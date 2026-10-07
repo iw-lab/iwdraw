@@ -21,8 +21,9 @@ const ALREADY = /duplicate column name|already exists/i;
 for (const f of files) {
   const rel = path.join("worker", "migrations", f);
   const r = spawnSync(
-    "npx",
-    ["wrangler", "d1", "execute", "arton", "--remote", "--yes", "--file", rel],
+    "bash",
+    // 격리 로그인 래퍼(전역 wrangler 로그인은 다른 계정일 수 있다 — tools/cf.sh 주석)
+    ["tools/cf.sh", "d1", "execute", "arton", "--remote", "--yes", "--file", rel],
     { encoding: "utf8" },
   );
   const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;

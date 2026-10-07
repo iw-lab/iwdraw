@@ -56,3 +56,4 @@ public/version.json
 
 # Firefly 생성 원본(채택본은 assets-src/textures/sources/ 로 복사해 보관)
 assets-src/textures/firefly/
+.cf-home/
