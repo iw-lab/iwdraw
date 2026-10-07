@@ -8,6 +8,7 @@ import { Crayon } from "./Crayon";
 import { Marker } from "./Marker";
 import { WatercolorBrush } from "./WatercolorBrush";
 import { OilBrush } from "./OilBrush";
+import { OilRibbon } from "./OilRibbon";
 import { InkBrush } from "./InkBrush";
 import { Airbrush } from "./Airbrush";
 import { OilPastel } from "./OilPastel";
@@ -37,6 +38,8 @@ export function createBrush(id: BrushId, rng?: () => number): BrushBase {
       return new WatercolorBrush(rng);
     case "oil":
       return new OilBrush(rng);
+    case "oilribbon":
+      return new OilRibbon(rng);
     case "inkbrush":
       return new InkBrush(rng);
     case "airbrush":
@@ -69,6 +72,7 @@ export const STROKE_BRUSHES: BrushId[] = [
   "marker",
   "watercolor",
   "oil",
+  "oilribbon",
   "inkbrush",
   "airbrush",
   "oilpastel",
@@ -96,6 +100,8 @@ export const BRUSH_META: BrushMeta[] = [
   { id: "marker", label: "마커", junior: true },
   { id: "watercolor", label: "수채붓", junior: true },
   { id: "oil", label: "유화붓", junior: false },
+  // 붓자국 그림(Firefly)을 획 경로에 입히는 유화 — 2026-10-07 아트봉봉 비교
+  { id: "oilribbon", label: "납작붓", junior: false },
   { id: "inkbrush", label: "붓펜", junior: false },
   { id: "airbrush", label: "에어브러시", junior: false },
   { id: "oilpastel", label: "오일파스텔", junior: false },

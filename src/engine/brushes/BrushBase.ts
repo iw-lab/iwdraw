@@ -22,7 +22,9 @@ export type TipKind =
   | "wet"
   | "ink"
   | "glow"
-  | "sparkle";
+  | "sparkle"
+  | "ribbon"
+  | "ribbon-bold";
 
 /**
  * dab 최소 지름(px) — 이보다 작으면 래스터에서 서브픽셀이 돼 획이 통째로 증발하거나
@@ -266,12 +268,12 @@ export class BrushBase {
   /** 이 브러시가 그을 수 있는 가장 가는 선(px) — 도구별로 다르다(minDabPxFor 참조) */
   readonly minDabPx: number;
   protected settings!: BrushSettings;
-  private last: StrokePoint | null = null;
+  protected last: StrokePoint | null = null;
   /** 다음 dab까지 남은 거리 */
   private residual = 0;
-  private traveled = 0;
+  protected traveled = 0;
   /** 지금 만드는 dab의 획 시작점부터의 호 길이(px) — 길이 방향 농담·hue의 위상 */
-  private arc = 0;
+  protected arc = 0;
   /** 획별 위상(결정론 — 같은 획을 다시 재생하면 같은 무늬) */
   private grainSeed = 0;
   /** 직전 makeDab이 적용한 길이 방향 농담 계수 — 알파를 직접 쓰는 서브클래스(붓펜)가 곱한다 */

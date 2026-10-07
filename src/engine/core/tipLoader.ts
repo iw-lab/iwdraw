@@ -7,6 +7,12 @@ import type { TipKind } from "../brushes/BrushBase";
  * 프로시저럴 팁을 대체한다. 로드 실패/미존재 시 조용히 프로시저럴 유지(폴백).
  */
 
+/** 납작붓 띠 텍스처 — 가는 획(폭 40px 미만)은 붓털을 굵게 묶은 bold 판(가는 결은 축소로 사라진다) */
+const RIBBON_FILES: [TipKind, string][] = [
+  ["ribbon", "/brush-tips/oil-ribbon.png"],
+  ["ribbon-bold", "/brush-tips/oil-ribbon-bold.png"],
+];
+
 const TIP_FILES: Partial<Record<TipKind, string>> = {
   bristle: "/brush-tips/bristle.png",
 };
@@ -97,5 +103,21 @@ export function loadTipOverrides(): void {
       }
     };
     img.src = url; // onerror 무시 → 프로시저럴 폴백 유지
+  }
+  // 리본 붓 띠 텍스처 — 이미 가공된 RGBA(RGB=명암, A=물감)라 알파맵 변환 없이 그대로 쓴다
+  for (const [kind, url] of RIBBON_FILES) {
+    const rib = new Image();
+    rib.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = rib.naturalWidth;
+        c.height = rib.naturalHeight;
+        c.getContext("2d")!.drawImage(rib, 0, 0);
+        setTipOverride(kind, c);
+      } catch {
+        /* 실패 = 코드 생성 대체 띠 유지 */
+      }
+    };
+    rib.src = url;
   }
 }

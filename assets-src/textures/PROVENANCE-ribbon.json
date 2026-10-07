@@ -1,0 +1,48 @@
+{
+  "file": "public/brush-tips/oil-ribbon.png",
+  "sha256": "03df050ea3bb242e098fdef399239bfd694b3ba910135e6a63e6d6d143a10aaa",
+  "bold_sha256": "ed1c926e309af52f2d79be0d2a551577c587f6a34796fb4b9f9082c995afd571",
+  "source": "sources/firefly-oilstroke.png",
+  "source_sha256": "3d9e515b7c080d8bde28e6f13dcecb4ae31b6e9c82d7fa360bb10db83d34ccf3",
+  "origin": "Adobe Firefly (Firefly Image 5) 2026-10-07 — prompts/oilstroke.txt",
+  "license": "Adobe Firefly output — Adobe Generative AI Product Specific Terms 2026-04-23 (개인 Premium, IP 면책 없음)",
+  "content_credentials": "https://cai-manifests.adobe.com/manifests/urn-c2pa-0d520070-361d-4685-bfcb-7feeb596af1d-adobe",
+  "layout": {
+    "W": 2048,
+    "H": 256,
+    "start": [
+      0,
+      256
+    ],
+    "body": [
+      256,
+      1792
+    ],
+    "end": [
+      1792,
+      2048
+    ]
+  },
+  "angle": -0.7,
+  "crop": [
+    275,
+    589,
+    49,
+    1148
+  ],
+  "start_src": [
+    49,
+    364
+  ],
+  "body_src": [
+    364,
+    805
+  ],
+  "body_period_tex": 287,
+  "reps": 6,
+  "end_src": [
+    805,
+    1148
+  ],
+  "body_cov": 0.853
+}

@@ -1,3 +1,4 @@
+import { makeRibbonFallback } from "./ribbon";
 import type { BackendCaps, BlendMode, Dab, RGB } from "../types";
 import type { TipKind, DabComposite } from "../brushes/BrushBase";
 import type { PaperKind } from "./paper";
@@ -176,6 +177,8 @@ export function makeTipHighlightCanvas(kind: TipKind, size = 128): HTMLCanvasEle
 
 /** 팁 종류 → 방사형 그라디언트 스탬프(공용, Canvas2D/WebGL 텍스처 소스) */
 export function makeTipCanvas(tip: TipKind, size = 128): HTMLCanvasElement {
+  // 리본 붓의 띠 텍스처는 정사각이 아니다(2048×256) — 별도 생성기
+  if (tip === "ribbon" || tip === "ribbon-bold") return makeRibbonFallback();
   const c = document.createElement("canvas");
   c.width = c.height = size;
   const ctx = c.getContext("2d")!;

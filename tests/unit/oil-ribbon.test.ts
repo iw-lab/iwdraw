@@ -1,0 +1,81 @@
+import { describe, it, expect } from "vitest";
+import { createBrush } from "@/engine/brushes";
+import { mulberry32 } from "@/engine/types";
+import { RIBBON, ribbonLen } from "@/engine/core/ribbon";
+import type { BrushSettings, Dab, StrokePoint } from "@/engine/types";
+
+const SETTINGS: BrushSettings = { size: 30, opacity: 1, color: { r: 40, g: 90, b: 200 }, waterAmount: 0.5, stabilize: 3 };
+
+/** 직선 획 하나 — 이동마다 받은 조각과 손 뗄 때 받은 조각을 따로 돌려준다 */
+function stroke(len: number, seed = 1) {
+  const b = createBrush("oilribbon", mulberry32(seed));
+  const live: Dab[] = [];
+  live.push(...b.begin({ x: 0, y: 0, pressure: 0.6, t: 0 }, SETTINGS));
+  for (let x = 10; x <= len; x += 10) live.push(...b.move({ x, y: 0, pressure: 0.6, t: x } as StrokePoint));
+  const tail = b.end();
+  return { b, live, tail, width: b.strokePx(SETTINGS.size) };
+}
+
+const u = (r: readonly [number, number]) => [r[0] / RIBBON.W, r[1] / RIBBON.W];
+
+describe("납작붓(리본 유화)", () => {
+  it("모든 조각이 띠 텍스처의 유효 구간을 가리킨다", () => {
+    const { live, tail } = stroke(400);
+    for (const d of [...live, ...tail]) {
+      expect(d.slice).toBeDefined();
+      expect(d.slice!.u0).toBeGreaterThanOrEqual(0);
+      expect(d.slice!.u1).toBeLessThanOrEqual(1);
+      expect(d.slice!.u1).toBeGreaterThan(d.slice!.u0);
+      expect(d.slice!.len).toBeGreaterThan(0);
+    }
+  });
+
+  it("그리는 중엔 끝 구간 길이만큼 뒤처져 내보내고, 그 구간은 손 뗄 때 끝 그림으로 채운다", () => {
+    const { live, tail, width } = stroke(400);
+    const le = ribbonLen(RIBBON.end, width);
+    const lastLiveX = Math.max(...live.map((d) => d.x));
+    // 마지막 이동 지점(400)보다 끝 구간 길이 가까이 뒤처져 있다
+    expect(400 - lastLiveX).toBeGreaterThanOrEqual(le - 2);
+    expect(tail.length).toBeGreaterThan(0);
+    // 꼬리의 맨 끝 조각은 끝 구간 텍스처, 그리는 중 조각은 끝 구간을 쓰지 않는다
+    const [e0, e1] = u(RIBBON.end);
+    const last = tail[tail.length - 1];
+    expect(last.slice!.u0).toBeGreaterThanOrEqual(e0 - 1e-9);
+    expect(last.slice!.u1).toBeLessThanOrEqual(e1 + 1e-9);
+    for (const d of live) expect(d.slice!.u1).toBeLessThanOrEqual(e0 + 1e-9);
+  });
+
+  it("시작은 시작 구간 텍스처에서 출발한다", () => {
+    const { live } = stroke(400);
+    const [s0, s1] = u(RIBBON.start);
+    expect(live[0].slice!.u0).toBeGreaterThanOrEqual(s0);
+    expect(live[0].slice!.u1).toBeLessThanOrEqual(s1 + 1e-9);
+  });
+
+  it("같은 점열이면 같은 조각(무비 재생·결정론)", () => {
+    const a = stroke(300, 1);
+    const b = stroke(300, 99);
+    const sig = (r: typeof a) => [...r.live, ...r.tail].map((d) => [d.x.toFixed(2), d.slice!.u0.toFixed(5), d.slice!.len.toFixed(3)].join()).join("|");
+    expect(sig(a)).toBe(sig(b));
+  });
+
+  it("콕 찍으면 시작+끝 구간으로 된 짧은 붓자국이 찍힌다", () => {
+    const b = createBrush("oilribbon", mulberry32(3));
+    b.begin({ x: 50, y: 50, pressure: 0.6, t: 0 }, SETTINGS);
+    const out = b.end();
+    expect(out.length).toBeGreaterThan(5);
+    const [s0, s1] = u(RIBBON.start);
+    const [e0, e1] = u(RIBBON.end);
+    expect(out.some((d) => d.slice!.u0 >= s0 && d.slice!.u1 <= s1 + 1e-9)).toBe(true);
+    expect(out.some((d) => d.slice!.u0 >= e0 - 1e-9 && d.slice!.u1 <= e1 + 1e-9)).toBe(true);
+  });
+
+  it("가는 획(폭 40px 미만)은 bold 띠, 굵은 획은 원본 띠", () => {
+    const thin = createBrush("oilribbon", mulberry32(1));
+    thin.begin({ x: 0, y: 0, pressure: 0.6, t: 0 }, { ...SETTINGS, size: 8 });
+    const t = [...thin.move({ x: 200, y: 0, pressure: 0.6, t: 200 }), ...thin.end()];
+    expect(t.every((d) => d.tip === "ribbon-bold")).toBe(true);
+    const { live } = stroke(400); // size 30 × 1.5 = 45px
+    expect(live.every((d) => d.tip === undefined)).toBe(true);
+  });
+});

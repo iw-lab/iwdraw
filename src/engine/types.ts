@@ -13,6 +13,7 @@ export type BrushId =
   | "marker"
   | "watercolor"
   | "oil"
+  | "oilribbon"
   | "inkbrush"
   | "airbrush"
   | "oilpastel"
@@ -64,6 +65,12 @@ export interface Dab {
   color?: RGB;
   /** 팁 오버라이드(글리터 별 글린트 등). 없으면 스트로크 팁 */
   tip?: import("./brushes/BrushBase").TipKind;
+  /**
+   * 띠 조각(리본 붓) — 팁 텍스처의 가로 구간 u0~u1(0~1)만 잘라, 획 방향 길이 len(px) × 폭 size(px)
+   * 사각형으로 그린다. 붓자국 그림 한 장을 획 경로를 따라 이어 붙이는 용도(OilRibbon).
+   * 없으면 지금까지처럼 팁 전체를 size×size 정사각형으로.
+   */
+  slice?: { u0: number; u1: number; len: number };
 }
 
 export interface BrushSettings {

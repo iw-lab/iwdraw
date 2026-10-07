@@ -143,6 +143,31 @@ export class Canvas2DBackend implements RendererBackend {
     return pick;
   }
 
+  /** 띠 텍스처(가로로 긴 팁)의 축소 단계 — 정사각 팁과 달리 «높이»가 획 폭에 대응한다 */
+  private sliceSource(kind: TipKind, color: RGB, size: number): HTMLCanvasElement {
+    const base = this.tinted(kind, color);
+    const key = `slice:${kind}:${color.r},${color.g},${color.b}`;
+    let chain = this.mipCache.get(key);
+    if (!chain || chain[0] !== base) {
+      chain = [base];
+      this.mipCache.set(key, chain);
+    }
+    for (;;) {
+      const last = chain[chain.length - 1];
+      if (last.height <= 4 || last.height / 2 < size) break;
+      const half = document.createElement("canvas");
+      half.width = Math.max(2, last.width >> 1);
+      half.height = Math.max(2, last.height >> 1);
+      const hx = half.getContext("2d")!;
+      hx.imageSmoothingQuality = "high";
+      hx.drawImage(last, 0, 0, half.width, half.height);
+      chain.push(half);
+    }
+    let pick = chain[0];
+    for (const c of chain) if (c.height >= size) pick = c;
+    return pick;
+  }
+
   beginStroke(ctx: StrokeContext): void {
     this.ctx = ctx;
     this.layerCtx = (ctx.layerCanvas as HTMLCanvasElement).getContext("2d");
@@ -176,7 +201,15 @@ export class Canvas2DBackend implements RendererBackend {
       }
       target.translate(dab.x, dab.y);
       target.rotate(dab.rotation);
-      target.drawImage(stamp, -s / 2, -s / 2, s, s);
+      if (dab.slice) {
+        // 띠 조각(리본 붓) — 텍스처 가로 구간만, 획 방향 길이 len × 폭 s
+        const src = this.sliceSource(dab.tip ?? this.ctx.tip, color, s);
+        const sx = dab.slice.u0 * src.width;
+        const sw = Math.max(1, (dab.slice.u1 - dab.slice.u0) * src.width);
+        target.drawImage(src, sx, 0, sw, src.height, -dab.slice.len / 2, -s / 2, dab.slice.len, s);
+      } else {
+        target.drawImage(stamp, -s / 2, -s / 2, s, s);
+      }
       target.restore();
     }
     if (eraser) target.restore();

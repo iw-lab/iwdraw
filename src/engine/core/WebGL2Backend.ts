@@ -22,17 +22,20 @@ in vec2 a_pos;      // -0.5..0.5 quad
 in vec2 a_uv;
 uniform vec2 u_resolution;
 uniform vec2 u_center;   // px
-uniform float u_size;    // px
+uniform float u_size;    // px (획 폭 방향)
+uniform float u_len;     // px (획 진행 방향) — 일반 dab 은 u_size 와 같다
+uniform vec4 u_uvr;      // 팁 텍스처에서 쓸 구간(u0,v0,u1,v1) — 일반 dab 은 (0,0,1,1)
 uniform float u_rot;
 out vec2 v_uv;
 out vec2 v_px;      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
 void main() {
   float c = cos(u_rot); float s = sin(u_rot);
-  vec2 p = vec2(a_pos.x * c - a_pos.y * s, a_pos.x * s + a_pos.y * c) * u_size;
+  vec2 q = vec2(a_pos.x * u_len, a_pos.y * u_size);
+  vec2 p = vec2(q.x * c - q.y * s, q.x * s + q.y * c);
   vec2 px = u_center + p;
   vec2 clip = (px / u_resolution) * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-  v_uv = a_uv;
+  v_uv = mix(u_uvr.xy, u_uvr.zw, a_uv);
   v_px = px;
 }`;
 
@@ -406,6 +409,8 @@ export class WebGL2Backend implements RendererBackend {
     const uCenter = gl.getUniformLocation(this.dabProg, "u_center");
     const uSize = gl.getUniformLocation(this.dabProg, "u_size");
     const uRot = gl.getUniformLocation(this.dabProg, "u_rot");
+    const uLen = gl.getUniformLocation(this.dabProg, "u_len");
+    const uUvr = gl.getUniformLocation(this.dabProg, "u_uvr");
     const uColor = gl.getUniformLocation(this.dabProg, "u_color");
 
     // dab별 팁 오버라이드(글리터 별 글린트) — 팁이 바뀔 때만 텍스처 리바인드.
@@ -425,6 +430,14 @@ export class WebGL2Backend implements RendererBackend {
       gl.uniform2f(uCenter, dab.x, dab.y);
       gl.uniform1f(uSize, dab.size);
       gl.uniform1f(uRot, dab.rotation);
+      // 띠 조각(리본 붓) — 텍스처 가로 구간만, 획 방향 길이 len
+      if (dab.slice) {
+        gl.uniform1f(uLen, dab.slice.len);
+        gl.uniform4f(uUvr, dab.slice.u0, 0, dab.slice.u1, 1);
+      } else {
+        gl.uniform1f(uLen, dab.size);
+        gl.uniform4f(uUvr, 0, 0, 1, 1);
+      }
       gl.uniform4f(uColor, col.r / 255, col.g / 255, col.b / 255, dab.alpha);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }

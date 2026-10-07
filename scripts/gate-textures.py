@@ -115,6 +115,26 @@ def gate(pub: Path = PUB, src: Path = SRC) -> list[str]:
                     errs.append(f"{name}: Firefly 원본인데 Content Credentials 참조가 원장에 없음(약관 §3.1)")
                 elif cc not in xmp:
                     errs.append(f"{name}: 납품 파일에서 Content Credentials 참조가 빠졌다(약관 §3.1 — 제거·변조 금지)")
+    # 납작붓 띠 텍스처(public/brush-tips/oil-ribbon.png) — 크기·출처·Content Credentials
+    rp = pub.parent / "brush-tips" / "oil-ribbon.png"
+    rprov_p = src / "PROVENANCE-ribbon.json"
+    if rp.exists():
+        r = Image.open(rp)
+        if r.size != (2048, 256) or r.mode != "RGBA":
+            errs.append(f"oil-ribbon.png: 2048×256 RGBA 여야 한다(ribbon.ts RIBBON) — {r.size} {r.mode}")
+        if not rprov_p.exists():
+            errs.append("oil-ribbon.png: PROVENANCE-ribbon.json 없음")
+        else:
+            rpv = json.loads(rprov_p.read_text())
+            if rpv.get("sha256") != sha(rp):
+                errs.append("oil-ribbon.png: 해시가 원장과 다름(process-ribbon.py 를 거치지 않은 수정)")
+            rb = rp.with_name("oil-ribbon-bold.png")
+            if not rb.exists() or rpv.get("bold_sha256") != sha(rb):
+                errs.append("oil-ribbon-bold.png: 없음/해시가 원장과 다름")
+            cc = rpv.get("content_credentials")
+            if "firefly" in str(rpv.get("origin", "")).lower() and (not cc or cc not in (r.info.get("XML:com.adobe.xmp") or "")):
+                errs.append("oil-ribbon.png: Firefly Content Credentials 참조 누락(약관 §3.1)")
+            print(f"  oil-ribbon.png: {r.size} {rp.stat().st_size // 1024}KB 출처 {rpv.get('origin', '')[:30]}")
     if total > LIM["total_kb"]:
         errs.append(f"합계 {total:.0f}KB > {LIM['total_kb']}KB")
     return errs

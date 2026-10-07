@@ -18,6 +18,7 @@ export type IconName =
   | "marker"
   | "watercolor"
   | "oil"
+  | "oilribbon"
   | "inkbrush"
   | "airbrush"
   | "oilpastel"
@@ -178,6 +179,18 @@ const ICONS: Record<IconName, ReactNode> = {
       <circle cx="7" cy="26" r="1.2" fill="#F49AC1" stroke="none" opacity="0.7" />
       <circle cx="10.5" cy="27.6" r="0.9" fill="#F49AC1" stroke="none" opacity="0.6" />
       <circle cx="5" cy="23.6" r="0.8" fill="#F49AC1" stroke="none" opacity="0.5" />
+    </g>
+  ),
+  /* 납작붓: 넓적한 붓머리 + 붓자국 띠(끝이 갈라짐) — 둥근 유화붓과 구분 */
+  oilribbon: (
+    <g {...O}>
+      <g transform="rotate(45 16 16)">
+        <rect x="14.2" y="2.5" width="3.6" height="11" rx="1.4" fill="#C98B5A" />
+        <rect x="12.6" y="13.5" width="6.8" height="3.2" fill="#B9BCC2" />
+        <path d="M12.6 16.7h6.8l-.4 6.8h-6z" fill="#3D9BE0" />
+      </g>
+      <path d="M4 27.5c4-1.6 9-1.6 13-.6" stroke="#3D9BE0" strokeWidth="3.4" strokeLinecap="butt" fill="none" />
+      <path d="M17 26.4l3 .2M17 27.6l2.2.3M16.8 28.6l3.4.1" stroke="#3D9BE0" strokeWidth="0.9" strokeLinecap="round" fill="none" />
     </g>
   ),
   glow: (
