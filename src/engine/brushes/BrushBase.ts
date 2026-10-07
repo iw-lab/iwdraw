@@ -271,7 +271,7 @@ export class BrushBase {
   private residual = 0;
   private traveled = 0;
   /** 지금 만드는 dab의 획 시작점부터의 호 길이(px) — 길이 방향 농담·hue의 위상 */
-  protected arc = 0;
+  private arc = 0;
   /** 획별 위상(결정론 — 같은 획을 다시 재생하면 같은 무늬) */
   private grainSeed = 0;
   /** 직전 makeDab이 적용한 길이 방향 농담 계수 — 알파를 직접 쓰는 서브클래스(붓펜)가 곱한다 */

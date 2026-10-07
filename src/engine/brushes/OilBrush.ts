@@ -23,7 +23,7 @@ export class OilBrush extends BrushBase {
         minSizeRatio: 0.6,
         composite: "source-over",
         rotationFollowsStroke: true,
-        paperGrain: 0.48, // 0.38→0.48(2026-10-07): 실물 평직은 격자처럼 읽히지 않아 붓결과 덜 경합 — 물감 속 천 결 비침↑. 옛 값 이력: // 캔버스 결이 배어나되 진행방향 붓결을 덮지 않게(0.6은 격자가 결을 가림, 0.45는 격자가 붓결과 경합 — 실측)
+        paperGrain: 0.38, // 캔버스 결이 배어나되 진행방향 붓결을 덮지 않게(0.6은 격자가 결을 가림, 0.45는 격자가 붓결과 경합 — 실측)
         strokeBlend: "wash", // 겹침 포화 방지 → 붓결이 획 전체에 보존
         washOpacity: 1,
         // fringe(양끝 트레일 dab) 금지 — 불투명 물감에선 꼬리 dab이 캡 경계 밖에 걸려
@@ -38,7 +38,7 @@ export class OilBrush extends BrushBase {
         thinGrain: 0.45,
         // 물감이 늘어나며 얇고 옅어진다
         speedAlpha: 0.25,
-        speedSize: 0.25, // 빠르게 튕기면 가늘어진다 — 획 끝 테이퍼의 자연스러운 근원(아트봉봉 대비 2026-10-07)
+        speedSize: 0.12,
         wetMix: 0.5, // 젖은 물감 섞임 — 지나간 밑색을 붓에 묻혀 와 섞임(i-scream 유화 실측, 2026-07-10 사용자 요청)
       },
       rng,
@@ -52,13 +52,6 @@ export class OilBrush extends BrushBase {
    * 제로 평균. */
   protected override makeDab(p: StrokePoint, angle: number): Dab {
     const dab = super.makeDab(p, angle);
-    // 붓을 대는 시작 테이퍼: 첫 지름 1.3배 거리 동안 폭 0.55→1 — 둥근 알약 시작이 «마커»로 읽혔다
-    // (2026-10-07 아트봉봉 비교). 이미 그린 dab 을 고치지 않으니 프리뷰=최종. 손 뗄 때 꼬리를 덧붙이는
-    // 방식(fringe)은 «물감 점·팝인» 실측 이력으로 금지 — 끝은 속도 반응(speedSize)이 맡는다.
-    const dia = this.strokePx(this.settings.size);
-    const ramp = Math.min(1, this.arc / Math.max(1, dia * 1.3));
-    const k = 0.55 + 0.45 * ramp * ramp * (3 - 2 * ramp);
-    dab.size = Math.max(Math.min(dab.size, 2.4), dab.size * k);
     const drift =
       Math.sin(p.t * 0.003 + this.strokeSeed) * 0.5 + Math.sin(p.t * 0.0013 + this.strokeSeed * 2.7) * 0.5;
     const v = 1 + drift * 0.05;
