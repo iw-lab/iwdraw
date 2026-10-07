@@ -383,7 +383,14 @@ export function makeTipCanvas(tip: TipKind, size = 128): HTMLCanvasElement {
         const v = deepRow ? 218 + Math.floor(brand() * 16) : 246 + Math.floor(brand() * 10);
         // 획 좌우 가장자리 밝은 테 — fine 팁(tipLoader)과 동일 처리(색 게이트 정합)
         const bny = Math.abs(y - r) / r;
-        const bEdgeK = bny > 0.78 ? 1 - 0.45 * Math.min(1, (bny - 0.78) / 0.22) : 1;
+        let bEdgeK = bny > 0.78 ? 1 - 0.45 * Math.min(1, (bny - 0.78) / 0.22) : 1;
+        // 바깥 줄 = 반투명 붓털(줄마다 농도 다르게) — 가는 획 테두리가 1px 안에 0→1 로 끊겨
+        // 확대하면 계단이 졌다(2026-10-07 사용자 스크린샷 ×3.5, 레이어 실측). wash(MAX)에선 획과 평행한
+        // 줄 단위 차이만 남으므로 테두리가 붓털 결 방향으로 한 단계 더 부드럽게 빠진다.
+        // ⚠️ 안쪽 줄은 그대로 불투명 — 내부 반투명 줄은 종이가 흰 줄로 비친다(위 주석 실측).
+        // 바깥 «한» 줄만 — 두 줄을 옅게 하면 획 단면 평균에 종이색이 섞여 가는 획만 연해졌다
+        // (oil-color-consistency B 87→109, 2026-10-07 A/B 실측).
+        if (i === 0 || i === boldRows - 1) bEdgeK *= 0.5 + brand() * 0.2;
         ctx.strokeStyle = `rgba(${v},${v},${v},${bEdgeK})`;
         // 행 피치(size/8)보다 넓게 → 행 사이 알파 틈 없음(틈=종이 비침 흰 줄)
         ctx.lineWidth = size * 0.13 + brand() * size * 0.05;

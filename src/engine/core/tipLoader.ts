@@ -38,6 +38,22 @@ function toAlphaMap(img: HTMLImageElement, size = 256): HTMLCanvasElement {
     // (2026-07-06 사용자 실측 "우리는 검은 느낌, 원본은 밝은 느낌") → 골은 은은하게만
     bandShade.push(DEEP.has(b) ? 0.85 + rnd * 0.07 : 0.96 + rnd * 0.04);
   }
+  // 붓털 줄(≈3px 묶음)마다 끝 길이·마른 정도 — 고정 시드(로드마다 같은 붓)
+  let lseed = 977;
+  const lrand = () => {
+    lseed = (lseed * 1103515245 + 12345) & 0x7fffffff;
+    return lseed / 0x7fffffff;
+  };
+  const rowLen = new Float32Array(size);
+  const rowDry = new Float32Array(size);
+  for (let y = 0; y < size; y += 3) {
+    const len = 0.7 + lrand() * 0.3;
+    const dry = 0.62 + lrand() * 0.38;
+    for (let k = 0; k < 3 && y + k < size; k++) {
+      rowLen[y + k] = len;
+      rowDry[y + k] = dry;
+    }
+  }
   for (let y = 0; y < size; y++) {
     // 밴드 사이 선형 보간 — 경계가 기계적인 평행선으로 보이지 않게
     const t = (y / size) * BANDS - 0.5;
@@ -61,6 +77,14 @@ function toAlphaMap(img: HTMLImageElement, size = 256): HTMLCanvasElement {
       const dn = Math.hypot(x - r + 0.5, y - r + 0.5) / r;
       if (dn > 1) a = 0;
       else if (dn > 0.94) a *= 1 - (dn - 0.94) / 0.06;
+      // 갈라진 붓끝: 진행 방향(x) 끝을 원이 아니라 «붓털 줄마다 다른 길이»로 자른다. wash(MAX)에서
+      // 획 안쪽은 앞뒤 dab 이 덮고, 시작·끝에서만 이 모양이 드러난다 — 둥근 알약 끝이 «마커»로
+      // 읽혔다(2026-10-07 아트봉봉 비교). 끝 25% 는 줄마다 옅게(마른 붓).
+      const nx = Math.abs(x - r + 0.5) / r;
+      const rowL = Math.sqrt(Math.max(0, 1 - Math.pow((y - r + 0.5) / r, 2))) * rowLen[y];
+      if (nx > rowL) a = 0;
+      else if (nx > rowL - 0.09) a *= (rowL - nx) / 0.09;
+      if (nx > rowL * 0.75) a *= rowDry[y];
       // 획 좌우 가장자리(팁 상하단) 물감 얇게 — 종이가 비쳐 밝은 테가 획 전체에
       // 이어진다(i-scream 유화). 실루엣 후처리(dryEdge)는 펜 뗄 때 팝인이라 금지
       // (2026-07-06 사용자 실측) — 팁에 베이크하면 그리는 중에도 동일(프리뷰=최종).

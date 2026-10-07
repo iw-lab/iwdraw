@@ -45,15 +45,23 @@ test("유화 굵기(LOD 경계)에 따라 색이 달라지지 않는다", async 
     const ctx = el.getContext("2d")!;
     return fxs.map((fx) => {
       const cx = Math.round(el.width * fx);
-      // 획 전폭 평균(붓결 밴드가 확률적으로 어디 걸리는지와 무관한 지각 대표색).
-      // 종이 픽셀은 제외: 노랑 획이므로 B<200 & R>150이면 획 내부로 판정.
+      // 획 «몸통» 평균 — 행마다 획 폭(B<200 & R>150 인 픽셀 구간)의 가운데 60%만.
+      // ⚠️ 전폭 평균은 반투명 테두리를 포함해서, 테두리를 부드럽게 하면(2026-10-07 가는 유화 계단
+      //    제거) 테두리 비율이 큰 가는 획만 연하게 잡혔다(B 87 vs 102). 이 게이트가 막는 결함은
+      //    «두 팁의 몸통 셰이드 불일치»라 몸통만 잰다. 붓결 밴드 확률 영향은 폭 60%·40행 평균으로 흡수.
       let r = 0, g = 0, b = 0, n = 0;
       for (let fy = 0.25; fy <= 0.65; fy += 0.01) {
         const y = Math.round(el.height * fy);
         const d = ctx.getImageData(cx - 70, y, 140, 1).data;
+        let lo = -1, hi = -1;
         for (let i = 0; i < 140; i++) {
-          const R = d[i * 4], G = d[i * 4 + 1], B = d[i * 4 + 2];
-          if (B < 200 && R > 150) { r += R; g += G; b += B; n++; }
+          const R = d[i * 4], B = d[i * 4 + 2];
+          if (B < 200 && R > 150) { if (lo < 0) lo = i; hi = i; }
+        }
+        if (lo < 0) continue;
+        const span = hi - lo;
+        for (let i = Math.round(lo + span * 0.2); i <= Math.round(hi - span * 0.2); i++) {
+          r += d[i * 4]; g += d[i * 4 + 1]; b += d[i * 4 + 2]; n++;
         }
       }
       return n ? ([Math.round(r / n), Math.round(g / n), Math.round(b / n)] as const) : ([0, 0, 0] as const);
@@ -61,9 +69,11 @@ test("유화 굵기(LOD 경계)에 따라 색이 달라지지 않는다", async 
   }, cases.map((c) => c[1]));
 
   console.log("OILCOLOR:", cases.map(([sz], i) => `굵기${sz}=rgb(${means[i].join(",")})`).join("  "));
-  // 채널별 최대-최소 편차 — 버그 시(팁 평균 셰이드 불일치) R 편차 30+, 정상 ≤8 실측 + 여유
+  // 채널별 최대-최소 편차 — 버그 시(팁 평균 셰이드 불일치) R 편차 30+.
+  // 2026-10-07 몸통 측정으로 바꾼 뒤 정상 R 8·B 3, 고의 파손(가는 팁 줄 셰이드 246→200 = −18%)은 R 14.
+  // 옛 상한 14 는 그 파손을 통과시켰다(약한 게이트) → 11.
   for (let ch = 0; ch < 3; ch++) {
     const vals = means.map((m) => m[ch]);
-    expect(Math.max(...vals) - Math.min(...vals), `채널 ${"RGB"[ch]} 편차`).toBeLessThanOrEqual(14);
+    expect(Math.max(...vals) - Math.min(...vals), `채널 ${"RGB"[ch]} 편차`).toBeLessThanOrEqual(11);
   }
 });
