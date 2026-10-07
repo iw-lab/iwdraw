@@ -15,7 +15,7 @@ export function PhotoStartButton({ className }: { className?: string }) {
           disabled={converting}
           className={
             className ??
-            "pressable touch-target inline-flex items-center gap-2 rounded-card bg-sky px-7 py-4 font-display text-lg text-white shadow-soft disabled:opacity-60"
+            "pressable touch-target inline-flex items-center gap-2 rounded-control border border-line bg-transparent px-7 py-4 text-lg font-semibold text-ink-soft hover:bg-surface-2 disabled:opacity-60"
           }
         >
           📷 {converting ? "변환 중…" : "내 사진으로"}

@@ -484,9 +484,30 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
     void handleExport("submit", t);
   };
 
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      const menu = headerRef.current?.querySelector(".editor-more");
+      if (event.target instanceof Node && !menu?.contains(event.target)) setMoreOpen(false);
+    };
+    const closeEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+        headerRef.current?.querySelector<HTMLButtonElement>(".editor-more-toggle")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeEscape);
+    };
+  }, [moreOpen]);
+
   // shrink-0: 헤더가 좁아지면 flex가 버튼을 눌러 라벨이 접힌다(웨일북에서 버튼이 세로로 길쭉)
   const iconBtn =
-    "pressable touch-target flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-paper px-3 py-2 text-sm font-semibold text-ink-soft shadow-soft";
+    "pressable touch-target flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-control bg-transparent px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-surface-2";
 
   return (
     // editor-no-pinch: 데스크톱 크로뮴(웨일북)은 뷰포트 메타 줌 잠금을 무시 — 툴바·여백에서
@@ -501,7 +522,7 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
       <header
         ref={headerRef}
         data-labels="off"
-        className="flex shrink-0 items-center gap-2 overflow-x-auto px-3 py-2 compact:gap-1 compact:px-2 compact:py-1"
+        className="editor-toolbar relative z-20 flex shrink-0 items-center gap-2 overflow-x-auto rounded-panel border border-ink/6 bg-paper px-3 py-2 shadow-panel compact:gap-1 compact:px-2 compact:py-1"
       >
         {/* 글자 폭 탐침 — 보이지 않고 흐름 밖(absolute)이라 배치에 영향이 없다.
             글꼴이 바뀌면 이 폭이 변하고, 그걸 ResizeObserver 가 잡아 헤더를 다시 잰다. */}
@@ -512,21 +533,21 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
         >
           내 기기에 저장
         </span>
-        <Link href={backHref} className="pressable touch-target grid place-items-center rounded-full bg-paper px-3 text-xl shadow-soft" aria-label="나가기">
+        <Link href={backHref} className="editor-back pressable touch-target grid place-items-center rounded-control bg-transparent px-3 text-xl hover:bg-surface-2" aria-label="나가기">
           ←
         </Link>
         <span className="hdr-extra block shrink-0">
           <ArtonLogo className="h-8" />
         </span>
         {who && (
-          <span className="hdr-extra block shrink-0 whitespace-nowrap rounded-full bg-paper px-3 py-1 text-sm font-semibold text-ink-soft shadow-soft">
+          <span className="hdr-extra block shrink-0 whitespace-nowrap rounded-control bg-surface-2 px-3 py-1 text-sm font-semibold text-ink-soft">
             {who}
           </span>
         )}
         {galleryHref && (
           <Link
             href={galleryHref}
-            className="pressable touch-target hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-paper px-3 py-1 text-sm font-semibold text-ink-soft shadow-soft sm:flex"
+            className="editor-context pressable touch-target hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-control bg-surface-2 px-3 py-1 text-sm font-semibold text-ink-soft sm:flex"
           >
             🖼️ <span className="hdr-extra">우리 반 갤러리</span>
           </Link>
@@ -534,7 +555,7 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
         {classHintable && (
           <Link
             href={joinHref}
-            className="pressable touch-target hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-sun-soft px-3 py-1 text-sm font-semibold text-ink shadow-soft sm:flex"
+            className="editor-context pressable touch-target hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-control bg-sun-soft px-3 py-1 text-sm font-semibold text-ink sm:flex"
             title="학급 코드로 들어오면 그림을 우리 반 갤러리에 전시할 수 있어요"
             data-testid="class-join-chip"
           >
@@ -550,98 +571,114 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
             아이콘에 가려 클릭 자체가 안 됐다(= 방에서 나갈 방법이 없음, 2026-07-25).
             min-w-0(줄어듦) 도, flex-1 기본값(basis 0 + shrink 1) 도 안 된다.
             넘치는 건 헤더의 가로 스크롤이 받는다. */}
-        <div className="flex flex-[1_0_auto] justify-center">
+        <div className="editor-modes flex flex-[1_0_auto] justify-center">
           <ModeTabs hasLineart={!!lineartSrc} />
         </div>
 
-        {/* 도안·이어그리기 원본이 있으면 캔버스 비율이 그 그림에 묶여 있어 방향 전환이
-            아무 일도 하지 않는다(CanvasStage가 이미지 비율을 쓴다) — 라벨만 가로↔세로로
-            바뀌는 죽은 버튼이었다(2026-07-25). 아예 감춘다. */}
-        {!lineart && !base && (
+        <div className="editor-more" data-open={moreOpen}>
           <button
-            onClick={handleRotate}
-            className={
-              confirmRotate
-                ? "pressable touch-target flex items-center gap-1 rounded-full bg-berry px-3 py-2 text-sm font-semibold text-white shadow-soft"
-                : iconBtn
-            }
-            title="캔버스 방향 바꾸기 (그림이 지워져요)"
-            aria-label="캔버스 방향 바꾸기"
+            type="button"
+            aria-label="더보기"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((value) => !value)}
+            className="editor-more-toggle pressable touch-target hidden items-center justify-center rounded-control text-2xl text-ink-soft hover:bg-surface-2"
           >
-            <Icon name="rotate" className="h-5 w-5" />
-            <span className={confirmRotate ? "" : "hdr-label"}>
-              {confirmRotate ? "지워요?" : orientation === "landscape" ? "가로" : "세로"}
-            </span>
+            ⋯
           </button>
-        )}
-        <button
-          onClick={handleNewDrawing}
-          className={
-            confirmNew
-              ? "pressable touch-target flex items-center gap-1 rounded-full bg-berry px-3 py-2 text-sm font-semibold text-white shadow-soft"
-              : iconBtn
-          }
-          aria-label="새 그림"
-          title="새 그림: 지금 그림을 지우고 처음부터"
-        >
-          <Icon name="plus" className="h-5 w-5" />
-          <span className={confirmNew ? "" : "hdr-label"}>
-            {confirmNew ? "정말요?" : "새 그림"}
-          </span>
-        </button>
-        {/* 그림 불러오기 — "사진"은 무슨 기능인지 헷갈린다는 실사용 피드백(2026-07-13) → "불러오기" */}
-        <PhotoImport
-          renderButton={(openPicker, converting) => (
+          <div className="editor-more-content">
+            {/* 도안·이어그리기 원본이 있으면 캔버스 비율이 그 그림에 묶여 있어 방향 전환이
+                아무 일도 하지 않는다(CanvasStage가 이미지 비율을 쓴다) — 라벨만 가로↔세로로
+                바뀌는 죽은 버튼이었다(2026-07-25). 아예 감춘다. */}
+            {!lineart && !base && (
+              <button
+                onClick={handleRotate}
+                className={
+                  confirmRotate
+                    ? "pressable touch-target flex items-center gap-1 rounded-control bg-berry px-3 py-2 text-sm font-semibold text-white"
+                    : iconBtn
+                }
+                title="캔버스 방향 바꾸기 (그림이 지워져요)"
+                aria-label="캔버스 방향 바꾸기"
+              >
+                <Icon name="rotate" className="h-5 w-5" />
+                <span className={confirmRotate ? "" : "hdr-label"}>
+                  {confirmRotate ? "지워요?" : orientation === "landscape" ? "가로" : "세로"}
+                </span>
+              </button>
+            )}
             <button
-              onClick={openPicker}
-              disabled={converting}
-              className={iconBtn}
-              aria-label="내 사진·그림으로 그리기"
-              title="내 사진·그림을 도안으로 만들거나(선따기) 밑그림으로 깔고 이어 그려요"
+              onClick={handleNewDrawing}
+              className={
+                confirmNew
+                  ? "pressable touch-target flex items-center gap-1 rounded-control bg-berry px-3 py-2 text-sm font-semibold text-white"
+                  : iconBtn
+              }
+              aria-label="새 그림"
+              title="새 그림: 지금 그림을 지우고 처음부터"
             >
-              📷
-              <span className="hdr-label">{converting ? "변환 중…" : "내 사진·그림"}</span>
+              <Icon name="plus" className="h-5 w-5" />
+              <span className={confirmNew ? "" : "hdr-label"}>
+                {confirmNew ? "정말요?" : "새 그림"}
+              </span>
             </button>
-          )}
-        />
-        <button
-          onClick={() => setShowMovie(true)}
-          className={iconBtn}
-          aria-label="무비 모드"
-          title="그려지는 과정 재생"
-        >
-          <Icon name="movie" className="h-5 w-5" />
-          <span className="hdr-label">무비</span>
-        </button>
-        <button
-          onClick={toggleJunior}
-          aria-pressed={juniorMode}
-          aria-label="저학년 모드"
-          title="저학년 모드: 도구를 쉬운 것만 보여줘요"
-          className={`pressable touch-target flex items-center gap-1 rounded-full px-3 py-2 text-sm font-semibold ${
-            juniorMode ? "bg-leaf text-white shadow-soft" : "bg-paper text-ink-soft shadow-soft"
-          }`}
-        >
-          <Icon name="junior" className="h-5 w-5" />
-          <span className="hdr-label">저학년</span>
-        </button>
-        {/* 학급으로 입장했어도 파일 저장은 따로 쓸 수 있어야 한다(사용자 요청 2026-07-13) */}
-        {submits && (
-          <button
-            onClick={() => handleExport("download")}
-            disabled={downloading}
-            className={iconBtn}
-            aria-label="내 컴퓨터에 저장"
-            title="그림을 그림 파일(PNG)로 내 기기에 저장해요"
-          >
-            <Icon name="save" className="h-5 w-5" />
-            <span className="hdr-extra">{downloading ? "저장 중…" : "내 기기에 저장"}</span>
-          </button>
-        )}
+            {/* 그림 불러오기 — "사진"은 무슨 기능인지 헷갈린다는 실사용 피드백(2026-07-13) → "불러오기" */}
+            <PhotoImport
+              renderButton={(openPicker, converting) => (
+                <button
+                  onClick={openPicker}
+                  disabled={converting}
+                  className={iconBtn}
+                  aria-label="내 사진·그림으로 그리기"
+                  title="내 사진·그림을 도안으로 만들거나(선따기) 밑그림으로 깔고 이어 그려요"
+                >
+                  📷
+                  <span className="hdr-label">{converting ? "변환 중…" : "내 사진·그림"}</span>
+                </button>
+              )}
+            />
+            <button
+              onClick={() => {
+                setShowMovie(true);
+                setMoreOpen(false); // 무비는 전체 화면 모달 — 폰 더보기 메뉴가 뒤에 열린 채 남지 않게
+              }}
+              className={iconBtn}
+              aria-label="무비 모드"
+              title="그려지는 과정 재생"
+            >
+              <Icon name="movie" className="h-5 w-5" />
+              <span className="hdr-label">무비</span>
+            </button>
+            <button
+              onClick={toggleJunior}
+              aria-pressed={juniorMode}
+              aria-label="저학년 모드"
+              title="저학년 모드: 도구를 쉬운 것만 보여줘요"
+              className={`pressable touch-target flex items-center gap-1 rounded-control px-3 py-2 text-sm font-semibold ${
+                juniorMode ? "bg-coral-soft text-coral-deep ring-2 ring-coral/60 ring-inset" : "bg-transparent text-ink-soft hover:bg-surface-2"
+              }`}
+            >
+              <Icon name="junior" className="h-5 w-5" />
+              <span className="hdr-label">저학년</span>
+            </button>
+            {/* 학급으로 입장했어도 파일 저장은 따로 쓸 수 있어야 한다(사용자 요청 2026-07-13) */}
+            {submits && (
+              <button
+                onClick={() => handleExport("download")}
+                disabled={downloading}
+                className={iconBtn}
+                aria-label="내 컴퓨터에 저장"
+                title="그림을 그림 파일(PNG)로 내 기기에 저장해요"
+              >
+                <Icon name="save" className="h-5 w-5" />
+                <span className="hdr-extra">{downloading ? "저장 중…" : "내 기기에 저장"}</span>
+              </button>
+            )}
+          </div>
+        </div>
         <button
           onClick={() => (submits ? setAskTitle(true) : handleExport("download"))}
           disabled={saving || (!submits && downloading)}
-          className="pressable touch-target flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-coral px-5 py-2.5 font-display text-white shadow-soft disabled:opacity-60"
+          className="editor-save pressable touch-target flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control bg-coral px-5 py-2.5 font-display text-white disabled:opacity-60"
           aria-label={submits ? "우리 반 갤러리에 보내기" : "저장하기"}
           title={
             submits ? "우리 반 갤러리에 바로 전시돼요" : "그림을 그림 파일(PNG)로 저장해요"
@@ -652,13 +689,15 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
           ) : (
             <Icon name="save" className="h-5 w-5" />
           )}
-          {submits
-            ? saving
-              ? "보내는 중…"
-              : "갤러리로 보내기"
-            : downloading
-              ? "저장 중…"
-              : "저장"}
+          <span className="editor-save-label">
+            {submits
+              ? saving
+                ? "보내는 중…"
+                : "갤러리로 보내기"
+              : downloading
+                ? "저장 중…"
+                : "저장"}
+          </span>
         </button>
       </header>
 
@@ -684,7 +723,7 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
         </div>
 
         {/* 중앙: 캔버스 + 플로팅 되돌리기/다시 */}
-        <div className="relative order-1 min-h-0 flex-1 compact:order-2 rail:order-2">
+        <div className="arton-workbench relative order-1 min-h-0 flex-1 compact:order-2 rail:order-2">
           <CanvasStage
             // navKey(진입 고유 토큰)가 있으면 그것으로 key 고정 — 커스텀 이미지는 dataURL 앞부분이
             // 같아(같은 크기) slice(0,64) 충돌 → 2회차 재마운트 실패하던 버그의 근본 수정.
@@ -717,13 +756,13 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
           {perfHud && <PerfHud />}
           <SuggestBar />
           <PendingStampBar />
-          <div className="absolute bottom-3 left-3 z-10 flex gap-2 compact:bottom-1.5 compact:left-1.5 compact:gap-1.5">
+          <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex gap-2 rounded-panel border border-ink/6 bg-paper p-1 shadow-lift compact:bottom-1.5 compact:left-1.5 compact:gap-1.5">
             <button
               onClick={undo}
               disabled={!canUndo}
               aria-label="되돌리기"
               title="되돌리기 (Ctrl+Z)"
-              className="pressable grid h-12 w-12 place-items-center rounded-full bg-paper shadow-lift disabled:opacity-35"
+              className="pressable touch-target pointer-events-auto grid h-12 w-12 place-items-center rounded-control bg-transparent hover:bg-surface-2 disabled:opacity-35"
             >
               <Icon name="undo" className="h-6 w-6" />
             </button>
@@ -732,7 +771,7 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
               disabled={!canRedo}
               aria-label="다시 실행"
               title="다시 실행 (Ctrl+Shift+Z)"
-              className="pressable grid h-12 w-12 place-items-center rounded-full bg-paper shadow-lift disabled:opacity-35"
+              className="pressable touch-target pointer-events-auto grid h-12 w-12 place-items-center rounded-control bg-transparent hover:bg-surface-2 disabled:opacity-35"
             >
               <Icon name="redo" className="h-6 w-6" />
             </button>
@@ -741,7 +780,7 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
                 onClick={resetView}
                 aria-label="화면 맞춤"
                 title="확대 풀고 화면에 맞추기"
-                className="pressable flex h-12 items-center gap-1 rounded-full bg-sky px-4 font-display text-sm text-white shadow-lift"
+                className="pressable touch-target pointer-events-auto flex h-12 items-center gap-1 rounded-control bg-sky-soft px-4 text-sm font-semibold text-sky-deep"
               >
                 🔍 화면 맞춤 ×{viewScale.toFixed(1)}
               </button>
@@ -763,14 +802,14 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
             /* ⚠️ compact(가로 폰)에는 내보내지 않는다 — 그 화면에서 캔버스는 **높이에 묶여**
                있어서 패널을 접어도 커지지 않는다(실측 387 → 387). 눌러도 아무 변화가 없는
                버튼은 아이에게 혼란만 준다. rail(넉넉한 화면)에서만 실제로 넓어진다. */
-            className="pressable hidden w-5 shrink-0 items-center justify-center self-center rounded-full bg-paper py-6 text-xs text-ink-faint shadow-soft hover:text-ink rail:flex"
+            className="pressable hidden w-5 shrink-0 items-center justify-center self-center rounded-control border border-line bg-paper py-6 text-xs text-ink-faint hover:text-ink rail:flex"
           >
             {panelOpen ? "▸" : "◂"}
           </button>
           {panelOpen && (
             // 우측 패널은 모든 화면에서 1열 — 2열(xl)은 시선이 갈라져 불편(2026-07-10
-            // 사용자 실측). 모바일은 기존대로 가로 스크롤 1줄(contents로 흐름 유지).
-            <div className="flex min-w-0 gap-1.5 overflow-x-auto overflow-y-auto compact:w-[228px] compact:shrink-0 compact:flex-col compact:overflow-x-hidden rail:w-[264px] rail:shrink-0 rail:flex-col rail:overflow-x-hidden">
+            // 사용자 실측). 폰은 세로 스크롤로 굵기 카드가 화면 밖에 밀리지 않게 한다.
+            <div className="editor-panels phone-panel-stack flex min-w-0 gap-3 overflow-x-auto overflow-y-auto compact:w-[228px] compact:shrink-0 compact:flex-col compact:overflow-x-hidden rail:w-[264px] rail:shrink-0 rail:flex-col rail:overflow-x-hidden">
               <ColorPalette />
               <BrushControls />
               <ActionRail />

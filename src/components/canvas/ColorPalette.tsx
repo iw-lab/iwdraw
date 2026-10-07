@@ -17,7 +17,7 @@ export function ColorPalette() {
   const palette = cvd ? PALETTE_CVD : PALETTE_24;
 
   return (
-    <div className="rounded-card bg-paper p-2.5 shadow-soft">
+    <div className="color-palette rounded-panel border border-ink/6 bg-paper p-3">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
@@ -26,14 +26,14 @@ export function ColorPalette() {
             style={{ background: rgbToCss(color) }}
             aria-label="지금 고른 색"
           />
-          <span className="font-display text-base text-ink">색</span>
+          <span className="text-xs font-semibold tracking-wide text-ink-faint">색</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setCvd((v) => !v)}
             aria-pressed={cvd}
-            className={`pressable flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${
-              cvd ? "bg-sky-soft text-sky-deep" : "text-ink-soft hover:bg-cream"
+            className={`pressable flex items-center gap-1 rounded-control px-2 py-1 text-xs font-semibold ${
+              cvd ? "bg-sky-soft text-sky-deep" : "text-ink-soft hover:bg-surface-2"
             }`}
             title="색각 보조 팔레트(구분하기 쉬운 색)"
           >
@@ -43,8 +43,8 @@ export function ColorPalette() {
           <button
             onClick={() => setShowPicker((v) => !v)}
             aria-pressed={showPicker}
-            className={`pressable flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${
-              showPicker ? "bg-coral-soft text-coral-deep" : "text-ink-soft hover:bg-cream"
+            className={`pressable flex items-center gap-1 rounded-control px-2 py-1 text-xs font-semibold ${
+              showPicker ? "bg-coral-soft text-coral-deep" : "text-ink-soft hover:bg-surface-2"
             }`}
             title="원하는 색 직접 만들기"
           >
@@ -63,7 +63,7 @@ export function ColorPalette() {
               onClick={() => setColor(c)}
               aria-label={`색 ${i + 1}`}
               aria-pressed={active}
-              className={`aspect-square rounded-full transition-transform active:scale-90 ${
+              className={`pressable aspect-square rounded-full transition-transform active:scale-90 ${
                 active
                   ? "scale-110 ring-[2.5px] ring-ink ring-offset-2 ring-offset-paper"
                   : "ring-1 ring-black/10 hover:scale-105"
@@ -78,7 +78,7 @@ export function ColorPalette() {
 
       {recent.length > 0 && (
         <div className="mt-3">
-          <span className="text-xs font-semibold text-ink-faint">최근 쓴 색</span>
+          <span className="text-xs font-semibold tracking-wide text-ink-faint">최근 쓴 색</span>
           <div className="mt-1 flex gap-1.5">
             {recent.map((c, i) => (
               <button
@@ -144,13 +144,13 @@ function HsvPicker({ value, onChange }: { value: RGB; onChange: (c: RGB) => void
   const dotY = 50 + Math.sin(hRad) * s * 48;
 
   return (
-    <div className="mt-2 space-y-2 rounded-2xl bg-cream p-2.5">
+    <div className="mt-2 space-y-2 rounded-control bg-surface-2 p-3">
       <div className="relative mx-auto h-44 w-44 touch-none">
         <canvas
           ref={canvasRef}
           width={WHEEL_PX}
           height={WHEEL_PX}
-          className="h-full w-full cursor-crosshair rounded-full shadow-soft"
+          className="h-full w-full cursor-crosshair rounded-full"
           // 포인터로 값을 고르는 위젯이다 — 입력 계층이 "조작 요소"로 알아보게 role을 준다
           // (없으면 그리는 도중 다른 손으로 색을 고를 때 그리던 획이 제스처로 오인돼 취소된다)
           role="slider"

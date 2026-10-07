@@ -5,6 +5,7 @@ import { useEditor } from "@/store/editor";
 import type { SymmetryMode } from "@/engine/types";
 import type { ShapeInsertKind } from "@/engine/tools/ShapeInsert";
 import { Icon, type IconName } from "./icons";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 const SYMS: { id: SymmetryMode; label: string; icon: IconName }[] = [
   { id: "none", label: "없음", icon: "symNone" },
@@ -59,65 +60,64 @@ export function ActionRail() {
   const [confirmClear, setConfirmClear] = useState(false);
 
   return (
-    <div className="rounded-card bg-paper p-2.5 shadow-soft">
-      <span className="font-display text-base text-ink">마법 도구</span>
-
-      {/* 뚝딱그림 */}
-      <button
-        onClick={toggleSketchSuggest}
-        disabled={suggestSuppressed}
-        aria-pressed={sketchSuggest && !suggestSuppressed}
-        title={
-          suggestSuppressed
-            ? "함께 그리는 방에서는 쓸 수 없어요"
-            : "대충 그려도 비슷한 그림을 찾아서 바꿔줘요"
-        }
-        className={`pressable mt-2 flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold disabled:opacity-40 ${
-          sketchSuggest && !suggestSuppressed
-            ? "bg-berry-soft text-berry ring-2 ring-berry"
-            : "bg-cream text-ink-soft hover:bg-cream-deep"
-        }`}
-      >
-        <Icon name="glow" className="h-6 w-6" />
-        뚝딱그림
-        <span
-          className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold ${
-            sketchSuggest && !suggestSuppressed ? "bg-berry text-white" : "bg-cream-deep text-ink-faint"
+    <div className="flex min-w-0 flex-col gap-3">
+      <CollapsibleSection title="마법 도구">
+        {/* 뚝딱그림 */}
+        <button
+          onClick={toggleSketchSuggest}
+          disabled={suggestSuppressed}
+          aria-pressed={sketchSuggest && !suggestSuppressed}
+          title={
+            suggestSuppressed
+              ? "함께 그리는 방에서는 쓸 수 없어요"
+              : "대충 그려도 비슷한 그림을 찾아서 바꿔줘요"
+          }
+          className={`pressable touch-target mt-2 flex w-full items-center gap-2 rounded-control px-3 py-2 text-sm font-semibold disabled:opacity-40 ${
+            sketchSuggest && !suggestSuppressed
+              ? "bg-coral-soft text-coral-deep ring-2 ring-coral/60 ring-inset"
+              : "bg-transparent text-ink-soft hover:bg-surface-2"
           }`}
         >
-          {suggestSuppressed ? "잠금" : sketchSuggest ? "켬" : "끔"}
-        </span>
-      </button>
+          <Icon name="glow" className="h-6 w-6" />
+          뚝딱그림
+          <span
+            className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              sketchSuggest && !suggestSuppressed ? "bg-berry text-white" : "bg-cream-deep text-ink-faint"
+            }`}
+          >
+            {suggestSuppressed ? "잠금" : sketchSuggest ? "켬" : "끔"}
+          </span>
+        </button>
 
-      {/* 그림 도장(스탬프 팔레트) — 264종을 직접 골라 넣고 크기·위치 조절 */}
-      <button
-        onClick={() => setStampPaletteOpen(true)}
-        title="여러 그림을 골라서 도장처럼 찍어요 (크기·위치 바꿀 수 있어요)"
-        className="pressable mt-2 flex w-full items-center gap-2 rounded-2xl bg-cream px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-cream-deep"
-      >
-        <span className="text-xl leading-none">🧸</span>
-        그림 도장
-        <span className="ml-auto rounded-full bg-cream-deep px-2 py-0.5 text-[11px] font-bold text-ink-faint">
-          고르기
-        </span>
-      </button>
+        {/* 그림 도장(스탬프 팔레트) — 264종을 직접 골라 넣고 크기·위치 조절 */}
+        <button
+          onClick={() => setStampPaletteOpen(true)}
+          title="여러 그림을 골라서 도장처럼 찍어요 (크기·위치 바꿀 수 있어요)"
+          className="pressable touch-target mt-2 flex w-full items-center gap-2 rounded-control bg-surface-2 px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-surface-2"
+        >
+          <span className="text-xl leading-none">🧸</span>
+          그림 도장
+          <span className="ml-auto rounded-full bg-cream-deep px-2 py-0.5 text-[11px] font-bold text-ink-faint">
+            고르기
+          </span>
+        </button>
 
-      {/* 글씨 넣기 — 글을 치고 글꼴을 고르면 캔버스에 떠서 들어온다(위치·크기 조절 후 확인) */}
-      <button
-        onClick={() => setTextPaletteOpen(true)}
-        title="글씨를 써서 그림에 넣어요 (크기·위치 바꿀 수 있어요)"
-        className="pressable mt-2 flex w-full items-center gap-2 rounded-2xl bg-cream px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-cream-deep"
-      >
-        <span className="text-xl leading-none">✏️</span>
-        글씨 넣기
-        <span className="ml-auto rounded-full bg-cream-deep px-2 py-0.5 text-[11px] font-bold text-ink-faint">
-          쓰기
-        </span>
-      </button>
+        {/* 글씨 넣기 — 글을 치고 글꼴을 고르면 캔버스에 떠서 들어온다(위치·크기 조절 후 확인) */}
+        <button
+          onClick={() => setTextPaletteOpen(true)}
+          title="글씨를 써서 그림에 넣어요 (크기·위치 바꿀 수 있어요)"
+          className="pressable touch-target mt-2 flex w-full items-center gap-2 rounded-control bg-surface-2 px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-surface-2"
+        >
+          <span className="text-xl leading-none">✏️</span>
+          글씨 넣기
+          <span className="ml-auto rounded-full bg-cream-deep px-2 py-0.5 text-[11px] font-bold text-ink-faint">
+            쓰기
+          </span>
+        </button>
+      </CollapsibleSection>
 
       {/* 도형 그리기 — 고르고 캔버스를 드래그하면 그 크기로 그려져요 */}
-      <div className="mt-2">
-        <span className="text-xs font-semibold text-ink-faint">도형 그리기</span>
+      <CollapsibleSection title="도형 그리기">
         <div className="mt-1 grid grid-cols-3 gap-1">
           {SHAPES.map((sh) => {
             const active = shapeInsert === sh.id;
@@ -127,8 +127,8 @@ export function ActionRail() {
                 onClick={() => setShapeInsert(active ? null : sh.id)}
                 aria-pressed={active}
                 title={active ? "도형 그리기 끄기" : `캔버스를 드래그하면 ${withGa(sh.label)} 그려져요`}
-                className={`pressable flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold ${
-                  active ? "bg-sky-soft text-sky-deep ring-2 ring-sky" : "bg-cream text-ink-soft hover:bg-cream-deep"
+                className={`pressable touch-target flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold ${
+                  active ? "bg-coral-soft text-coral-deep ring-2 ring-coral/60 ring-inset" : "bg-transparent text-ink-soft hover:bg-surface-2"
                 }`}
               >
                 <svg
@@ -153,11 +153,10 @@ export function ActionRail() {
             캔버스를 드래그하면 그 자리에 그 크기로 그려져요!
           </p>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* 대칭 */}
-      <div className="mt-2">
-        <span className="text-xs font-semibold text-ink-faint">데칼코마니(대칭)</span>
+      <CollapsibleSection title="데칼코마니(대칭)">
         <div className="mt-1 grid grid-cols-4 gap-1">
           {SYMS.map((s) => {
             const active = symmetry === s.id;
@@ -167,8 +166,8 @@ export function ActionRail() {
                 onClick={() => setSymmetry(s.id)}
                 aria-pressed={active}
                 title={`${s.label} 대칭`}
-                className={`pressable flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold ${
-                  active ? "bg-berry-soft text-berry ring-2 ring-berry" : "bg-cream text-ink-soft hover:bg-cream-deep"
+                className={`pressable touch-target flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold ${
+                  active ? "bg-coral-soft text-coral-deep ring-2 ring-coral/60 ring-inset" : "bg-transparent text-ink-soft hover:bg-surface-2"
                 }`}
               >
                 <Icon name={s.icon} className="h-5 w-5" />
@@ -184,16 +183,16 @@ export function ActionRail() {
             </span>
             <button
               onClick={() => useEditor.getState().engine?.resetSymmetryAxis()}
-              className="pressable shrink-0 rounded-lg bg-cream px-2 py-1 text-[10px] font-semibold text-ink-soft hover:bg-cream-deep"
+              className="pressable touch-target shrink-0 rounded-lg bg-cream px-2 py-1 text-[10px] font-semibold text-ink-soft hover:bg-cream-deep"
             >
               가운데로
             </button>
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* 전체 지우기 */}
-      <div className="mt-2 border-t border-cream-deep pt-1.5">
+      <div className="rounded-panel border border-ink/6 bg-paper p-3">
         {confirmClear ? (
           <div className="flex gap-1.5">
             <button
@@ -201,13 +200,13 @@ export function ActionRail() {
                 clearActive();
                 setConfirmClear(false);
               }}
-              className="pressable flex-1 rounded-xl bg-danger py-2 text-sm font-bold text-white"
+              className="pressable touch-target flex-1 rounded-xl bg-danger py-2 text-sm font-bold text-white"
             >
               정말 지울래요
             </button>
             <button
               onClick={() => setConfirmClear(false)}
-              className="pressable flex-1 rounded-xl bg-cream py-2 text-sm font-semibold text-ink-soft"
+              className="pressable touch-target flex-1 rounded-xl bg-cream py-2 text-sm font-semibold text-ink-soft"
             >
               취소
             </button>
@@ -216,7 +215,7 @@ export function ActionRail() {
           <button
             onClick={() => setConfirmClear(true)}
             aria-label="전체 지우기"
-            className="pressable flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold text-danger hover:bg-danger-soft"
+            className="pressable touch-target flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold text-danger hover:bg-danger-soft"
           >
             <Icon name="trash" className="h-5 w-5" />
             전체 지우기

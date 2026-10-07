@@ -1,7 +1,7 @@
 /* 아트온 로고: 붓 + 물감 방울 모티프 인라인 SVG (자체 제작) */
 export function ArtonLogo({ className = "h-10" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex items-center gap-3 ${className}`}>
       <svg viewBox="0 0 48 48" className="h-full w-auto" aria-hidden="true">
         {/* 팔레트 */}
         <path
@@ -20,7 +20,7 @@ export function ArtonLogo({ className = "h-10" }: { className?: string }) {
         />
         <path d="M40.5 30.5 44 27l-3.2-3.2-3.5 3.5Z" fill="#B878E0" />
       </svg>
-      <span className="font-display text-2xl leading-none text-ink">
+      <span className="font-display text-2xl leading-none tracking-tight text-ink">
         아트온 <span className="text-coral">ArtON</span>
       </span>
     </span>
