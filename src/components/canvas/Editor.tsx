@@ -15,9 +15,6 @@ import { BrushControls } from "./BrushControls";
 import { LayerPanel } from "./LayerPanel";
 import { ActionRail } from "./ActionRail";
 import { useKeyboard } from "./useKeyboard";
-import { shortCodeFromRoom } from "@/lib/collab-room";
-import { useCollab } from "./useCollab";
-import { CollabOverlay } from "./CollabOverlay";
 import { SuggestBar } from "./SuggestBar";
 import { PendingStampBar } from "./PendingStampBar";
 import { ArtonLogo } from "@/components/arton-logo";
@@ -41,10 +38,6 @@ const TextPalette = dynamic(() => import("./TextPalette").then((m) => m.TextPale
  * (photo-to-lineart, 42KB)까지 끌고 온다. StampPalette 는 스탬프 132종의 카탈로그.
  * ⚠️ 엔진이 직접 쓰는 StampTool/SketchMatch 는 그대로 둔다(획 처리 핫패스). */
 const MovieModal = dynamic(() => import("./MovieModal").then((m) => m.MovieModal), { ssr: false });
-const CollabStartModal = dynamic(
-  () => import("./CollabStartModal").then((m) => m.CollabStartModal),
-  { ssr: false },
-);
 const StampPalette = dynamic(() => import("./StampPalette").then((m) => m.StampPalette), {
   ssr: false,
 });
@@ -60,8 +53,6 @@ export interface EditorProps {
   /** 진입마다 고유한 토큰(URL의 ?v=) — 같은 커스텀 이미지 URL 재진입 시 강제 재마운트용 */
   navKey?: string;
   initialMode?: import("@/engine/types").Mode;
-  /** 협동 방 코드 */
-  room?: string;
   /**
    * 저장 콜백(학생 작품 제출) — 없으면 로컬 다운로드.
    * draftId = 이 그리기 세션의 익명 토큰. 서버가 같은 토큰의 자기 행을 덮어써 갤러리에 최신본만 남긴다.
@@ -263,7 +254,7 @@ function useAutoHeaderLabels(
   }, []);
 }
 
-export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave, who, backHref = "/", galleryHref }: EditorProps) {
+export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, backHref = "/", galleryHref }: EditorProps) {
   useKeyboard();
   const editorRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -288,7 +279,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
   // 이 그리기 세션의 익명 토큰 — 저장 때 서버로 보내면 서버가 같은 토큰의 자기 행을 덮어쓴다.
   // 새 그림(리셋)·다른 도안 진입 시 새 토큰으로 갈려, 진짜 다른 작품은 별개로 남는다.
   const draftIdRef = useRef<string>(genDraftId());
-  const collab = useCollab(engine, room);
   const mode = useEditor((s) => s.mode);
   const juniorMode = useEditor((s) => s.juniorMode);
   const toggleJunior = useEditor((s) => s.toggleJunior);
@@ -354,12 +344,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
     const swap = () => setBlank({ n: Date.now(), entry: entryId });
     void Promise.resolve(eng?.discardRestore()).then(swap, swap);
   };
-  const setSuggestSuppressed = useEditor((s) => s.setSuggestSuppressed);
-  // 협동 방: 뚝딱그림 수락(undo×k+스탬프)이 원격에 전파되지 않아 캔버스가 갈라진다 — 방에선 잠금
-  useEffect(() => {
-    setSuggestSuppressed(!!room);
-    return () => setSuggestSuppressed(false);
-  }, [room, engine, setSuggestSuppressed]);
   // 정상 마운트 = 자가치유 1회권 재장전(global-error/error.tsx의 크래시 자동 복구용)
   useEffect(() => {
     try {
@@ -389,10 +373,9 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
     return () => clearTimeout(t);
   }, [submits]);
   /* 학급 안내 — 혼자 그리는 게스트에게만.
-   * onSave 가 있으면 이미 학급 학생이고, 협동방(room)은 모둠 캔버스라 갤러리 제출 흐름이
-   * 다른 데다 헤더가 이미 가득 차 있다(2026-09-02 교차검증 Claude 렌즈). 백엔드가 없는
+   * onSave 가 있으면 이미 학급 학생이다. 백엔드가 없는
    * 게스트 빌드에선 학급 자체가 없으니 문구가 거짓이 된다. */
-  const classHintable = hasBackend() && !submits && !room;
+  const classHintable = hasBackend() && !submits;
   const [classHint, setClassHint] = useState(false);
   // 지금 화면으로 되돌아오기 위한 경로 — location 은 서버에 없어 마운트 후에 읽는다
   const [joinHref, setJoinHref] = useState("/join");
@@ -425,7 +408,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
   const stampPaletteOpen = useEditor((s) => s.stampPaletteOpen);
   const textPaletteOpen = useEditor((s) => s.textPaletteOpen);
   const [showMovie, setShowMovie] = useState(false);
-  const [showCollab, setShowCollab] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
 
   /* 저장은 두 갈래 — 학급으로 입장했어도 "내 컴퓨터에 저장"은 늘 쓸 수 있어야 한다
@@ -562,34 +544,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
             🏫 <span className="hdr-extra">학급 입장</span>
           </Link>
         )}
-        {room ? (
-          <span
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-berry-soft px-3 py-1 text-sm font-semibold text-berry"
-            title="이 코드를 친구에게 알려주면 같이 그릴 수 있어요"
-          >
-            👥 {collab.connected ? `${collab.peers.length + 1}명` : "연결 중…"}
-            <span className="rounded-full bg-white/70 px-2 py-0.5 font-display tracking-widest text-berry">
-              {shortCodeFromRoom(room)}
-            </span>
-            <Link
-              href={`/draw?mode=${mode}`}
-              title="모둠에서 나가 혼자 그리기"
-              aria-label="모둠 나가기"
-              className="pressable ml-0.5 rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-berry hover:bg-white"
-            >
-              나가기
-            </Link>
-          </span>
-        ) : (
-          <button
-            onClick={() => setShowCollab(true)}
-            className="pressable flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-berry-soft px-3 py-1 text-sm font-semibold text-berry hover:bg-berry-soft/80"
-            aria-label="함께 그리기"
-            title="친구들과 한 캔버스에 같이 그려요"
-          >
-            👥 <span className="hdr-label">함께 그리기</span>
-          </button>
-        )}
 
         {/* ⚠️ 이 칸은 절대 줄어들면 안 된다(flex: 1 0 auto) — 줄어들면 모드 탭이 자기 칸
             밖으로 흘러 좌우 버튼 위를 덮는다. 실측: 협동 방에서 "모둠 나가기"가 연필
@@ -635,24 +589,21 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
             {confirmNew ? "정말요?" : "새 그림"}
           </span>
         </button>
-        {/* 그림 불러오기 — 협동 방에서는 숨김(가져오면 방을 떠나게 되어 혼란).
-            "사진"은 무슨 기능인지 헷갈린다는 실사용 피드백(2026-07-13) → "불러오기" */}
-        {!room && (
-          <PhotoImport
-            renderButton={(openPicker, converting) => (
-              <button
-                onClick={openPicker}
-                disabled={converting}
-                className={iconBtn}
-                aria-label="내 사진·그림으로 그리기"
-                title="내 사진·그림을 도안으로 만들거나(선따기) 밑그림으로 깔고 이어 그려요"
-              >
-                📷
-                <span className="hdr-label">{converting ? "변환 중…" : "내 사진·그림"}</span>
-              </button>
-            )}
-          />
-        )}
+        {/* 그림 불러오기 — "사진"은 무슨 기능인지 헷갈린다는 실사용 피드백(2026-07-13) → "불러오기" */}
+        <PhotoImport
+          renderButton={(openPicker, converting) => (
+            <button
+              onClick={openPicker}
+              disabled={converting}
+              className={iconBtn}
+              aria-label="내 사진·그림으로 그리기"
+              title="내 사진·그림을 도안으로 만들거나(선따기) 밑그림으로 깔고 이어 그려요"
+            >
+              📷
+              <span className="hdr-label">{converting ? "변환 중…" : "내 사진·그림"}</span>
+            </button>
+          )}
+        />
         <button
           onClick={() => setShowMovie(true)}
           className={iconBtn}
@@ -796,7 +747,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
               </button>
             )}
           </div>
-          {room && <CollabOverlay cursorStore={collab.cursorStore} engine={engine} />}
         </div>
 
         {/* 우측: 색 → 굵기 → 마법 도구 → 레이어 (접으면 캔버스 풀폭) */}
@@ -871,21 +821,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, room, onSave,
       )}
       {showMovie && engineRef.current && (
         <MovieModal engine={engineRef.current} onClose={() => setShowMovie(false)} />
-      )}
-      {showCollab && <CollabStartModal onClose={() => setShowCollab(false)} />}
-      {room && collab.kicked && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/80 p-6">
-          <div className="rounded-bubble bg-paper p-8 text-center shadow-lift">
-            <div className="text-5xl">👋</div>
-            <p className="mt-4 font-display text-xl text-ink">협동 캔버스에서 나왔어요</p>
-            <a href={backHref} className="pressable mt-6 inline-block rounded-card bg-coral px-6 py-3 font-display text-white">
-              돌아가기
-            </a>
-          </div>
-        </div>
-      )}
-      {room && collab.locked && (
-        <Toast tone="ink">🔒 선생님이 캔버스를 잠갔어요</Toast>
       )}
       {/* 스탬프·글씨 팔레트는 스스로 열림 여부를 보고 null 을 돌려주지만, 여기서 마운트하는
           순간 청크는 이미 받는다. 스토어 상태로 감싸 "열 때 받도록" 한다. */}

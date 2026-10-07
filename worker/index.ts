@@ -1078,16 +1078,9 @@ app.post("/api/artwork", async (c) => {
   return c.json({ id: rowId });
 });
 
-// ══════════════════════ 협동: WebSocket → Durable Object ══════════════════════
-app.get("/api/collab/:room", (c) => {
-  if (c.req.header("Upgrade")?.toLowerCase() !== "websocket") {
-    return c.text("expected websocket", 426);
-  }
-  const room = c.req.param("room");
-  const id = c.env.COLLAB.idFromName(room);
-  const stub = c.env.COLLAB.get(id);
-  return stub.fetch(c.req.raw);
-});
+// ══════════════════════ 협동(함께 그리기) — 2026-10-07 종료 ══════════════════════
+// 옛 클라이언트(서비스 워커에 남은 구버전)가 접속을 시도해도 DO 를 깨우지 않고 바로 410.
+app.get("/api/collab/:room", (c) => c.json({ error: "collab_ended" }, 410));
 
 app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 

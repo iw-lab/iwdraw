@@ -12,7 +12,7 @@ const MODES: Mode[] = ["sketch", "watercolor", "oil", "coloring"];
 
 /*
  * /draw — 메인 캔버스.
- *  ?template=<path> 색칠 도안, ?mode=<mode>, ?room=<code> 협동(협동은 Phase6 CollabEditor로 위임)
+ *  ?template=<path> 색칠 도안, ?mode=<mode>
  * 학생 세션이 있으면 저장 시 작품 제출, 없으면(교사 미리보기) 로컬 다운로드.
  * 학생 세션 + 선생님이 배포한 도안이 있으면 하단 배너로 안내한다.
  */
@@ -32,7 +32,6 @@ export function DrawClient() {
       : undefined;
   const modeParam = params.get("mode");
   const initialMode = MODES.includes(modeParam as Mode) ? (modeParam as Mode) : undefined;
-  const room = params.get("room") ?? undefined;
   // 진입 고유 토큰 — 같은 ?base=custom/?template=custom URL로 재진입해도 캔버스를 새로
   // 마운트시켜 새 이미지가 반드시 로드되게 한다(2회차 이어그리기 무반응 방지)
   const navKey = params.get("v") ?? undefined;
@@ -79,7 +78,6 @@ export function DrawClient() {
         baseSrc={baseSrc}
         navKey={navKey}
         initialMode={initialMode}
-        room={room}
         onSave={session ? handleSave : undefined}
         who={session ? `${session.nickname} · ${session.className}` : undefined}
         backHref={template ? "/coloring" : "/"}

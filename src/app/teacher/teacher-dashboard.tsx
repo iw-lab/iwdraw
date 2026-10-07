@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { classRoomName } from "@/lib/collab-room";
 import { Button, Card } from "@/components/ui";
 import { QrCode } from "@/components/QrCode";
 import {
@@ -20,12 +19,6 @@ import { AssignmentModal } from "./assignment-modal";
 /* 교사 대시보드: 학급 목록·생성·코드/QR·갤러리·도안 배포 */
 export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
   const router = useRouter();
-  /* 함께 그리기 — 학급 고정 방으로 바로 입장(코드 재입력 불필요). 학생은 '우리 반 다 같이 그리기'로
-   * 같은 방에 모인다. as=teacher면 협동 참가자 이름이 '선생님'으로 표시된다. */
-  const openCollab = (c: ClassRow) => {
-    const room = classRoomName(c.code);
-    router.push(`/draw?room=${encodeURIComponent(room)}&mode=sketch&as=teacher&v=collab-${c.code}`);
-  };
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -132,9 +125,6 @@ export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="md" tone="leaf" onClick={() => openCollab(c)}>
-                  🎨 함께 그리기
-                </Button>
                 <Button size="md" tone="sky" onClick={() => setBig(c)}>
                   📺 큰 화면으로 보여주기
                 </Button>

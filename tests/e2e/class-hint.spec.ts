@@ -85,16 +85,6 @@ test("게스트: 학급 세션이 있으면 안내가 아예 없다", async ({ p
   await expect(page.getByTestId("class-join-toast-link")).toHaveCount(0);
 });
 
-test("협동방(모둠)에서는 학급 안내를 띄우지 않는다", async ({ page }) => {
-  test.skip(!(await backendOn(page)), "백엔드 없는 빌드 — 학급 안내가 꺼져 있다");
-
-  await page.goto("/draw?mode=sketch&room=abcdefgh~WXYZ");
-  await page.getByLabel("그림 캔버스").waitFor();
-  await page.waitForTimeout(1000);
-  await expect(page.getByTestId("class-join-chip")).toHaveCount(0);
-  await expect(page.getByTestId("class-join-toast-link")).toHaveCount(0);
-});
-
 /*
  * 헤더 항목이 하나 늘어나는 케이스 — 과거에 학급 입장 조합이 뷰포트 기준(xl=1280)을 깨뜨려
  * 한글 라벨이 글자 단위로 접힌 이력이 있다(header-layout.spec 주석). 칩이 붙어도 어느 폭에서든

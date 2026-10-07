@@ -5,8 +5,8 @@ test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] } });
 /*
  * 헤더 버튼이 서로 겹쳐 "눌리지 않는" 상태가 되면 안 된다.
  * 2026-07-25 실측(태블릿 712px): 모드 탭 칸이 `min-w-0 flex-1`이라 폭이 0까지 줄고,
- * 탭 자체는 안 줄어서 칸 밖으로 흘러 좌우 버튼 위를 덮었다. 협동 방에서
- * "모둠 나가기"가 연필 아이콘에 가려 클릭이 아예 안 됐다 = 방에서 나갈 방법이 없음.
+ * 탭 자체는 안 줄어서 칸 밖으로 흘러 좌우 버튼 위를 덮었다(당시 협동 방의 "모둠 나가기"가
+ * 연필 아이콘에 가려 클릭이 안 됐다 — 협동은 2026-10-07 종료, 헤더 겹침 불변식은 유지).
  *
  * 각 컨트롤의 중심점에서 elementFromPoint가 자기 자신(또는 자손)인지 본다.
  */
@@ -43,18 +43,3 @@ for (const width of WIDTHS) {
     expect(await covered(page), `가려진 컨트롤`).toEqual([]);
   });
 }
-
-test("712px: 협동 방에서도 '모둠 나가기'를 실제로 누를 수 있다", async ({ page }) => {
-  await page.setViewportSize({ width: 712, height: 800 });
-  await page.goto("/draw?mode=sketch&backend=gl");
-  await page.getByLabel("그림 캔버스").waitFor();
-  await page.getByRole("button", { name: "함께 그리기" }).click();
-  await page.getByRole("button", { name: /새 모둠 방 만들기/ }).click();
-  await page.waitForURL(/room=/);
-  await page.waitForTimeout(500);
-
-  expect(await covered(page), "협동 헤더에서 가려진 컨트롤").toEqual([]);
-  await page.getByRole("link", { name: "모둠 나가기" }).click({ timeout: 8000 });
-  await page.waitForURL((u) => !u.searchParams.has("room"));
-  await expect(page.getByRole("button", { name: "함께 그리기" })).toBeVisible();
-});
