@@ -54,7 +54,7 @@ export function BrushBar() {
     <div
       // compact(가로 폰) = 좁은 2열 아이콘 그리드. 라벨은 남긴다 — 아이콘만으로는
       // 초등 저학년이 도구를 못 고른다(라벨 제거는 접근성 후퇴). 대신 글자를 줄인다.
-      className="flex min-w-0 gap-1 overflow-x-auto rounded-card bg-paper p-1.5 shadow-soft compact:grid compact:w-[92px] compact:shrink-0 compact:grid-cols-2 compact:content-start compact:gap-1 compact:p-1 compact:overflow-x-hidden compact:overflow-y-auto rail:grid rail:w-[150px] rail:shrink-0 rail:grid-cols-2 rail:content-start rail:gap-1.5 rail:overflow-x-hidden rail:overflow-y-auto"
+      className="flex min-w-0 gap-1 overflow-x-auto rounded-panel border border-ink/6 bg-paper p-1.5 compact:grid compact:w-[92px] compact:shrink-0 compact:grid-cols-2 compact:content-start compact:gap-1 compact:p-1 compact:overflow-x-hidden compact:overflow-y-auto rail:grid rail:w-[150px] rail:shrink-0 rail:grid-cols-2 rail:content-start rail:gap-1.5 rail:overflow-x-hidden rail:overflow-y-auto"
       role="toolbar"
       aria-label="그리기 도구"
       aria-orientation="vertical"
@@ -68,10 +68,10 @@ export function BrushBar() {
             aria-pressed={active}
             aria-label={t.label}
             title={t.label}
-            className={`pressable flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl py-1.5 min-w-[60px] compact:min-w-0 compact:gap-0 compact:rounded-xl compact:py-0.5 rail:min-w-0 ${
+            className={`pressable touch-target aspect-square flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-control py-1.5 min-w-[60px] compact:min-w-0 compact:gap-0 compact:rounded-xl compact:py-0.5 rail:min-w-0 ${
               active
-                ? "bg-coral-soft shadow-soft ring-2 ring-coral"
-                : "hover:bg-cream"
+                ? "bg-coral-soft text-coral-deep ring-2 ring-coral/60 ring-inset"
+                : "hover:bg-surface-2"
             }`}
           >
             <ToolIcon
@@ -79,7 +79,7 @@ export function BrushBar() {
               className={`${junior ? "h-9 w-9" : "h-8 w-8"} compact:h-6 compact:w-6`}
             />
             <span
-              className={`text-[10px] font-semibold leading-tight compact:text-[9px] ${
+              className={`text-[10px] font-semibold leading-tight compact:text-[10px] ${
                 active ? "text-coral-deep" : "text-ink-soft"
               }`}
             >

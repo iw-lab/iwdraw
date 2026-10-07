@@ -70,10 +70,10 @@ export function BrushControls() {
   };
 
   return (
-    <div className="rounded-card bg-paper p-2.5 shadow-soft">
+    <div className="brush-controls rounded-panel border border-ink/6 bg-paper p-3">
       <div className="flex items-center gap-3">
         <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-cream"
+          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-control bg-surface-2"
           aria-hidden="true"
         >
           <span
@@ -88,11 +88,11 @@ export function BrushControls() {
         <div className="flex-1 text-sm text-ink-soft">
           <div className="flex items-center gap-1">
             {/* 좁은 카드(세로형 태블릿 스택 레이아웃)에서 "굵 / 기"로 접히던 것 방지 */}
-            <span className="whitespace-nowrap">굵기</span>
+            <span className="whitespace-nowrap text-xs font-semibold tracking-wide text-ink-faint">굵기</span>
             <button
               onClick={() => nudgeSize(-1)}
               aria-label="굵기 1 줄이기"
-              className="pressable ml-auto grid h-7 w-7 place-items-center rounded-full bg-cream text-base font-bold text-ink"
+              className="pressable ml-auto grid h-7 w-7 place-items-center rounded-control bg-surface-2 text-base font-bold text-ink"
             >
               −
             </button>
@@ -109,12 +109,12 @@ export function BrushControls() {
               onBlur={() => setSizeText(String(Math.round(size)))}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               aria-label="브러시 굵기"
-              className="h-7 w-14 rounded-lg border border-cream-deep bg-paper text-center font-semibold text-ink [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="h-7 w-14 rounded-control border border-line bg-paper text-center font-semibold text-ink [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
             <button
               onClick={() => nudgeSize(1)}
               aria-label="굵기 1 늘리기"
-              className="pressable grid h-7 w-7 place-items-center rounded-full bg-cream text-base font-bold text-ink"
+              className="pressable grid h-7 w-7 place-items-center rounded-control bg-surface-2 text-base font-bold text-ink"
             >
               +
             </button>
@@ -134,12 +134,12 @@ export function BrushControls() {
             }}
             aria-label="브러시 굵기 슬라이더"
             aria-valuetext={`${Math.round(size)}`}
-            className="mt-1 h-4 w-full cursor-pointer appearance-none rounded-full bg-cream-deep accent-coral"
+            className="brush-range mt-1 h-4 w-full cursor-pointer appearance-none rounded-control bg-cream-deep accent-coral"
           />
         </div>
       </div>
 
-      <label className="mt-2 block text-sm text-ink-soft">
+      <label className="mt-3 block text-xs font-semibold tracking-wide text-ink-faint">
         진하기 <span className="font-semibold text-ink">{Math.round(opacity * 100)}%</span>
         <input
           type="range"
@@ -148,12 +148,12 @@ export function BrushControls() {
           value={Math.round(opacity * 100)}
           onChange={(e) => setOpacity(+e.target.value / 100)}
           aria-label="진하기"
-          className="mt-1 h-4 w-full cursor-pointer appearance-none rounded-full bg-cream-deep accent-sky"
+          className="brush-range mt-1 h-4 w-full cursor-pointer appearance-none rounded-control bg-cream-deep accent-sky"
         />
       </label>
 
       {mode === "watercolor" && (
-        <label className="mt-2 block text-sm text-ink-soft">
+        <label className="mt-3 block text-xs font-semibold tracking-wide text-ink-faint">
           💧 물 양 <span className="font-semibold text-ink">{Math.round(water * 100)}%</span>
           <input
             type="range"
@@ -167,7 +167,7 @@ export function BrushControls() {
         </label>
       )}
 
-      <label className="mt-2 block text-sm text-ink-soft">
+      <label className="mt-3 block text-xs font-semibold tracking-wide text-ink-faint">
         ✋ 손떨림 보정 <span className="font-semibold text-ink">{stabilize}</span>
         <input
           type="range"
@@ -176,12 +176,12 @@ export function BrushControls() {
           value={stabilize}
           onChange={(e) => setStabilize(+e.target.value)}
           aria-label="손떨림 보정 강도"
-          className="mt-1 h-4 w-full cursor-pointer appearance-none rounded-full bg-cream-deep accent-leaf"
+          className="brush-range mt-1 h-4 w-full cursor-pointer appearance-none rounded-control bg-cream-deep accent-leaf"
         />
       </label>
 
       {/* 필압: 펜 실필압 + 마우스/손가락 속도 시뮬. 필압이 안 오는 기기(웨일북 등)는 끄면 균일 획 */}
-      <div className="mt-2 flex items-center justify-between text-sm text-ink-soft">
+      <div className="mt-3 flex items-center justify-between text-sm text-ink-soft">
         <span>✍️ 필압 (누르는 세기·속도 반영)</span>
         <button
           onClick={togglePressure}

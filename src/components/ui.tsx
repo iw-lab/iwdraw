@@ -11,7 +11,7 @@ const toneClass: Record<ButtonTone, string> = {
   coral: "bg-coral text-white hover:bg-coral-deep",
   sky: "bg-sky text-white hover:bg-sky-deep",
   leaf: "bg-leaf text-white hover:bg-leaf-deep",
-  ghost: "bg-paper text-ink border-2 border-cream-deep hover:border-ink-faint",
+  ghost: "bg-transparent text-ink border border-line hover:bg-surface-2",
   danger: "bg-danger-soft text-danger border-2 border-danger/30 hover:bg-danger hover:text-white",
 };
 
@@ -33,7 +33,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button
       ref={ref}
-      className={`pressable touch-target inline-flex items-center justify-center gap-2 rounded-card font-display shadow-soft disabled:cursor-not-allowed disabled:opacity-50 ${toneClass[tone]} ${sizeClass[size]} ${className}`}
+      className={`pressable touch-target inline-flex items-center justify-center gap-2 rounded-control font-display disabled:cursor-not-allowed disabled:opacity-50 ${toneClass[tone]} ${sizeClass[size]} ${className}`}
       {...rest}
     />
   );
@@ -47,7 +47,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-card bg-paper p-6 shadow-soft ${className}`}>{children}</div>
+    <div className={`rounded-panel border border-ink/6 bg-paper p-6 ${className}`}>{children}</div>
   );
 }
 
@@ -82,7 +82,7 @@ export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLIn
     return (
       <input
         ref={ref}
-        className={`touch-target w-full rounded-card border-2 border-cream-deep bg-paper px-5 py-3 text-lg text-ink placeholder:text-ink-faint focus:border-sky ${className}`}
+        className={`touch-target w-full rounded-control border border-line bg-paper px-5 py-3 text-lg text-ink placeholder:text-ink-faint focus:border-sky ${className}`}
         {...rest}
       />
     );
@@ -97,6 +97,6 @@ export function SectionTitle({
   className?: string;
 }) {
   return (
-    <h2 className={`font-display text-2xl text-ink md:text-3xl ${className}`}>{children}</h2>
+    <h2 className={`text-2xl font-semibold tracking-tight text-ink md:text-3xl ${className}`}>{children}</h2>
   );
 }

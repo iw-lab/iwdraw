@@ -54,7 +54,7 @@ export function JoinCodeForm({ autoFocus = false }: { autoFocus?: boolean }) {
         data-1p-ignore
         data-lpignore="true"
         data-form-type="other"
-        className="touch-target w-full rounded-card border-2 border-cream-deep bg-paper px-5 py-3 text-center font-display text-2xl tracking-[0.35em] text-ink placeholder:tracking-normal placeholder:text-base placeholder:text-ink-faint focus:border-sky"
+        className="touch-target w-full rounded-control border border-line bg-paper px-5 py-3 text-center text-2xl font-semibold tracking-[0.35em] text-ink placeholder:tracking-normal placeholder:text-base placeholder:text-ink-faint focus:border-sky"
       />
       <Button
         type="button"
@@ -62,7 +62,7 @@ export function JoinCodeForm({ autoFocus = false }: { autoFocus?: boolean }) {
         size="lg"
         disabled={!ready}
         aria-label="학급 코드로 입장하기"
-        className="shrink-0 whitespace-nowrap px-6"
+        className="join-code-entry shrink-0 whitespace-nowrap border border-line bg-transparent px-6 font-semibold text-ink-soft hover:bg-surface-2"
       >
         입장
       </Button>
