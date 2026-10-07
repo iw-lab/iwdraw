@@ -106,6 +106,18 @@ export default function TermsPage() {
         </p>
       </Section>
 
+      {/* 약관 조항이 아니라 고지 — 재질 텍스처의 출처(Adobe 생성형 AI 약관 §3.1: 생성물 출처를 오인시키지 않는다) */}
+      <section className="mt-10">
+        <h2 className="font-display text-base text-ink">자료 출처</h2>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-relaxed text-ink-soft">
+          <li>
+            캔버스천 질감은 Adobe Firefly(생성형 AI)로 만든 이미지를 가공해 사용합니다.
+          </li>
+          <li>도화지 질감은 ambientCG(CC0 1.0 퍼블릭 도메인) 재질 자료를 가공해 사용합니다.</li>
+          <li>명화 밑그림은 저작권 보호기간이 끝난 퍼블릭 도메인 작품(위키미디어 공용)입니다.</li>
+        </ul>
+      </section>
+
       <div className="mt-10 border-t border-cream-deep pt-4 text-xs text-ink-faint">
         <Link href="/privacy" className="underline">
           개인정보처리방침

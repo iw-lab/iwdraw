@@ -18,6 +18,8 @@ const BRUSH_ICON: Partial<Record<BrushId, IconName>> = {
   inkbrush: "inkbrush",
   airbrush: "airbrush",
   oilpastel: "oilpastel",
+  charcoal: "charcoal",
+  pastel: "pastel",
   glow: "glow",
   rainbow: "rainbow",
   glitter: "glitter",

@@ -11,6 +11,8 @@ import { OilBrush } from "./OilBrush";
 import { InkBrush } from "./InkBrush";
 import { Airbrush } from "./Airbrush";
 import { OilPastel } from "./OilPastel";
+import { Charcoal } from "./Charcoal";
+import { SoftPastel } from "./SoftPastel";
 import { GlowBrush } from "./GlowBrush";
 import { RainbowBrush } from "./RainbowBrush";
 import { GlitterBrush } from "./GlitterBrush";
@@ -41,6 +43,10 @@ export function createBrush(id: BrushId, rng?: () => number): BrushBase {
       return new Airbrush(rng);
     case "oilpastel":
       return new OilPastel(rng);
+    case "charcoal":
+      return new Charcoal(rng);
+    case "pastel":
+      return new SoftPastel(rng);
     case "glow":
       return new GlowBrush(rng);
     case "rainbow":
@@ -66,6 +72,8 @@ export const STROKE_BRUSHES: BrushId[] = [
   "inkbrush",
   "airbrush",
   "oilpastel",
+  "charcoal",
+  "pastel",
   "glow",
   "rainbow",
   "glitter",
@@ -91,6 +99,9 @@ export const BRUSH_META: BrushMeta[] = [
   { id: "inkbrush", label: "붓펜", junior: false },
   { id: "airbrush", label: "에어브러시", junior: false },
   { id: "oilpastel", label: "오일파스텔", junior: false },
+  // 종이 요철을 가장 잘 타는 마른 매체 2종(2026-10-07 종이 결 팩과 함께)
+  { id: "charcoal", label: "목탄", junior: false },
+  { id: "pastel", label: "파스텔", junior: false },
   { id: "glow", label: "글로우", junior: false },
   { id: "rainbow", label: "무지개", junior: true },
   { id: "glitter", label: "반짝이", junior: true },

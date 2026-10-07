@@ -16,6 +16,8 @@ export type BrushId =
   | "inkbrush"
   | "airbrush"
   | "oilpastel"
+  | "charcoal"
+  | "pastel"
   | "glow"
   | "rainbow"
   | "glitter"

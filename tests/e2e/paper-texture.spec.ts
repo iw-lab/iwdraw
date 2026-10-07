@@ -1,6 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
-test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] } });
+// serviceWorkers: block — 프로덕션 빌드에선 SW 가 텍스처를 프리캐시에서 내줘서 page.route(404·지연 주입)가
+// 닿지 않는다(2026-10-07 out/ 실측: 404 주입이 무시돼 팩이 그대로 적용). 여기서 재는 건 «네트워크로 받을 때의
+// 폴백·세션 고정 논리»라 SW 를 막는다. 프리캐시 포함 여부는 빌드된 sw.js 에서 따로 확인한다.
+test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] }, serviceWorkers: "block" });
 
 /*
  * 종이 결 팩(public/textures — 실물 재질 순위 타일) 회귀.

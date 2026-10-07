@@ -21,6 +21,8 @@ export type IconName =
   | "inkbrush"
   | "airbrush"
   | "oilpastel"
+  | "charcoal"
+  | "pastel"
   | "glow"
   | "rainbow"
   | "glitter"
@@ -153,6 +155,29 @@ const ICONS: Record<IconName, ReactNode> = {
         <rect x="12.8" y="10" width="6.4" height="8" fill="#FFB268" stroke="none" />
       </g>
       <path d="M6 27c3-1.5 7-1.5 10 0" stroke="#FF9838" strokeWidth="3.4" strokeLinecap="round" fill="none" />
+    </g>
+  ),
+  /* 목탄: 울퉁불퉁한 검은 막대 + 회색 가루 자국 — 연필(깎은 나무)과 실루엣이 다르게 */
+  charcoal: (
+    <g {...O}>
+      <g transform="rotate(45 16 16)">
+        <path d="M13 4.5l1.6-1.2 1.8.8 1.8-.6 1 1.4V22l-1.4 1.6-1.6-.8-1.8.9L13 22.6z" fill="#3A3633" />
+        <path d="M14.6 8v9.5" stroke="#6B6560" strokeWidth="1" strokeLinecap="round" />
+      </g>
+      <path d="M5.5 27.5c3.5-2 8-2.2 11.5-.4" stroke="#8A847E" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.55" />
+    </g>
+  ),
+  /* 소프트 파스텔: 네모난 분필 막대(종이 띠) + 가루 점 — 둥근 오일파스텔과 구분 */
+  pastel: (
+    <g {...O}>
+      <g transform="rotate(45 16 16)">
+        <rect x="12.6" y="4" width="6.8" height="18" rx="1" fill="#F49AC1" />
+        <rect x="12.6" y="9" width="6.8" height="7" fill="#FBF7F0" />
+        <path d="M14 12.5h4" stroke="#F49AC1" strokeWidth="1.2" strokeLinecap="round" />
+      </g>
+      <circle cx="7" cy="26" r="1.2" fill="#F49AC1" stroke="none" opacity="0.7" />
+      <circle cx="10.5" cy="27.6" r="0.9" fill="#F49AC1" stroke="none" opacity="0.6" />
+      <circle cx="5" cy="23.6" r="0.8" fill="#F49AC1" stroke="none" opacity="0.5" />
     </g>
   ),
   glow: (

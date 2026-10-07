@@ -262,8 +262,9 @@ test("굵은 획에서도 브러시마다 다른 획이 나온다", async ({ pag
       return out;
     }, rows);
 
-  const BRUSHES = ["연필", "크레용", "사인펜", "유화붓", "오일파스텔"];
-  const rows = BRUSHES.map((name, i) => ({ name, yFrac: 0.12 + i * 0.18 }));
+  // 목탄·파스텔(2026-10-07 추가) — 크레용·오일파스텔과 같은 마른/입자 매체라 «같은 획»이 되기 가장 쉬운 짝
+  const BRUSHES = ["연필", "크레용", "사인펜", "유화붓", "오일파스텔", "목탄", "파스텔"];
+  const rows = BRUSHES.map((name, i) => ({ name, yFrac: 0.09 + i * 0.135 }));
   for (const r of rows) {
     await page.getByRole("button", { name: r.name, exact: true }).click();
     await page.getByLabel("브러시 굵기", { exact: true }).fill("20");
@@ -293,6 +294,10 @@ test("굵은 획에서도 브러시마다 다른 획이 나온다", async ({ pag
   expect(thick["연필"].w10, "굵기20 연필 폭 < 유화붓 폭").toBeLessThan(thick["유화붓"].w10);
   // ② 마른/입자 매체는 획 안쪽에 결이 있고, 잉크 펜은 평평하다 — 굵은 쪽 질감 정체성
   expect(thick["크레용"].inCV, "크레용 내부 결 > 사인펜").toBeGreaterThan(thick["사인펜"].inCV * 2);
+  // 목탄 = 가장 거친 가루 매체 — 내부 결이 크레용보다 크다(2026-10-07 실측 0.147 vs 0.103).
+  // ⚠️ 이 단언은 «종이 결 반응»을 증명하지 않는다: 목탄 paperGrain 을 0 으로 꺼도 거친 팁·낮은 흐름만으로
+  //    통과했다(고의 파손 실측). 종이 결 배선 자체는 paper-texture.spec 이 잰다.
+  expect(thick["목탄"].inCV, "목탄 내부 결 > 크레용").toBeGreaterThan(thick["크레용"].inCV);
   // ③ 가는 불투명 매체도 질감이 남는다(2026-07-29 실측 유화붓 0.034 · 오일파스텔 0.22)
   expect(liftThin["유화붓"].inCV, "유화붓 굵기3 내부 결").toBeGreaterThan(0.024);
   expect(liftThin["오일파스텔"].inCV, "오일파스텔 굵기3 내부 결").toBeGreaterThan(0.14);
