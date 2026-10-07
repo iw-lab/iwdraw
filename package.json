@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run",
+    "test": "pnpm -s gate:textures && vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
@@ -16,7 +16,8 @@
     "cf:migrate:local": "wrangler d1 execute arton --local --file=worker/schema.sql",
     "cf:migrate:remote": "wrangler d1 execute arton --remote --file=worker/schema.sql",
     "//cf:migrate": "미적용 마이그레이션을 원격 D1에 적용(중복 컬럼은 통과). cf:deploy 가 자동 호출하므로 보통 직접 부를 일은 없다",
-    "cf:migrate": "node scripts/migrate-remote.mjs"
+    "cf:migrate": "node scripts/migrate-remote.mjs",
+    "gate:textures": "python3 scripts/gate-textures.py && python3 scripts/gate-textures.py --selftest"
   },
   "dependencies": {
     "hono": "^4.12.27",

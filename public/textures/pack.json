@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "files": {
+    "smooth": {
+      "grain": "/textures/paper-smooth-grain.png",
+      "tint": "/textures/paper-smooth-tint.png"
+    },
+    "linen": {
+      "grain": "/textures/paper-linen-grain.png",
+      "tint": "/textures/paper-linen-tint.png"
+    }
+  }
+}

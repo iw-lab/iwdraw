@@ -1,0 +1,4 @@
+ambientcg-*.png — ambientCG (https://ambientcg.com), Lennart Demes.
+License: Creative Commons CC0 1.0 Universal (https://ambientcg.com/license, 2026-10-07 확인:
+"All ambientCG assets are provided under the Creative Commons CC0 1.0 Universal License").
+Paper001 — 1K-PNG Displacement(실측 높이맵).

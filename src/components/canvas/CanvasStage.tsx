@@ -5,6 +5,7 @@ import { ArtEngine } from "@/engine/ArtEngine";
 import { useEditor } from "@/store/editor";
 import type { Mode } from "@/engine/types";
 import { fitAspectHelper } from "@/lib/aspect";
+import { loadPaperPack } from "@/engine/core/paperPack";
 
 /*
  * CanvasStage: 실제 캔버스 DOM을 만들고 ArtEngine을 마운트한다.
@@ -55,10 +56,13 @@ export function CanvasStage({
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // 종이 결 팩은 엔진보다 먼저 — 결은 획에 구워져서 그림 도중엔 바꿀 수 없다(paperPack.ts)
+      const pack = loadPaperPack();
       let aspect: number;
       if (lineartSrc) aspect = await loadImageSize(lineartSrc);
       else if (baseSrc) aspect = await loadImageSize(baseSrc);
       else aspect = orientation === "portrait" ? 1152 / 1536 : 1536 / 1152;
+      await pack;
       if (!cancelled) setSize(fitCanvasSize(aspect));
     })();
     return () => {

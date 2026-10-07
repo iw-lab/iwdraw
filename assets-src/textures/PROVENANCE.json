@@ -1,0 +1,67 @@
+{
+  "_note": "종이 결 팩 출처 원장 — scripts/process-texture.py 가 쓴다. 게이트가 sha256 을 대조한다.",
+  "files": {
+    "paper-smooth-grain.png": {
+      "kind": "smooth",
+      "layer": "grain",
+      "source": "sources/ambientcg-Paper001-disp.png",
+      "source_sha256": "8957802bcc0bf44e950263fda8b8bc0fe3127ba50e456cffc933f4f33f9a235a",
+      "sha256": "18967d52b15aed8aa786d26645796ab97528e4e787f531d1eca0d0de8be39346",
+      "origin": "ambientCG Paper001 Displacement",
+      "license": "CC0-1.0",
+      "crop": [
+        0,
+        0,
+        168
+      ],
+      "size": 256
+    },
+    "paper-smooth-tint.png": {
+      "kind": "smooth",
+      "layer": "tint",
+      "source": "sources/ambientcg-Paper001-disp.png",
+      "source_sha256": "8957802bcc0bf44e950263fda8b8bc0fe3127ba50e456cffc933f4f33f9a235a",
+      "sha256": "d1ef0639302f572bbdf04c35a60707a850e9ff71134157fdfc9ee7c85454dbbc",
+      "origin": "ambientCG Paper001 Displacement",
+      "license": "CC0-1.0",
+      "crop": [
+        0,
+        0,
+        168
+      ],
+      "size": 256
+    },
+    "paper-linen-grain.png": {
+      "kind": "linen",
+      "layer": "grain",
+      "source": "sources/firefly-linen-1.png",
+      "source_sha256": "9305f9a3e23363896210487e0ab831af27045bae85c99bff581502329f9b84e9",
+      "sha256": "a8b3bbb9c3e24bda58e6fe089a4677a5c37e63108b0dd26541241cce691836bc",
+      "origin": "Adobe Firefly (Firefly Image 5) 2026-10-07 — prompts/linen.txt",
+      "license": "Adobe Firefly output — Adobe Generative AI Product Specific Terms 2026-04-23 (개인 Premium, IP 면책 없음)",
+      "crop": [
+        150,
+        0,
+        800
+      ],
+      "content_credentials": "https://cai-manifests.adobe.com/manifests/urn-c2pa-0067fc43-2b05-4b80-bc43-072ab993bc81-adobe",
+      "size": 256
+    },
+    "paper-linen-tint.png": {
+      "kind": "linen",
+      "layer": "tint",
+      "source": "sources/firefly-linen-1.png",
+      "source_sha256": "9305f9a3e23363896210487e0ab831af27045bae85c99bff581502329f9b84e9",
+      "sha256": "79554a1c4fbd39add668754293bdc172851dba0268e736ced846bc560857f85c",
+      "origin": "Adobe Firefly (Firefly Image 5) 2026-10-07 — prompts/linen.txt",
+      "license": "Adobe Firefly output — Adobe Generative AI Product Specific Terms 2026-04-23 (개인 Premium, IP 면책 없음)",
+      "crop": [
+        150,
+        0,
+        800
+      ],
+      "content_credentials": "https://cai-manifests.adobe.com/manifests/urn-c2pa-0067fc43-2b05-4b80-bc43-072ab993bc81-adobe",
+      "size": 256
+    }
+  }
+}

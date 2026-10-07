@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "paper": {
+    "smooth": {
+      "grain": {
+        "src": "sources/ambientcg-Paper001-disp.png",
+        "invert": true,
+        "size": 256,
+        "origin": "ambientCG Paper001 Displacement",
+        "license": "CC0-1.0"
+      },
+      "tint": {
+        "src": "sources/ambientcg-Paper001-disp.png",
+        "invert": true,
+        "size": 256,
+        "origin": "ambientCG Paper001 Displacement",
+        "license": "CC0-1.0",
+        "relief": 0.8
+      }
+    },
+    "linen": {
+      "grain": {
+        "src": "sources/firefly-linen-1.png",
+        "invert": true,
+        "size": 256,
+        "scale": 0.32,
+        "x": 150,
+        "y": 0,
+        "origin": "Adobe Firefly (Firefly Image 5) 2026-10-07 — prompts/linen.txt",
+        "license": "Adobe Firefly output — Adobe Generative AI Product Specific Terms 2026-04-23 (개인 Premium, IP 면책 없음)",
+        "_why": "평직 캔버스(CC0 중엔 없음: Fabric036=능직 사선, Fabric039=결 너무 잘아 게이트 FAIL). 원본 실 간격 ~23px × 0.32 ≈ 7px",
+        "soften": 1.0
+      },
+      "tint": {
+        "src": "sources/firefly-linen-1.png",
+        "invert": true,
+        "size": 256,
+        "scale": 0.32,
+        "x": 150,
+        "y": 0,
+        "origin": "Adobe Firefly (Firefly Image 5) 2026-10-07 — prompts/linen.txt",
+        "license": "Adobe Firefly output — Adobe Generative AI Product Specific Terms 2026-04-23 (개인 Premium, IP 면책 없음)",
+        "_why": "평직 캔버스(CC0 중엔 없음: Fabric036=능직 사선, Fabric039=결 너무 잘아 게이트 FAIL). 원본 실 간격 ~23px × 0.32 ≈ 7px"
+      }
+    }
+  }
+}

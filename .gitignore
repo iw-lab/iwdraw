@@ -53,3 +53,6 @@ test-results/
 
 # 배포마다 재생성되는 빌드ID 산출물(scripts/gen-version.mjs) — 추적 불필요
 public/version.json
+
+# Firefly 생성 원본(채택본은 assets-src/textures/sources/ 로 복사해 보관)
+assets-src/textures/firefly/

@@ -10,7 +10,22 @@
  * 2) tintTile: 표시용 종이 결 — compositeNow에서 흰 종이 위에 깔린다(내보내기엔 미포함).
  */
 
+import { packField, sealPaperPack } from "./paperPack";
+
 const TILE = 256;
+
+/** 시드 고정 난수(mulberry32) — 예전엔 Math.random 이라 새로고침마다 결이 바뀌었다
+ * (무비 재생·협동에서 원본과 결이 달라짐). 종이마다 고정 시드. */
+function seededRand(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 export type PaperKind = "linen" | "cotton" | "smooth" | "hanji";
 
@@ -76,7 +91,7 @@ interface PaperRecipe {
 const RECIPES: Record<PaperKind, PaperRecipe> = {
   linen: {
     make() {
-      const rand = Math.random;
+      const rand = seededRand(11);
       const n2 = latticeNoise(TILE, 96, rand);
       const rows = weaveLine(TILE, rand);
       const cols = weaveLine(TILE, rand);
@@ -101,7 +116,7 @@ const RECIPES: Record<PaperKind, PaperRecipe> = {
     // 표시 전용: 올 굵기 편차 압축(spread 0.4) — 실제 캔버스천처럼 균일한 직조
     tintSize: 512,
     makeTint() {
-      const rand = Math.random;
+      const rand = seededRand(12);
       const S = 512;
       const n2 = latticeNoise(S, 256, rand);
       const rows = weaveLine(S, rand, 0.4);
@@ -118,7 +133,7 @@ const RECIPES: Record<PaperKind, PaperRecipe> = {
   },
   cotton: {
     make() {
-      const rand = Math.random;
+      const rand = seededRand(13);
       // 위브 없는 셀룰로스 요철 — 초고주파 미세 입자만. 60cell(4px급) 성분은 깊은 골이
       // 뭉쳐 획 안에 "점 클러스터"로 찍힌다(2026-07-07 사용자 실측 → 제거).
       const n2 = latticeNoise(TILE, 130, rand);
@@ -137,7 +152,7 @@ const RECIPES: Record<PaperKind, PaperRecipe> = {
     tintGamma: 0.75,
     // 표시 전용: 초고주파만 — 중간 크기(60cell) 성분은 옅은 반점 클러스터를 만든다
     makeTint() {
-      const rand = Math.random;
+      const rand = seededRand(14);
       const n2 = latticeNoise(TILE, 130, rand);
       const n3 = latticeNoise(TILE, 190, rand);
       const f = new Float32Array(TILE * TILE);
@@ -149,7 +164,7 @@ const RECIPES: Record<PaperKind, PaperRecipe> = {
     make() {
       // 흡수성 얼룩 — 먹이 스미는 자리의 부드러운 요철 + 미세 입자.
       // 침식(붓펜 paperGrain)이 이 필드를 쓰므로 cotton보다 살짝 큰 결로 스밈을 만든다.
-      const rand = Math.random;
+      const rand = seededRand(15);
       const n1 = latticeNoise(TILE, 80, rand);
       const n2 = latticeNoise(TILE, 150, rand);
       const f = new Float32Array(TILE * TILE);
@@ -172,7 +187,7 @@ const RECIPES: Record<PaperKind, PaperRecipe> = {
       // "쓸데없는 선"으로 읽힌다 — 줌 배율만큼 궤적도 확대되기 때문. 섬유 자체는
       // 화선지의 정체성이라 유지하되(사용자 판단), 강도를 절반으로(0.14~0.24) 낮춰
       // 100% 배율에선 결로, 확대해도 낙서선으로 읽히지 않게 한다.
-      const rand = Math.random;
+      const rand = seededRand(16);
       const S = 512;
       const n = latticeNoise(S, 220, rand);
       const f = new Float32Array(S * S);
@@ -198,7 +213,7 @@ const RECIPES: Record<PaperKind, PaperRecipe> = {
   },
   smooth: {
     make() {
-      const rand = Math.random;
+      const rand = seededRand(17);
       const n1 = latticeNoise(TILE, 40, rand);
       const n2 = latticeNoise(TILE, 120, rand);
       const f = new Float32Array(TILE * TILE);
@@ -223,7 +238,10 @@ const tintPatterns = new Map<PaperKind, CanvasPattern>();
 function field(kind: PaperKind): Float32Array {
   let f = fields.get(kind);
   if (!f) {
+    sealPaperPack();
     f = RECIPES[kind].make();
+    // 실물 결 팩이 있으면 공간 구조만 갈아 끼운다(값 분포 = 프로시저럴 그대로 → 곡선·상수 유효)
+    f = packField(kind, "grain", f, TILE) ?? f;
     fields.set(kind, f);
   }
   return f;
@@ -233,7 +251,9 @@ function tintField(kind: PaperKind): Float32Array {
   let f = tintFields.get(kind);
   if (!f) {
     const r = RECIPES[kind];
-    f = r.makeTint ? r.makeTint() : field(kind);
+    sealPaperPack();
+    f = r.makeTint ? r.makeTint() : RECIPES[kind].make();
+    f = packField(kind, "tint", f) ?? (r.makeTint ? f : field(kind));
     tintFields.set(kind, f);
   }
   return f;
@@ -273,7 +293,8 @@ export function paperTintTile(kind: PaperKind = "linen"): HTMLCanvasElement {
   if (tile) return tile;
   const r = RECIPES[kind];
   const f = tintField(kind);
-  const size = r.makeTint ? (r.tintSize ?? TILE) : TILE;
+  // 크기는 필드에서 — 팩 tint(256)가 레시피 tintSize(512)를 대신할 수 있다
+  const size = Math.round(Math.sqrt(f.length));
   tile = document.createElement("canvas");
   tile.width = tile.height = size;
   const ctx = tile.getContext("2d")!;
