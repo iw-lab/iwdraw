@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "assets-src" / "textures"
 OUT = ROOT / "public" / "brush-tips" / "oil-ribbon.png"
 W, H = 2048, 256
-STREAK_GAIN = 3.0
+STREAK_GAIN = 5.5  # 2026-10-08 사용자 «붓결 더 진하게» — 3.0 은 몸통이 거의 단색
 OUT_BOLD = ROOT / "public" / "brush-tips" / "oil-ribbon-bold.png"
 START, BODY, END = (0, 256), (256, 1792), (1792, 2048)
 
@@ -133,27 +133,69 @@ def build(src_path: Path):
     med = np.median(L[paint])
     rel = L / med
     # 붓결 대비 키우기 — 사진의 줄 명암(±3~5%)은 색을 곱하면 거의 안 보인다(첫 렌더 실측: 몸통이 단색)
-    shade = np.clip(0.95 + (rel - 1) * STREAK_GAIN, 0.55, 1.0)
+    shade = np.clip(0.86 + (rel - 1) * STREAK_GAIN, 0.45, 1.0)
+    # 테두리는 물감색 그대로(밝게) — 원본 사진은 가장자리가 그늘져 획 둘레에 검은 테가 돌았다
+    # (2026-10-08 사용자 «테두리가 검은 빛, 아트봉봉은 흰빛»). 알파 경계에서 18줄 안쪽까지 셰이드를 1로 올린다.
+    lift = edge_lift(A)
+    shade = shade * (1 - lift) + lift
     rgb = np.where(A[..., None] > 0.004, (shade * 255)[..., None], 255.0).repeat(3, 2)
     out = np.dstack([rgb, A[..., None] * 255]).round().astype(np.uint8)
     # 가는 획용(획 폭 < 40px): 256 줄을 붓털 9가닥으로 묶고 대비를 더 키운다 — 원본은 몇 px 로
     # 줄어들면 가는 결이 평균으로 사라진다(유화붓 bristle-bold 와 같은 이유)
     bands = 9
     edges = np.linspace(0, H, bands + 1).astype(int)
-    Lb = L.copy()
-    for i in range(bands):
-        Lb[edges[i] : edges[i + 1]] = np.median(L[edges[i] : edges[i + 1]], 0, keepdims=True)
+    # 몸통의 줄별 프로필 하나를 세로로 흐려 굵은 가닥으로 묶고, 획 방향으로는 일정하게 깐다.
+    # (띠별 열 중앙값 = 벽돌 무늬, 2D 흐림 = 얼룩 — 2026-10-08 시각 확인. 시작·끝 모양은 알파가 만든다)
+    prof = np.median(L[:, START[1] : BODY[1]], 1)
+    sig = H / bands / 3
+    kk = np.arange(-int(3 * sig), int(3 * sig) + 1)
+    ker = np.exp(-(kk**2) / (2 * sig**2))
+    ker /= ker.sum()
+    prof = np.convolve(np.pad(prof, len(kk) // 2, mode="edge"), ker, mode="valid")
+    # 원본 조명의 넓은 명암(아래쪽 절반이 통째로 어두움 → 가는 획이 원통처럼 보임)을 빼고 가닥 무늬만 남긴다
+    s2 = 40
+    k2 = np.arange(-3 * s2, 3 * s2 + 1)
+    g2 = np.exp(-(k2**2) / (2 * s2**2))
+    g2 /= g2.sum()
+    trend = np.convolve(np.pad(prof, len(k2) // 2, mode="edge"), g2, mode="valid")
+    prof = prof - trend + med
+    Lb = np.repeat(prof[:, None], L.shape[1], 1)
+    # 가닥 대비를 일정하게(줄 명암 표준편차 2.5%) — 흐림·추세 제거로 얼마나 줄었든 같은 진하기로 되돌린다
+    dev = Lb[:, START[1] : BODY[1]] / med - 1
+    Lb = med * (1 + (Lb / med - 1) * (0.025 / max(1e-4, float(dev[A[:, START[1] : BODY[1]] > 0.8].std()))))
     yy = np.arange(H)[:, None]
     groove = np.zeros_like(yy, dtype=float)
     for e in edges[1:-1]:
         groove += np.exp(-((yy - e) ** 2) / (2 * 2.5**2))  # 가닥 사이 골
     relb = Lb / med - 0.035 * groove
-    shade_b = np.clip(0.95 + (relb - 1) * STREAK_GAIN * 1.2, 0.62, 1.0)
+    shade_b = np.clip(0.86 + (relb - 1) * STREAK_GAIN * 1.2, 0.5, 1.0)
+    # 가는 획에선 18줄이 1px 도 안 된다 — 테두리 쪽 가닥 두 개 폭(≈56줄)까지 밝혀 «검은 테»로 안 읽히게
+    lift_b = edge_lift(A, rows=56)
+    shade_b = shade_b * (1 - lift_b) + lift_b
     rgb_b = np.where(A[..., None] > 0.004, (shade_b * 255)[..., None], 255.0).repeat(3, 2)
     out_bold = np.dstack([rgb_b, A[..., None] * 255]).round().astype(np.uint8)
     info = dict(angle=round(float(ang), 2), crop=[int(top), int(bot), x0, x1], start_src=[x0, x0 + s_len], body_src=[b0, b0 + p_src],
                 body_period_tex=P, reps=reps, end_src=[e0, x1], body_cov=round(float(body_cov), 3))
     return out, out_bold, info
+
+
+def edge_lift(A: np.ndarray, rows: int = 18) -> np.ndarray:
+    """세로로 알파 경계(0.5)에서 가까울수록 1 — 열마다 위·아래 경계까지 거리"""
+    inside = A > 0.5
+    h = A.shape[0]
+    top = np.zeros(A.shape)
+    bot = np.zeros(A.shape)
+    run = np.zeros(A.shape[1])
+    for y in range(h):
+        run = np.where(inside[y], run + 1, 0)
+        top[y] = run
+    run = np.zeros(A.shape[1])
+    for y in range(h - 1, -1, -1):
+        run = np.where(inside[y], run + 1, 0)
+        bot[y] = run
+    d = np.minimum(top, bot)
+    t = np.clip(d / rows, 0, 1)
+    return 1 - t * t * (3 - 2 * t)
 
 
 def main() -> int:

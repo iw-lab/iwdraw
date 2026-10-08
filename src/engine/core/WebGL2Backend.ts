@@ -1,6 +1,6 @@
 import type { BackendCaps, Dab, RGB } from "../types";
-import { getTipCanvas, getTipEpoch, getTipPixels, makeTipHighlightCanvas, type RendererBackend, type StrokeContext } from "./backend";
-import { applyImpastoRelief, applyWetEdge, compositeGlaze, paperGrainTile, type PaperKind } from "./paper";
+import { getTipCanvas, getTipEpoch, getTipPixels, makeTipHighlightCanvas, unionDabBounds, type RendererBackend, type StrokeContext } from "./backend";
+import { applyImpastoRelief, applyWetEdge, compositeGlaze, growRect, IMPASTO_REACH, paperGrainTile, type PaperKind, type PxRect } from "./paper";
 import type { TipKind } from "../brushes/BrushBase";
 
 /*
@@ -351,8 +351,10 @@ export class WebGL2Backend implements RendererBackend {
 
   beginStroke(ctx: StrokeContext): void {
     this.ctx = ctx;
+    this.previewDabs = [];
     this.strokeRev++;
     this.liveRev = -1;
+    this.liveDirty = null;
     const gl = this.gl;
     // 스트로크 버퍼 클리어
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.strokeFbo.fb);
@@ -365,8 +367,27 @@ export class WebGL2Backend implements RendererBackend {
   drawDabs(dabs: Dab[]): void {
     if (!this.ctx) return;
     this.strokeRev++;
+    this.drawDabsInto(this.strokeFbo.fb, dabs);
+    this.liveDirty = unionDabBounds(this.liveDirty, dabs);
+  }
+
+  /** 라이브 임파스토 부분 갱신 — 지난 계산 이후 바뀐 영역 */
+  private liveDirty: PxRect | null = null;
+
+  /** 아직 확정 안 된 꼬리(납작붓 끝 모양) — 표시에만 덧그리고 스트로크 버퍼엔 안 남긴다 */
+  private previewDabs: Dab[] = [];
+  setPreviewDabs(dabs: Dab[]): void {
+    if (!this.ctx) return;
+    // 지난 꼬리 자리도 다시 칠해야 지워진다
+    this.liveDirty = unionDabBounds(unionDabBounds(this.liveDirty, this.previewDabs), dabs);
+    this.previewDabs = dabs;
+    this.strokeRev++;
+  }
+
+  private drawDabsInto(fb: WebGLFramebuffer | null, dabs: Dab[]): void {
+    if (!this.ctx) return;
     const gl = this.gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.strokeFbo.fb);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
     gl.viewport(0, 0, this.width, this.height);
     gl.useProgram(this.dabProg);
     gl.bindVertexArray(this.quadVao);
@@ -469,6 +490,7 @@ export class WebGL2Backend implements RendererBackend {
   presentStroke(target: CanvasRenderingContext2D): void {
     if (!this.ctx) return;
     this.blitStrokeToScreen();
+    if (this.previewDabs.length) this.drawDabsInto(null, this.previewDabs);
     const c = this.ctx.composite;
     if (c === "glaze") {
       // 수채 글레이징(겹침 1단계 진해짐 + 포화) — 프리뷰=최종(endStroke와 같은 함수)
@@ -487,10 +509,24 @@ export class WebGL2Backend implements RendererBackend {
         this.live2d = cv.getContext("2d")!;
       }
       if (this.liveRev !== this.strokeRev) {
-        this.live2d.clearRect(0, 0, this.width, this.height);
-        this.live2d.drawImage(this.glCanvas, 0, 0);
-        applyImpastoRelief(this.live2d, this.width, this.height, this.ctx.impasto);
+        // 바뀐 영역(+릴리프 도달 거리)만 다시 — 매 프레임 캔버스 전체는 저사양에서 끊겼다(2026-10-08 실측)
+        // 획 시작 = 버퍼가 비어 있으니 지우기만 하고, 그다음부터는 dab 이 닿은 곳만
+        if (this.liveRev < 0) this.live2d.clearRect(0, 0, this.width, this.height);
+        const R = this.liveDirty && growRect(this.liveDirty, IMPASTO_REACH, this.width, this.height);
+        if (R && R.w > 0 && R.h > 0) {
+          this.live2d.clearRect(R.x, R.y, R.w, R.h);
+          this.live2d.drawImage(this.glCanvas, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+          applyImpastoRelief(
+            this.live2d,
+            this.width,
+            this.height,
+            this.ctx.impasto,
+            this.ctx.impastoShadow,
+            R,
+          );
+        }
         this.liveRev = this.strokeRev;
+        this.liveDirty = null;
       }
       src = this.live2d.canvas;
     }
@@ -512,6 +548,7 @@ export class WebGL2Backend implements RendererBackend {
 
   endStroke(): void {
     if (!this.ctx) return;
+    this.previewDabs = []; // 꼬리는 brush.end() 가 확정 dab 으로 이미 그렸다
     // 스트로크 버퍼(premultiplied)를 화면 캔버스로 복사해 2D 레이어에 합성
     this.blitStrokeToScreen();
 
@@ -531,7 +568,7 @@ export class WebGL2Backend implements RendererBackend {
       if (this.ctx.wetEdge > 0)
         applyWetEdge(this.post2d, this.width, this.height, this.ctx.wetEdge, this.ctx.paperKind);
       if (this.ctx.impasto > 0)
-        applyImpastoRelief(this.post2d, this.width, this.height, this.ctx.impasto);
+        applyImpastoRelief(this.post2d, this.width, this.height, this.ctx.impasto, this.ctx.impastoShadow);
       src = this.post2d.canvas;
     }
 
@@ -559,6 +596,7 @@ export class WebGL2Backend implements RendererBackend {
 
   cancelStroke(): void {
     // 버퍼는 다음 beginStroke가 클리어 — ctx만 끊으면 present/end가 no-op
+    this.previewDabs = [];
     this.ctx = null;
   }
 

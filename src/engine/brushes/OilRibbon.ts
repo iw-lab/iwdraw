@@ -11,7 +11,8 @@ import { RIBBON, ribbonLen, ribbonU } from "../core/ribbon";
  *  · 굵기와 무관하게 붓결이 획을 따라 길게 이어진다(텍스처 높이 = 획 폭).
  *  · 끝은 «마른 붓이 갈라지는 모양»이라 몸통 위에 덧칠로는 못 만든다(wash = MAX 합성은 칠을 더하기만).
  *    그래서 마지막 «끝 구간 길이»만큼은 붙잡아 두었다가 손을 떼면 끝 그림으로 그린다 —
- *    그 길이만큼 펜보다 늦게 따라온다(끝 구간 = 획 폭 1배로 짧게 잡았다, ribbon.ts).
+ *    붙잡아 둔 구간은 매 프레임 «지금 떼면» 끝 그림으로 표시만 한다(preview) — 펜에 바로 붙어 온다
+ *    (2026-10-08 사용자 «커서를 늦게 따라온다»: 표시까지 붙잡아 두면 획 폭만큼 늦었다).
  *  · 결정론: 점열만으로 정해진다(무비 재생 = 같은 그림).
  */
 export class OilRibbon extends BrushBase {
@@ -35,6 +36,7 @@ export class OilRibbon extends BrushBase {
         grainLift: true,
         streaks: 0, // 붓결은 텍스처가 담당
         impasto: 0.6,
+        impastoShadow: 0, // 테두리 검은 테 제거 — 아트봉봉 붓자국은 둘레가 밝다(2026-10-08 사용자)
         wetMix: 0.4,
         speedSize: 0.1,
         speedAlpha: 0.08,
@@ -103,6 +105,17 @@ export class OilRibbon extends BrushBase {
     let n = 0;
     while (n < this.queue.length && this.queue[n].arc <= keepFrom) n++;
     return this.queue.splice(0, n).map((q) => q.d);
+  }
+
+  override preview(): Dab[] {
+    const w = this.width();
+    const total = this.traveled;
+    if (!this.queue.length || total <= w * 0.25) return [];
+    const e = Math.min(ribbonLen(RIBBON.end, w), total * 0.5);
+    // end() 와 같은 계산 — 손을 떼도 화면이 안 바뀐다(프리뷰=최종)
+    return this.queue.map((q) =>
+      q.arc > total - e ? { ...q.d, slice: this.sliceAt(RIBBON.end, (q.arc - (total - e)) / e, e) } : q.d,
+    );
   }
 
   override end(): Dab[] {

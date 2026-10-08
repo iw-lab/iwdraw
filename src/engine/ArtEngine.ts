@@ -454,6 +454,7 @@ export class ArtEngine {
         : 1,
       wetEdge: brush.cfg.wetEdge * thin,
       impasto: brush.cfg.impasto,
+      impastoShadow: brush.cfg.impastoShadow,
       grainLift: brush.cfg.grainLift,
       streaks: brush.cfg.streaks,
       washCloud: brush.cfg.washCloud,
@@ -554,6 +555,9 @@ export class ArtEngine {
       if (dabs.length) this.armQuickShapeHold();
       lastSp = sp;
     }
+    // 손 뗄 때 끝 모양이 정해지는 브러시(납작붓) — 붙잡아 둔 꼬리를 표시만 해 펜에 붙어 오게
+    const tail = lastSp ? this.brush.preview() : null;
+    if (tail && lastSp) this.cm.backend.setPreviewDabs(this.expandDabs(tail, lastSp));
     if (lastSp) this.emit("pointerMoved", { x: lastSp.x, y: lastSp.y });
     this.requestComposite();
   }
@@ -873,30 +877,33 @@ export class ArtEngine {
     return this.scratch;
   }
 
+  /** 크기 하한 + 대칭 복제 — 확정 dab·표시 전용 꼬리 공용 */
+  private expandDabs(dabs: ReturnType<BrushBase["begin"]>, center: StrokePoint): ReturnType<BrushBase["begin"]> {
+    const floor = this.brush?.minDabPx ?? MIN_DAB_PX;
+    for (const d of dabs) if (d.size < floor) d.size = floor;
+    return this.symmetry === "none"
+      ? dabs
+      : dabs.flatMap((d) =>
+          mirrorPoint(
+            { x: d.x, y: d.y, pressure: 1, t: center.t },
+            this.symmetry,
+            this.axis().x,
+            this.axis().y,
+          ).map((m) => ({ ...d, x: m.x, y: m.y })),
+        );
+  }
+
   private paintDabs(dabs: ReturnType<BrushBase["begin"]>, center: StrokePoint): void {
     if (!dabs.length) return;
     // 최종 안전망 — makeDab 이후 크기를 곱하는 브러시(수채 벌지·로브, 유화 등)가 다시
     // 서브픽셀로 내려가면 획이 끊기고 계단이 진다(2026-07-13 실측). 여기서 한 번 더 하한.
     // 하한은 브러시별(minDabPxFor) — 도구마다 그을 수 있는 최소 선 폭이 다르다.
     // 공통 하한 하나로 누르면 굵기 1~4에서 전 브러시가 같은 헤어라인이 된다(2026-07-25).
-    const floor = this.brush?.minDabPx ?? MIN_DAB_PX;
-    for (const d of dabs) if (d.size < floor) d.size = floor;
     if (this.firstDabLatency < 0) {
       this.firstDabLatency = performance.now() - this.strokeStartTs;
       this.emit("strokeLatency", { ms: this.firstDabLatency });
     }
-    // 대칭 복제
-    const all =
-      this.symmetry === "none"
-        ? dabs
-        : dabs.flatMap((d) =>
-            mirrorPoint(
-              { x: d.x, y: d.y, pressure: 1, t: center.t },
-              this.symmetry,
-              this.axis().x,
-              this.axis().y,
-            ).map((m) => ({ ...d, x: m.x, y: m.y })),
-          );
+    const all = this.expandDabs(dabs, center);
     if (this.cow) {
       // ⚠️ 반드시 그리기 전에 — 지운 뒤 복사하면 "지워진 상태"가 undo 대상이 된다
       for (const d of all) {
@@ -1016,6 +1023,7 @@ export class ArtEngine {
         : 1,
       wetEdge: brush.cfg.wetEdge,
       impasto: brush.cfg.impasto,
+      impastoShadow: brush.cfg.impastoShadow,
       grainLift: brush.cfg.grainLift,
       streaks: brush.cfg.streaks,
       washCloud: brush.cfg.washCloud,

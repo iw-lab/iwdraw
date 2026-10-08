@@ -1,6 +1,6 @@
 import type { BackendCaps, Dab, RGB } from "../types";
-import { getTipCanvas, getTipEpoch, getTipPixels, type RendererBackend, type StrokeContext } from "./backend";
-import { applyImpastoRelief, applyPaperGrain, applyPaperGrainLift, applyWetEdge, compositeGlaze } from "./paper";
+import { getTipCanvas, getTipEpoch, getTipPixels, unionDabBounds, type RendererBackend, type StrokeContext } from "./backend";
+import { applyImpastoRelief, applyPaperGrain, applyPaperGrainLift, applyWetEdge, compositeGlaze, growRect, IMPASTO_REACH, type PxRect } from "./paper";
 import type { TipKind } from "../brushes/BrushBase";
 
 /*
@@ -170,6 +170,9 @@ export class Canvas2DBackend implements RendererBackend {
 
   beginStroke(ctx: StrokeContext): void {
     this.ctx = ctx;
+    this.previewDabs = [];
+    this.liveStale = true;
+    this.liveDirty = null;
     this.layerCtx = (ctx.layerCanvas as HTMLCanvasElement).getContext("2d");
     this.strokeCtx.clearRect(0, 0, this.width, this.height);
     // 지우개는 스트로크 버퍼가 아니라 레이어에 직접(destination-out)
@@ -177,11 +180,30 @@ export class Canvas2DBackend implements RendererBackend {
 
   drawDabs(dabs: Dab[]): void {
     if (!this.ctx) return;
+    const eraser = this.ctx.composite === "destination-out";
+    this.drawDabsInto(eraser ? this.layerCtx! : this.strokeCtx, dabs);
+    this.liveDirty = unionDabBounds(this.liveDirty, dabs);
+  }
+
+  /** 라이브 프리뷰 부분 갱신 — 지난 present 이후 바뀐 영역(없으면 그대로 재사용) */
+  private liveDirty: PxRect | null = null;
+  private liveStale = true;
+
+  /** 아직 확정 안 된 꼬리(납작붓 끝 모양) — 표시에만 덧그리고 스트로크 버퍼엔 안 남긴다 */
+  private previewDabs: Dab[] = [];
+  setPreviewDabs(dabs: Dab[]): void {
+    if (!this.ctx) return;
+    // 지난 꼬리 자리도 다시 칠해야 지워진다
+    this.liveDirty = unionDabBounds(unionDabBounds(this.liveDirty, this.previewDabs), dabs);
+    this.previewDabs = dabs;
+  }
+
+  private drawDabsInto(target: CanvasRenderingContext2D, dabs: Dab[]): void {
+    if (!this.ctx) return;
     // wash(MAX) 근사: Canvas2D엔 max 블렌드가 없어 source-over 누적을 쓴다.
     // 팁이 near-binary(스트릭≈1, 골≈0)라 over 누적≈union≈max로 질감이 유지되고,
     // 진하기는 strokeOpacity로 합성 시 1회 적용된다(실측: strokes-2d 스크린샷 검증).
     const eraser = this.ctx.composite === "destination-out";
-    const target = eraser ? this.layerCtx! : this.strokeCtx;
     if (eraser) target.save();
     for (const dab of dabs) {
       const color = dab.color ?? this.ctx.color;
@@ -223,20 +245,40 @@ export class Canvas2DBackend implements RendererBackend {
     if (this.ctx.composite === "destination-out") return;
     // 종이 결·임파스토를 프리뷰에도 실시간 적용("떼는 순간 질감·명암이 변하는" 팝인 제거)
     let src: HTMLCanvasElement = this.strokeBuf;
-    if (this.ctx.paperGrain > 0 || this.ctx.impasto > 0) {
+    if (this.ctx.paperGrain > 0 || this.ctx.impasto > 0 || this.previewDabs.length) {
       if (!this.liveBuf) {
         const c = document.createElement("canvas");
         c.width = this.width;
         c.height = this.height;
         this.liveBuf = c.getContext("2d")!;
       }
-      this.liveBuf.clearRect(0, 0, this.width, this.height);
-      this.liveBuf.drawImage(this.strokeBuf, 0, 0);
-      // endStroke와 같은 순서(임파스토 → 종이 결) — 프리뷰=최종
-      if (this.ctx.impasto > 0)
-        applyImpastoRelief(this.liveBuf, this.width, this.height, this.ctx.impasto);
-      if (this.ctx.paperGrain > 0) this.grain(this.liveBuf);
-      src = this.liveBuf.canvas;
+      // 바뀐 영역만 다시 만든다 — 매 프레임 캔버스 전체 임파스토·결은 저사양에서 프레임당 100ms+
+      // (2026-10-08 CPU 4배 감속 실측, 사용자 «중간중간 끊긴다»). 릴리프는 둘레까지 번지니 그만큼 넓힌다.
+      const L = this.liveBuf;
+      const reach = this.ctx.impasto > 0 ? IMPASTO_REACH : 1;
+      // 획 시작 = 버퍼가 비어 있으니 지우기만 하고, 그다음부터는 dab 이 닿은 곳만
+      if (this.liveStale) L.clearRect(0, 0, this.width, this.height);
+      const R = this.liveDirty && growRect(this.liveDirty, reach, this.width, this.height);
+      if (R && R.w > 0 && R.h > 0) {
+        const part = R;
+        L.clearRect(R.x, R.y, R.w, R.h);
+        L.drawImage(this.strokeBuf, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+        if (this.previewDabs.length) {
+          L.save();
+          L.beginPath();
+          L.rect(R.x, R.y, R.w, R.h);
+          L.clip();
+          this.drawDabsInto(L, this.previewDabs);
+          L.restore();
+        }
+        // endStroke와 같은 순서(임파스토 → 종이 결) — 프리뷰=최종
+        if (this.ctx.impasto > 0)
+          applyImpastoRelief(L, this.width, this.height, this.ctx.impasto, this.ctx.impastoShadow, part);
+        if (this.ctx.paperGrain > 0) this.grain(L, part);
+      }
+      this.liveStale = false;
+      this.liveDirty = null;
+      src = L.canvas;
     }
     if (this.ctx.composite === "glaze") {
       compositeGlaze(target, src, this.width, this.height);
@@ -257,18 +299,19 @@ export class Canvas2DBackend implements RendererBackend {
   }
 
   /** 종이 결 적용 — 불투명 매체(grainLift)는 백화, 그 외는 알파 침식(라이브/최종 공용) */
-  private grain(target: CanvasRenderingContext2D): void {
+  private grain(target: CanvasRenderingContext2D, rect?: PxRect): void {
     const c = this.ctx!;
     if (c.grainLift) {
       const dk = 1 - Math.max(c.color.r, c.color.g, c.color.b) / 255;
-      applyPaperGrainLift(target, this.width, this.height, c.paperGrain, c.paperKind, dk);
+      applyPaperGrainLift(target, this.width, this.height, c.paperGrain, c.paperKind, dk, rect);
     } else {
-      applyPaperGrain(target, this.width, this.height, c.paperGrain, c.paperKind);
+      applyPaperGrain(target, this.width, this.height, c.paperGrain, c.paperKind, rect);
     }
   }
 
   endStroke(): void {
     if (!this.ctx || !this.layerCtx) return;
+    this.previewDabs = []; // 꼬리는 brush.end() 가 확정 dab 으로 이미 그렸다
     if (this.ctx.composite === "destination-out") {
       this.ctx = null;
       return; // 지우개는 이미 레이어에 직접 반영됨
@@ -279,7 +322,7 @@ export class Canvas2DBackend implements RendererBackend {
       applyWetEdge(this.strokeCtx, this.width, this.height, this.ctx.wetEdge, this.ctx.paperKind);
     }
     if (this.ctx.impasto > 0) {
-      applyImpastoRelief(this.strokeCtx, this.width, this.height, this.ctx.impasto);
+      applyImpastoRelief(this.strokeCtx, this.width, this.height, this.ctx.impasto, this.ctx.impastoShadow);
     }
     if (this.ctx.paperGrain > 0) this.grain(this.strokeCtx);
     // 스트로크 버퍼를 레이어에 1회 합성 — 브러시 composite 반영(라이브 프리뷰와 동일해야 함)
@@ -306,6 +349,7 @@ export class Canvas2DBackend implements RendererBackend {
   cancelStroke(): void {
     // 스트로크 버퍼는 다음 beginStroke가 클리어. 지우개(레이어 직접)는 취소 불가 —
     // 호출측(ArtEngine)이 destination-out 브러시에서 QuickShape를 막는다.
+    this.previewDabs = [];
     this.ctx = null;
   }
 

@@ -1,7 +1,7 @@
 import { makeRibbonFallback } from "./ribbon";
 import type { BackendCaps, BlendMode, Dab, RGB } from "../types";
 import type { TipKind, DabComposite } from "../brushes/BrushBase";
-import type { PaperKind } from "./paper";
+import type { PaperKind, PxRect } from "./paper";
 
 /*
  * RendererBackend: 브러시가 만든 백엔드 독립 Dab 스트림을 래스터화하는 추상.
@@ -29,6 +29,8 @@ export interface StrokeContext {
   wetEdge: number;
   /** 임파스토 릴리프 강도 0~1(유화) — endStroke에서 applyImpastoRelief */
   impasto: number;
+  /** 임파스토 우하단 그림자 배율(기본 1) — 납작붓은 0: 테두리에 검은 테가 돌았다(2026-10-08) */
+  impastoShadow?: number;
   /** 종이 결을 색 백화로(불투명 유지, 유화) — false면 알파 침식(수채 등) */
   grainLift: boolean;
   /** 붓 방향 밝은 스트릭 강도 0~1(유화) — GL 전용(2D 폴백은 근사 생략) */
@@ -72,6 +74,8 @@ export interface RendererBackend {
   beginStroke(ctx: StrokeContext): void;
   /** Dab 배치 렌더 */
   drawDabs(dabs: Dab[]): void;
+  /** 표시 전용 꼬리 dab(다음 presentStroke 에 덧그림, 버퍼엔 안 남김) — 매번 통째로 교체 */
+  setPreviewDabs(dabs: Dab[]): void;
   /**
    * 진행 중 스트로크를 표시 캔버스에 라이브 프리뷰로 그린다(매 composite 프레임).
    * 스트로크가 없으면 no-op. endStroke 전에도 획이 즉시 보이게 하는 핵심.
@@ -579,4 +583,20 @@ export function blendToComposite(blend: BlendMode): GlobalCompositeOperation {
     default:
       return "source-over";
   }
+}
+
+/** dab 들이 덮는 영역(회전·띠 길이 포함)을 r 에 합친다 — 라이브 프리뷰 부분 갱신용 */
+export function unionDabBounds(r: PxRect | null, dabs: Dab[]): PxRect | null {
+  let x0 = r ? r.x : Infinity;
+  let y0 = r ? r.y : Infinity;
+  let x1 = r ? r.x + r.w : -Infinity;
+  let y1 = r ? r.y + r.h : -Infinity;
+  for (const d of dabs) {
+    const rad = Math.hypot(d.slice ? d.slice.len : d.size, d.size) / 2 + 2;
+    if (d.x - rad < x0) x0 = d.x - rad;
+    if (d.y - rad < y0) y0 = d.y - rad;
+    if (d.x + rad > x1) x1 = d.x + rad;
+    if (d.y + rad > y1) y1 = d.y + rad;
+  }
+  return x1 > x0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : r;
 }

@@ -178,6 +178,8 @@ export interface BrushConfig {
   wetEdge: number;
   /** 임파스토 릴리프 0~1(유화) — 실루엣 좌상단 하이라이트/우하단 그림자, endStroke 후처리 */
   impasto: number;
+  /** 임파스토 우하단 그림자 배율(기본 1) */
+  impastoShadow: number;
   /** 획 시작·끝의 마른 붓털 트레일 강도 0~1(유화) — 진행 방향으로 저알파 fringe dab */
   fringe: number;
   /** 종이 결을 알파 침식 대신 "색 백화"(흰 캔버스가 물감에 배어남)로 — 획 불투명 유지.
@@ -247,6 +249,7 @@ const DEFAULTS: Omit<BrushConfig, "id" | "tip"> = {
   edgeNoise: 0,
   wetEdge: 0,
   impasto: 0,
+  impastoShadow: 1,
   fringe: 0,
   grainLift: false,
   streaks: 0,
@@ -414,6 +417,14 @@ export class BrushBase {
     this.traveled += segLen;
     this.last = p;
     return dabs;
+  }
+
+  /**
+   * 아직 확정 안 된 꼬리를 «지금 손을 떼면» 모양으로 — 표시 전용(상태 불변).
+   * 손 뗄 때 끝 모양이 정해지는 브러시(납작붓)만 쓴다. 없으면 null.
+   */
+  preview(): Dab[] | null {
+    return null;
   }
 
   end(): Dab[] {

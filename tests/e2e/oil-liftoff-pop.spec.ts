@@ -9,15 +9,26 @@ test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] } });
  * 획을 그린 채(마우스 다운 유지) 평균색을 재고, 뗀 뒤 같은 영역을 다시 재서
  * 채널별 편차를 단언한다.
  */
-test("유화 획이 손을 떼도 색이 변하지 않는다(임파스토 프리뷰=최종)", async ({ page }) => {
-  await page.goto("/draw?mode=oil&backend=gl");
+/*
+ * 2026-10-08 확장: 라이브 프리뷰를 «바뀐 영역만» 다시 만들도록 바꿨다(저사양 끊김) — 부분 갱신이
+ * 어긋나면 그리는 중 화면과 뗀 뒤가 달라진다. 납작붓은 꼬리를 표시만 하다가 뗄 때 확정하므로
+ * 같은 단언으로 잠근다. 경로는 되돌아오는 지그재그(자기 겹침·꼬리 자리 갱신)까지 포함.
+ */
+for (const [brush, backend] of [
+  ["유화붓", "gl"],
+  ["유화붓", "2d"],
+  ["납작붓", "gl"],
+  ["납작붓", "2d"],
+] as const)
+test(`${brush}(${backend}) 획이 손을 떼도 색이 변하지 않는다(임파스토 프리뷰=최종)`, async ({ page }) => {
+  await page.goto(`/draw?mode=oil&backend=${backend}`);
   const canvas = page.getByLabel("그림 캔버스");
   await canvas.waitFor();
   const fresh = page.getByRole("button", { name: /새로 시작/ });
   if (await fresh.isVisible().catch(() => false)) await fresh.click();
   await page.waitForTimeout(300);
 
-  await page.getByRole("button", { name: "유화붓", exact: true }).click();
+  await page.getByRole("button", { name: brush, exact: true }).click();
   await page.getByRole("button", { name: "색 8", exact: true }).click(); // 노랑 255,200,74
   await page.getByLabel("브러시 굵기", { exact: true }).fill("24");
 
@@ -26,7 +37,13 @@ test("유화 획이 손을 떼도 색이 변하지 않는다(임파스토 프리
   await page.mouse.move(x, box.y + box.height * 0.15);
   await page.mouse.down();
   for (let k = 1; k <= 30; k++)
-    await page.mouse.move(x, box.y + box.height * (0.15 + 0.6 * (k / 30)));
+    await page.mouse.move(x + Math.sin(k / 3) * 40, box.y + box.height * (0.15 + 0.6 * (k / 30)));
+  // 되돌아 올라가며 자기 획과 겹친다
+  for (let k = 1; k <= 12; k++)
+    await page.mouse.move(x + 30 - k * 2, box.y + box.height * (0.75 - 0.3 * (k / 12)));
+  // 획 끝(뗄 때 붓털 끌림 dab·납작붓 끝 그림)은 측정 창(가운데 ±90px) 밖에서 — 끝 처리는 이 시험 대상이 아니다
+  for (let k = 1; k <= 10; k++)
+    await page.mouse.move(x + 6 + k * 20, box.y + box.height * 0.45);
   await page.waitForTimeout(400); // 라이브 컴포짓 안정화(아직 마우스 다운)
 
   // 획 주변 넓은 영역의 픽셀 전체를 캡처 — 릴리프 림(가장자리 2~3px 밴드)의 팝인은

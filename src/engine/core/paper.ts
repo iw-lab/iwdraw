@@ -323,15 +323,17 @@ export function applyPaperGrain(
   height: number,
   strength: number,
   kind: PaperKind = "linen",
+  rect?: PxRect,
 ): void {
   const pat = ctx.createPattern(paperGrainTile(kind), "repeat");
   if (!pat) return;
+  const r = rect ?? { x: 0, y: 0, w: width, h: height };
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = "destination-out";
   ctx.globalAlpha = Math.min(1, strength);
   ctx.fillStyle = pat;
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(r.x, r.y, r.w, r.h);
   ctx.restore();
 }
 
@@ -347,15 +349,17 @@ export function applyPaperGrainLift(
   strength: number,
   kind: PaperKind,
   dk: number,
+  rect?: PxRect,
 ): void {
   const pat = ctx.createPattern(paperGrainTile(kind), "repeat");
   if (!pat) return;
+  const r = rect ?? { x: 0, y: 0, w: width, h: height };
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = "source-atop"; // 획 실루엣 안에서만 백화
   ctx.globalAlpha = Math.min(1, strength * 0.42 * (dk > 0.6 ? 0.4 : 1));
   ctx.fillStyle = pat;
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(r.x, r.y, r.w, r.h);
   ctx.restore();
 }
 
@@ -477,41 +481,75 @@ export function applyImpastoRelief(
   width: number,
   height: number,
   strength: number,
+  shadow = 1,
+  rect?: PxRect,
 ): void {
   const soft = (wetTmp = scratch(wetTmp, width, height));
   const bandCtx = (wetBand = scratch(wetBand, width, height));
+  // 영역 지정 = 그 안만 다시 칠한다(라이브 프리뷰 — 매 프레임 캔버스 전체는 저사양에서 프레임당 100ms+,
+  // 2026-10-08 실측). 릴리프는 둘레 IMPASTO_REACH px 의 알파만 보므로 그만큼 넓혀 읽는다.
+  const R = rect ?? { x: 0, y: 0, w: width, h: height };
+  const S = rect ? growRect(R, IMPASTO_REACH, width, height) : R;
+  const sub = (c: CanvasRenderingContext2D, src: CanvasImageSource, dx = 0, dy = 0) =>
+    c.drawImage(src, S.x, S.y, S.w, S.h, S.x + dx, S.y + dy, S.w, S.h);
+  bandCtx.save();
+  soft.save();
+  for (const c of [bandCtx, soft]) {
+    c.beginPath();
+    c.rect(S.x, S.y, S.w, S.h);
+    c.clip(); // source-in 같은 «바깥도 지우는» 합성이 캔버스 전체를 돌지 않게
+  }
 
   // 부드러운 경화 실루엣 — blur가 릴리프 램프의 폭(부드러움)을 만든다
-  bandCtx.clearRect(0, 0, width, height);
-  bandCtx.drawImage(ctx.canvas, 0, 0);
-  bandCtx.drawImage(ctx.canvas, 0, 0);
-  bandCtx.drawImage(ctx.canvas, 0, 0);
-  bandCtx.drawImage(ctx.canvas, 0, 0);
-  soft.clearRect(0, 0, width, height);
+  bandCtx.clearRect(S.x, S.y, S.w, S.h);
+  for (let i = 0; i < 4; i++) sub(bandCtx, ctx.canvas);
+  soft.clearRect(S.x, S.y, S.w, S.h);
   soft.filter = "blur(2px)";
-  soft.drawImage(bandCtx.canvas, 0, 0);
+  sub(soft, bandCtx.canvas);
   soft.filter = "none";
 
   const d = 2.2; // 물감 두께감의 스케일(px) — 굵기 비례가 아니라 물리적 고정
   const band = (dx: number, dy: number, color: string, alpha: number) => {
-    bandCtx.clearRect(0, 0, width, height);
-    bandCtx.drawImage(soft.canvas, 0, 0);
+    bandCtx.clearRect(S.x, S.y, S.w, S.h);
+    sub(bandCtx, soft.canvas);
     bandCtx.globalCompositeOperation = "destination-out";
-    bandCtx.drawImage(soft.canvas, dx, dy);
+    sub(bandCtx, soft.canvas, dx, dy);
     bandCtx.globalCompositeOperation = "source-in"; // 밴드 알파 유지, 색만 교체
     bandCtx.fillStyle = color;
-    bandCtx.fillRect(0, 0, width, height);
+    bandCtx.fillRect(S.x, S.y, S.w, S.h);
     bandCtx.globalCompositeOperation = "source-over";
     ctx.save();
     ctx.globalCompositeOperation = "source-atop";
     ctx.globalAlpha = Math.min(1, strength * alpha);
-    ctx.drawImage(bandCtx.canvas, 0, 0);
+    ctx.drawImage(bandCtx.canvas, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
     ctx.restore();
   };
   // shift(+d,+d)와의 차분 = 좌상단 림, shift(−d,−d)와의 차분 = 우하단 림.
   // 그림자를 하이라이트보다 살짝 약하게 — 아이 그림에서 어두운 테는 금방 "때"로 읽힌다.
   band(d, d, "#ffffff", 0.22);
-  band(-d, -d, "#1a1208", 0.15);
+  if (shadow > 0) band(-d, -d, "#1a1208", 0.15 * shadow);
+  bandCtx.restore();
+  soft.restore();
+}
+
+/** 정수 픽셀 사각형(캔버스 좌표) */
+export interface PxRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** 임파스토 릴리프가 닿는 거리(px) — blur(2px) 커널 ≈ 6px + 오프셋 2.2 */
+export const IMPASTO_REACH = 9;
+
+/** r 을 m 만큼 넓혀 캔버스 안으로 자른다(정수) */
+export function growRect(r: PxRect, m: number, width: number, height: number): PxRect {
+  const x0 = Math.max(0, Math.floor(r.x - m));
+  const y0 = Math.max(0, Math.floor(r.y - m));
+  const x1 = Math.min(width, Math.ceil(r.x + r.w + m));
+  const y1 = Math.min(height, Math.ceil(r.y + r.h + m));
+  return { x: x0, y: y0, w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0) };
 }
 
 /**

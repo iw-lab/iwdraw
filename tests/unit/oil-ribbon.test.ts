@@ -78,4 +78,18 @@ describe("납작붓(리본 유화)", () => {
     const { live } = stroke(400); // size 30 × 1.5 = 45px
     expect(live.every((d) => d.tip === undefined)).toBe(true);
   });
+
+  it("그리는 중 꼬리 미리보기 = 지금 떼면 그려질 꼬리(펜에 붙어 오고, 떼도 화면이 안 바뀐다)", () => {
+    const b = createBrush("oilribbon", mulberry32(1));
+    b.begin({ x: 0, y: 0, pressure: 0.6, t: 0 }, SETTINGS);
+    for (let x = 10; x <= 400; x += 10) b.move({ x, y: 0, pressure: 0.6, t: x } as StrokePoint);
+    const pv = b.preview()!;
+    const sig = (ds: Dab[]) => ds.map((d) => [d.x.toFixed(2), d.slice!.u0.toFixed(5), d.slice!.u1.toFixed(5)].join()).join("|");
+    expect(pv.length).toBeGreaterThan(0);
+    // 미리보기 맨 앞 조각은 펜 위치(400) 근처까지 간다
+    expect(400 - Math.max(...pv.map((d) => d.x))).toBeLessThan(4);
+    const second = sig(b.preview()!); // 상태 불변 — 두 번 불러도 같다
+    expect(sig(pv)).toBe(second);
+    expect(sig(b.end())).toBe(second);
+  });
 });
