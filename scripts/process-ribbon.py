@@ -29,26 +29,22 @@ from texture_lib import _quilt_wrap_x, to_gray  # noqa: E402
 
 # 물감 표면(붓털 이랑) — Firefly 레이킹 라이트 임파스토 사진. 띠 전체에 깔아 «물감이 쌓인» 질감을 낸다
 # (2026-10-08 사용자 «물감도 파이어플라이로 쌓이는 질감 표현 못하나?»)
-# 짧고 엇갈린 붓털 이랑(paintdab) — paint3d(길게 끌린 가로선)는 띠에서 나무결·등고선처럼 보였다(2026-10-08)
-PAINT_SRC = Path(__file__).resolve().parent.parent / "assets-src/textures/sources/firefly-paintdab.png"
-PAINT_ROWS = 270
-EMBOSS = 2.6  # 엠보스(높이 기울기 → 명암) 세기 — 1.6 은 «튀어나오는 느낌» 부족(2026-10-08 사용자)
-PAINT = 0.24  # 물감 표면 명암 세기(dev 단위)
+PAINT_SRC = Path(__file__).resolve().parent.parent / "assets-src/textures/sources/firefly-paint3d.png"
+EMBOSS = 1.6  # 엠보스(높이 기울기 → 명암) 세기
+PAINT = 0.28  # dev 단위 세기
 
 
 def paint_layer(width: int, height: int) -> np.ndarray:
-    """(height, width) 가로 반복 물감 표면 명암(이미 비스듬한 빛을 받은 사진) — 평균 0, 표준편차 1.
-    사진 세로 PAINT_ROWS 줄 → 띠 높이: 이랑 하나가 획에서 3~5px(아트봉봉 화면과 같은 크기)."""
+    """(height, width) 가로 반복 물감 이랑 — 평균 0, 표준편차 1"""
     g = to_gray(np.asarray(Image.open(PAINT_SRC).convert("RGB")))
+    g = g[380:, :]  # 위쪽의 붓 그림 제외
     h, w = g.shape
     F = np.fft.fft2(g)
     fy = np.fft.fftfreq(h)[:, None]
     fx = np.fft.fftfreq(w)[None, :]
-    g = g - np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) * (2 * np.pi * 30) ** 2 / 2)))  # 조명 기울기 제거(σ 30px)
-    y0 = (h - PAINT_ROWS) // 2
-    g = g[y0 : y0 + PAINT_ROWS]
+    g = g - np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) * (2 * np.pi * 3) ** 2 / 2)))  # 조명·큰 굴곡 제거(σ 3px) — 큰 이랑은 띠에서 반복 무늬로 보였다
+    k = height / h  # 사진 세로 전체 → 띠 높이
     seg = _quilt_wrap_x(g, w - 96)  # 가로 이음매 없이
-    k = height / PAINT_ROWS
     t = np.asarray(
         Image.fromarray(seg.astype(np.float32), mode="F").resize((round(seg.shape[1] * k), height), Image.Resampling.BOX)
     )
@@ -174,16 +170,11 @@ def build(src_path: Path):
     tail_w = np.clip((xs - (END[0] - 120)) / 240, 0, 1)  # 끝 구간 앞 120px 부터 서서히
     dev = dev * (BODY_STREAK + (1 - BODY_STREAK) * tail_w)
     pl = paint_layer(dev.shape[1], dev.shape[0])
-    # 입체 높이 = 물감 사진 이랑 + 붓결 줄을 «짧게 끊은» 것. 줄을 그대로 높이로 쓰면 획 전체를 따라 긴 평행선
-    # (나무결·등고선)이 됐다 — 아트봉봉 이랑은 짧고 불규칙하다(2026-10-08 나란히 비교)
-    # 입체 = 사진 명암을 그대로(이미 빛을 받은 표면). 붓결 줄은 짧게 끊어 약한 엠보스만 —
-    # 줄을 길게 엠보스하면 나무결·등고선이 됐다(2026-10-08 나란히 비교)
-    lit = PAINT * pl * (1 - tail_w)
-    height = 0.3 * dev * dash_mask(dev.shape) * (1 - tail_w)
+    dev = dev + PAINT * pl * (1 - tail_w)
     # 테두리는 물감색 그대로(밝게) — 원본 사진은 가장자리가 그늘져 획 둘레에 검은 테가 돌았다
     # (2026-10-08 사용자 «테두리가 검은 빛, 아트봉봉은 흰빛»). 알파 경계에서 18줄 안쪽까지 셰이드를 1로 올린다.
     lift = edge_lift(A)
-    out = pack_channels(dev, A, lift, height=height, lit=lit)
+    out = pack_channels(dev, A, lift)
     # 가는 획용(획 폭 < 40px): 256 줄을 붓털 9가닥으로 묶고 대비를 더 키운다 — 원본은 몇 px 로
     # 줄어들면 가는 결이 평균으로 사라진다(유화붓 bristle-bold 와 같은 이유)
     bands = 9
@@ -205,32 +196,13 @@ def build(src_path: Path):
     # 가는 획: 테두리 흰 테 없이(rim 0) 가장자리 골만 지운다(12줄). 56줄 + 흰 테는 어두운 색에서
     # «가운데 검은 줄 + 바깥 흰 줄» 두 겹으로 갈라져 보였다(2026-10-08 사용자 ×3 확대 지적)
     lift_b = edge_lift(A, rows=12)
-    out_bold = pack_channels(dev_b, A, lift_b, rim=0.0, height=height * 0.8, lit=lit * 0.9)
+    out_bold = pack_channels(dev_b, A, lift_b, rim=0.0)
     info = dict(angle=round(float(ang), 2), crop=[int(top), int(bot), x0, x1], start_src=[x0, x0 + s_len], body_src=[b0, b0 + p_src],
                 body_period_tex=P, reps=reps, end_src=[e0, x1], body_cov=round(float(body_cov), 3))
     return out, out_bold, info
 
 
-def dash_mask(shape: tuple[int, int], seed: int = 20261008) -> np.ndarray:
-    """0~1 얼룩 마스크 — 획 방향 ≈60px·폭 방향 ≈14px 덩어리(가로 반복 이음매 없게 FFT 주기 잡음)"""
-    h, w = shape
-    rng = np.random.default_rng(seed)
-    n = rng.standard_normal((h, w))
-    fy = np.fft.fftfreq(h)[:, None]
-    fx = np.fft.fftfreq(w)[None, :]
-    m = np.real(np.fft.ifft2(np.fft.fft2(n) * np.exp(-((fx * 60) ** 2 + (fy * 14) ** 2) * 2)))
-    m = (m - m.mean()) / m.std()
-    return np.clip(0.5 + m * 0.6, 0, 1)
-
-
-def pack_channels(
-    dev: np.ndarray,
-    A: np.ndarray,
-    lift: np.ndarray,
-    rim: float = 0.2,
-    height: np.ndarray | None = None,
-    lit: np.ndarray | None = None,
-) -> np.ndarray:
+def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float = 0.2) -> np.ndarray:
     """
     R = 물감 명암(골만 살짝 어둡게, 하한 0.72) · G = 붓결 하이라이트(밝은 줄 → 셰이더가 흰빛을 섞는다) · B = R.
     붓결을 어두운 골로만 그리면 획 전체가 고른 색보다 어둡고 «검은 느낌»이 났다(2026-10-08 사용자 두 번째 지적).
@@ -242,10 +214,10 @@ def pack_channels(
     # 띠는 획에서 1/3~1/6 로 줄어 그려진다 — 높이를 세로 σ2.5 로 흐리고 4px 어긋나게 비춰야 골이 몇 px 로 남는다
     k = np.exp(-(np.arange(-7, 8) ** 2) / (2 * 2.5**2))
     k /= k.sum()
-    hgt = np.apply_along_axis(lambda c: np.convolve(c, k, mode="same"), 0, dev if height is None else height)
+    hgt = np.apply_along_axis(lambda c: np.convolve(c, k, mode="same"), 0, dev)
     emb = (hgt - np.roll(np.roll(hgt, 4, 0), 2, 1)) * EMBOSS
-    shade = emb + dev * 0.35 + (0 if lit is None else lit)
-    r = np.clip(1 + np.minimum(shade, 0) * 0.8, 0.72, 1.0)  # 그늘은 물감색이 진해지는 것(곱하기) — 회색 아님
+    shade = emb + dev * 0.35
+    r = np.clip(1 + np.minimum(shade, 0) * 0.6, 0.82, 1.0)  # 그늘은 옅게(검은 얼룩 금지)
     g = np.clip(np.maximum(shade, 0) * 3.4, 0, 1)
     # 테두리는 몸통 «평균» 명암으로 — 1(가장 밝음)로 올리면 밝은 색은 흰 테, 어두운 색은 (골이 밝아지는
     # 셰이더 특성상) 오히려 가장 어두운 테가 되어, 덧칠할 때마다 붓질 윤곽선이 낙서처럼 남았다(2026-10-08).
