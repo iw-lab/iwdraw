@@ -34,7 +34,8 @@ uniform vec2 u_arc;      // 조각 양 끝의 지나온 거리(px) — 물감 �
 out vec2 v_uv;
 out vec2 v_px;
 out vec2 v_paint;   // 획 방향 고정 픽셀 좌표(지나온 거리, 폭 방향 px)
-out float v_rot;    // 획 방향(물감 입체 조명의 기울기 회전)      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
+out float v_rot;    // 획 방향(물감 입체 조명의 기울기 회전)
+out float v_w;      // 획 폭 px(납작붓 가장자리 거칠기)      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
 void main() {
   float c = cos(u_rot); float s = sin(u_rot);
   vec2 q = vec2(a_pos.x * u_len, a_pos.y * u_size);
@@ -51,6 +52,7 @@ void main() {
   v_uv = mix(u_uvr.xy, u_uvr.zw, a_uv);
   v_paint = vec2(mix(u_arc.x, u_arc.y, a_uv.x), a_uv.y * u_size);
   v_rot = u_rot;
+  v_w = u_size;
   v_px = px;
 }`;
 
@@ -60,6 +62,7 @@ in vec2 v_uv;
 in vec2 v_px;
 in vec2 v_paint;
 in float v_rot;
+in float v_w;
 uniform float u_paintAmt;        // 물감 입체 조명 0 = 끔(납작붓만 1)
 uniform sampler2D u_paintHeight; // Firefly 물감 높이 타일(?relief=ff 비교 실험)
 uniform float u_paintTex;        // 1 = 높이를 위 텍스처에서, 0 = 절차 paintH(기본)
@@ -170,6 +173,19 @@ void main() {
     col = mix(col, vec3(1.0), bloom * 0.3);
   }
   if (u_paintAmt > 0.0) {
+    // 가장자리 오돌토돌 — 실루엣 안쪽 ≈14px 띠에서 캔버스 결 볼록한 곳에만 물감이 남는다(아트봉봉 최대 확대
+    // 비교, 2026-10-08). 띠 텍스처의 물감은 폭의 9% 안쪽부터라 그만큼 빼고 잰다. 캔버스·획 고정이라 결정론.
+    float ed = min(v_paint.y, v_w - v_paint.y) - 0.09 * v_w;
+    // 띠 폭은 획 폭의 18%(최대 14px) — 고정 14px 면 가는 획은 폭 전체가 띠가 돼 점선으로 끊겼다(brush-matrix 실측)
+    float bw = min(14.0, 0.18 * v_w);
+    float band = bw < 2.0 ? 0.0 : 1.0 - smoothstep(-2.0, bw, ed);
+    if (band > 0.0) {
+      float gr = texture(u_paper, v_px / 256.0).a;               // 캔버스 골(1 = 깊은 골)
+      // 1px 알갱이 + 3px 덩어리 + 획 방향으로 끌린 붓털(획 좌표 길쭉)
+      float fn = pHash(floor(v_px)) * 0.35 + pNoise(v_px / 3.0 + 7.0) * 0.35 + pNoise(v_paint / vec2(14.0, 1.5)) * 0.3;
+      float keep = (1.0 - gr) * 0.4 + fn * 0.6;
+      a *= smoothstep(band * 0.8 - 0.05, band * 0.8 + 0.05, keep);
+    }
     // 물감 입체 = 높이 지도 + 화면 고정 빛(왼쪽 위) 법선 조명. 아트봉봉 원본 픽셀 분석(2026-10-08, GPT 비전 +
     // 메인 확대 확인): 이랑 폭 ≈3px·간격 ≈10px·길이 10~35px(캔버스 px), 획 방향, 끊기고 살짝 휨.
     // 밝은 쪽 ≈+13% · 그늘 ≈−14%(회색이 아니라 같은 색이 짙어짐). 흰 선 더하기는 «긁힌 자국»으로 읽혔다.
