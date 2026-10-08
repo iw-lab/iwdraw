@@ -88,10 +88,11 @@ float paintHTex(vec2 q) {
 }
 float paintH(vec2 q) {
   if (u_paintTex > 0.5) return paintHTex(q);
-  float w = (pNoise(q / vec2(33.0, 23.0)) - 0.5) * 2.6; // 이랑이 획 축에서 살짝 흔들림(±1.3px)
+  // 굵고 길게 이어지는 이랑(폭 ≈6px·길이 60px+) — 3px·26px 는 «잘게 쪼개져 징그럽다»(2026-10-08 사용자)
+  float w = (pNoise(q / vec2(70.0, 30.0)) - 0.5) * 6.0; // 이랑이 획 축에서 완만하게 휨(±3px)
   vec2 r = vec2(q.x, q.y + w);
-  float n = 0.88 * pNoise(r / vec2(26.0, 3.0)) + 0.12 * pNoise(r / vec2(12.0, 1.6) + 17.0);
-  return smoothstep(0.32, 0.78, n);
+  float n = 0.8 * pNoise(r / vec2(45.0, 4.5)) + 0.2 * pNoise(r / vec2(20.0, 2.5) + 17.0);
+  return smoothstep(0.2, 0.85, n);
 }
 void main() {
   vec4 t = texture(u_tip, v_uv);
@@ -178,15 +179,16 @@ void main() {
                    paintH(q + vec2(0.0, 1.0)) - paintH(q - vec2(0.0, 1.0))) * 0.5;
     float rc = cos(v_rot); float rs = sin(v_rot);
     vec2 gsc = vec2(gx.x * rc - gx.y * rs, gx.x * rs + gx.y * rc); // 획 좌표 → 화면 좌표 기울기
-    vec3 N = normalize(vec3(-gsc * 3.0, 1.0));
+    vec3 N = normalize(vec3(-gsc * 3.6, 1.0)); // 이랑이 굵어져 기울기가 완만 — 법선 세기 보정
     vec3 L = normalize(vec3(-0.45, -0.55, 0.70)); // 왼쪽 위(화면 y 는 아래로 +)
     // 입체는 밝은 면이 맡는다 — 그늘은 아주 옅게(−4%)·같은 색 채도만 살짝. 그늘이 −15% 면 물감이
     // 검게 탁해졌다(2026-10-08 사용자 «검은색이 너무 많이 들어감», 아트봉봉은 밝게 준다)
-    float d = 1.1 * (dot(N, L) - L.z);
+    float d = 0.9 * (dot(N, L) - L.z);
     float spec = 0.03 * pow(max(dot(N, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 12.0);
     vec3 lit = d > 0.0
-      ? mix(col, vec3(1.0), min(d, 0.3) * 0.9) + spec
-      : col * (1.0 + max(d, -0.15) * 0.27);
+      // 어두운 색은 흰빛 섞임을 줄인다 — 검정 위 하이라이트가 회색 띠로 보였다
+      ? mix(col, vec3(1.0), min(d, 0.22) * 0.6 * (0.35 + 0.65 * max(col.r, max(col.g, col.b)))) + spec
+      : col * (1.0 + max(d, -0.2) * 0.45); // 그늘 최대 −9%(같은 색) — 밝은 면만이면 «너무 밝다»(2026-10-08)
     col = mix(col, min(lit, vec3(1.0)), u_paintAmt);
   }
   frag = vec4(col * a, a);  // premultiplied

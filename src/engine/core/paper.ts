@@ -447,7 +447,7 @@ export function drawPaperRelief(
   ctx.fillStyle = r.shadow;
   ctx.fillRect(0, 0, width, height);
   ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = strength * 0.4;
+  ctx.globalAlpha = strength * 0.15; // 흰 이랑 점이 물감(특히 어두운 색) 위에 잘게 흩뿌려졌다(2026-10-08)
   ctx.fillStyle = r.hi;
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
