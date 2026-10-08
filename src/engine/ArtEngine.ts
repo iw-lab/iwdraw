@@ -24,7 +24,7 @@ import { smearSegment } from "./tools/SmudgeTool";
 import { drawPaperRelief, drawPaperTint, onPaperReliefLoad, type PaperKind } from "./core/paper";
 
 /** 캔버스 요철 soft-light 세기(0~1) — 아트봉봉 화면과 나란히 보고 맞춘 값(2026-10-08) */
-const PAPER_RELIEF_STRENGTH = 0.6;
+const PAPER_RELIEF_STRENGTH = 0.8; // 0.6 → 0.42: 2026-10-08 사용자 «캔버스 굴곡을 줄여보자»
 import { tilesForRect, copyTiles, readTiles, TileSnapshotCommand, type TileRect } from "./core/tiles";
 import type { Layer } from "./core/LayerStack";
 import { BrushBase, createBrush, MIN_DAB_PX, STROKE_BRUSHES } from "./brushes";

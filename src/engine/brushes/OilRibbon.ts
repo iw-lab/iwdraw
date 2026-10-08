@@ -41,8 +41,10 @@ export class OilRibbon extends BrushBase {
         washOver: true, // 나중 붓질이 앞을 덮는다(MAX 면 겹친 자리마다 밝은 테가 쌓임)
         grainLift: true,
         streaks: 1, // 붓결 하이라이트 = 띠 텍스처 G 채널(셰이더 u_hlTip) — 강도는 텍스처가 정한다
-        impasto: 0.6,
-        impastoShadow: 0, // 테두리 검은 테 제거 — 아트봉봉 붓자국은 둘레가 밝다(2026-10-08 사용자)
+        // 덧칠하면 물감이 쌓이는 느낌 — 새 획 둘레의 두께 음영(하이라이트+옅은 그림자)이 아래 물감 위에 선다
+        // (2026-10-08 사용자 요청). 그림자는 옅게: 0 이던 때는 «검은 테» 지적 때문(그건 텍스처 가장자리가 원인이었다)
+        impasto: 0.8,
+        impastoShadow: 0, // 쌓임은 밝은 둘레(하이라이트)로만 — 어두운 테는 «검은 얼룩»으로 읽힌다(2026-10-08)
         wetMix: 0.4,
         speedSize: 0.1,
         speedAlpha: 0.08,
@@ -191,6 +193,17 @@ export class OilRibbon extends BrushBase {
    */
   private settle(d: Dab, arc: number): Dab {
     if (this.pts.length > 1) {
+      // 위치도 앞뒤 폭 60% 로 둥글게 — 빠른 지그재그는 입력 점이 듬성해 꺾인 직선(각진 다각형)으로
+      // 그려졌다(2026-10-08 사용자). 내보내기가 펜보다 뒤라 앞쪽 경로가 이미 있다.
+      const hp0 = this.width() * 0.6; // 0.25 는 지그재그 꼭짓점에 생선 꼬리 모양이 남았다 — 둥근 회전으로
+      // 획 양 끝에선 범위를 줄인다(한쪽만 있는 평균은 끝을 안으로 끌어당겨 펜보다 뒤처진다)
+      const P = this.pts;
+      const hp = Math.max(0, Math.min(hp0, arc - P[0].arc, P[P.length - 1].arc - arc));
+      const q0 = this.pointAt(arc - hp);
+      const qc = this.pointAt(arc);
+      const q1 = this.pointAt(arc + hp);
+      d.x = (q0.x + 2 * qc.x + q1.x) / 4;
+      d.y = (q0.y + 2 * qc.y + q1.y) / 4;
       // 앞뒤 폭 35% — 20% 는 꺾임 꼭짓점에서 몇 조각 만에 휙 돌아 각졌다(2026-10-08 낙서 실측)
       const h = this.width() * 0.35;
       const p0 = this.pointAt(arc - h);
@@ -198,22 +211,26 @@ export class OilRibbon extends BrushBase {
       const p1 = this.pointAt(arc + h);
       const li = Math.hypot(pc.x - p0.x, pc.y - p0.y);
       const lo = Math.hypot(p1.x - pc.x, p1.y - pc.y);
-      // 방향이 아니라 «축»으로 평균(각도 2배 평균) — 실제 납작붓은 왔다 갔다 문지를 때 180° 돌지 않는다.
-      // 방향으로 평균하면 되돌림마다 단면이 반 바퀴 돌며 부채꼴·너트 모양이 생겼다(2026-10-08 사용자 낙서).
-      let sx = 0;
-      let sy = 0;
       const ti = Math.atan2(pc.y - p0.y, pc.x - p0.x);
       const to = Math.atan2(p1.y - pc.y, p1.x - pc.x);
-      if (li > 1e-3) {
-        sx += Math.cos(2 * ti) * li;
-        sy += Math.sin(2 * ti) * li;
+      let turn = Math.abs(Math.atan2(Math.sin(to - ti), Math.cos(to - ti))); // 0~π 꺾인 각
+      if (li < 1e-3 || lo < 1e-3) turn = 0;
+      let rot: number | null = null;
+      if (turn > (150 * Math.PI) / 180) {
+        // 거의 되돌아감(문지르기) — «축»으로 평균(각도 2배): 실제 납작붓은 왔다 갔다 할 때 반 바퀴 돌지 않는다.
+        // 방향 평균이면 되돌림마다 단면이 180° 돌며 부채꼴·너트가 생겼다(2026-10-08 사용자 낙서)
+        const sx = Math.cos(2 * ti) * li + Math.cos(2 * to) * lo;
+        const sy = Math.sin(2 * ti) * li + Math.sin(2 * to) * lo;
+        if (sx * sx + sy * sy > 1e-9) rot = Math.atan2(sy, sx) / 2;
+        turn = 0; // 되돌림은 마이터 보정 없음
+      } else {
+        // 보통 꺾임(지그재그 꼭짓점 포함) — 진행 «방향»을 따라 붓이 돈다. 축 평균은 V 꼭짓점에서 단면이
+        // 가로로 누워 귀처럼 튀어나왔다(2026-10-08 사용자 «지그재그가 저렇게 나타나는데 맞나?»)
+        const tx = p1.x - p0.x;
+        const ty = p1.y - p0.y;
+        if (tx * tx + ty * ty > 1e-6) rot = Math.atan2(ty, tx);
       }
-      if (lo > 1e-3) {
-        sx += Math.cos(2 * to) * lo;
-        sy += Math.sin(2 * to) * lo;
-      }
-      if (sx * sx + sy * sy > 1e-9) {
-        let rot = Math.atan2(sy, sx) / 2;
+      if (rot !== null) {
         // 앞 단면과 같은 쪽을 향하게(축은 π 주기) — 반대로 잡히면 이음 띠가 X 자로 꼬인다
         if (this.lastOut) {
           const dd = Math.atan2(Math.sin(rot - this.lastOut.rot), Math.cos(rot - this.lastOut.rot));
@@ -221,11 +238,12 @@ export class OilRibbon extends BrushBase {
         }
         d.rotation = rot;
       }
-      if (li > 1e-3 && lo > 1e-3) {
-        // 축 사이 각(0~90°)만큼 마이터 보정 — 꺾임에서 폭 유지, 되돌림(축 같음)은 보정 없음
-        let turn = Math.abs(ti - to) % Math.PI;
-        turn = Math.min(turn, Math.PI - turn);
-        d.size *= 1 / Math.cos(turn / 2);
+      if (turn > 0) {
+        // 꺾임 마이터 보정 — 90° 까지 1/cos(θ/2)(최대 √2), 더 급하면 거둔다(화살촉 방지)
+        const half = turn / 2;
+        const base = 1 / Math.cos(Math.min(half, Math.PI / 4));
+        const fade = Math.max(0, Math.min(1, (Math.PI / 2 - half) / (Math.PI / 4)));
+        d.size *= 1 + (base - 1) * fade;
       }
     }
     if (d.slice?.seg) {

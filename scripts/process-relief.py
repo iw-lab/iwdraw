@@ -32,7 +32,7 @@ SRC = ROOT / "assets-src/textures/sources/firefly-canvas3d.png"
 OUT = ROOT / "public/textures/paper-linen-relief.png"
 PROV = ROOT / "assets-src/textures/PROVENANCE-relief.json"
 SIZE = 256  # 타일(캔버스 px)
-CROP = 512  # 원본에서 잘라 SIZE 로 줄이는 크기 — 원본 직조 칸 ≈30px → 타일 ≈10px(캔버스가 화면에 ≈0.5배로 보여 아트봉봉 결 크기와 비슷)
+CROP = 896  # 원본 세로 전체 — 직조 칸 ≈30px → 타일 ≈8.5px. 512 는 결이 굵다(2026-10-08 사용자 «캔버스 점을 촘촘하게»)
 AMP = 52  # 128 ± AMP·(표준편차 단위) — 엔진의 soft-light 세기는 globalAlpha 로 따로 조절
 
 

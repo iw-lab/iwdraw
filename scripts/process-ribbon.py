@@ -177,7 +177,7 @@ def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float =
     붓결을 어두운 골로만 그리면 획 전체가 고른 색보다 어둡고 «검은 느낌»이 났다(2026-10-08 사용자 두 번째 지적).
     아트봉봉처럼 몸통은 제 색 그대로, 결은 밝은 줄로. 테두리는 어둡게 하지 않고 옅은 흰 테.
     """
-    r = np.clip(1 + np.minimum(dev, 0) * 0.5, 0.76, 1.0)
+    r = np.clip(1 + np.minimum(dev, 0) * 0.25, 0.9, 1.0)  # 골은 거의 안 어둡게 — 물감은 한 색(아트봉봉)
     g = np.clip(np.maximum(dev, 0) * 3.4, 0, 1)  # 2.5 → 3.4: 2026-10-08 «붓결 더 강하게»(4.0 은 획이 하얗게 바램)
     # 테두리는 몸통 «평균» 명암으로 — 1(가장 밝음)로 올리면 밝은 색은 흰 테, 어두운 색은 (골이 밝아지는
     # 셰이더 특성상) 오히려 가장 어두운 테가 되어, 덧칠할 때마다 붓질 윤곽선이 낙서처럼 남았다(2026-10-08).
@@ -185,7 +185,8 @@ def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float =
     r_mean = float(r[body].mean()) if body.any() else 0.9
     g_mean = float(g[body].mean()) if body.any() else 0.0
     r = r * (1 - lift) + r_mean * lift
-    g = g * (1 - lift) + max(g_mean, rim * 0.5) * lift
+    # 테두리에 흰 테(rim)를 두면 덧칠·지그재그 때 붓질마다 흰 선이 그어졌다(2026-10-08) — 몸통 평균의 절반만
+    g = g * (1 - lift) + g_mean * 0.5 * lift
     paint = A > 0.004
     R = np.where(paint, r * 255, 255.0)
     G = np.where(paint, g * 255, 128.0)  # 투명 이웃 필터링이 테두리 흰 테(0.5)와 같은 값이 되게

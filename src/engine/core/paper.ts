@@ -372,14 +372,15 @@ export function applyPaperGrainLift(
 const RELIEF_URL: Partial<Record<PaperKind, string>> = { linen: "/textures/paper-linen-relief.png" };
 const relief = new Map<
   PaperKind,
-  { state: "loading" | "ok" | "fail"; img: HTMLImageElement; pat?: CanvasPattern; shadow?: CanvasPattern }
+  { state: "loading" | "ok" | "fail"; img: HTMLImageElement; hi?: CanvasPattern; shadow?: CanvasPattern }
 >();
 
 /**
- * 요철 음영을 연속으로 곱하는 타일(밝은 곳 0 ~ 어두운 곳 진하게) — soft-light 는 흰 바탕을 못 바꿔
- * 빈 종이에 결이 안 보인다. 골(128 미만)만 뽑으면 중간 밝기가 사라져 점선처럼 끊겼다(2026-10-08 실측).
+ * 요철 타일 두 장 — 밝은 이랑(흰색, 위에 얹기) / 골(아주 옅은 따뜻한 회색, 곱하기).
+ * 아트봉봉은 결이 «밝은 점»으로 보이고 물감은 한 색이다. 갈색·검은 그림자로 결을 그리면
+ * 물감 위가 얼룩덜룩해졌다(2026-10-08 사용자 «캔버스 질감을 검은 색으로 표현하지 말라»).
  */
-function reliefShadowTile(img: HTMLImageElement): HTMLCanvasElement {
+function reliefTile(img: HTMLImageElement, kind: "hi" | "lo"): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = img.naturalWidth;
   c.height = img.naturalHeight;
@@ -388,10 +389,16 @@ function reliefShadowTile(img: HTMLImageElement): HTMLCanvasElement {
   const d = x.getImageData(0, 0, c.width, c.height);
   for (let i = 0; i < d.data.length; i += 4) {
     const v = d.data[i];
-    d.data[i] = 78;
-    d.data[i + 1] = 72;
-    d.data[i + 2] = 64;
-    d.data[i + 3] = Math.max(0, Math.min(255, (200 - v) * 0.9));
+    if (kind === "hi") {
+      d.data[i] = d.data[i + 1] = d.data[i + 2] = 255;
+      d.data[i + 3] = Math.max(0, Math.min(255, (v - 120) * 2.2));
+    } else {
+      // 곱하기 색 자체가 밝아 아무리 진해도 15% 이상 어두워지지 않는다
+      d.data[i] = 222;
+      d.data[i + 1] = 218;
+      d.data[i + 2] = 212;
+      d.data[i + 3] = Math.max(0, Math.min(255, (150 - v) * 1.6));
+    }
   }
   x.putImageData(d, 0, 0);
   return c;
@@ -430,18 +437,18 @@ export function drawPaperRelief(
     img.src = url;
   }
   if (r.state !== "ok") return false;
-  if (!r.pat) r.pat = ctx.createPattern(r.img, "repeat") ?? undefined;
-  if (!r.shadow) r.shadow = ctx.createPattern(reliefShadowTile(r.img), "repeat") ?? undefined;
-  if (!r.pat || !r.shadow) return false;
+  if (!r.hi) r.hi = ctx.createPattern(reliefTile(r.img, "hi"), "repeat") ?? undefined;
+  if (!r.shadow) r.shadow = ctx.createPattern(reliefTile(r.img, "lo"), "repeat") ?? undefined;
+  if (!r.hi || !r.shadow) return false;
   ctx.save();
-  // ① 빛·그림자 → 물감 위 요철 ② 골 그림자 곱하기 → 빈 종이와 물감 모두에 같은 천 결
-  ctx.globalCompositeOperation = "soft-light";
-  ctx.globalAlpha = strength;
-  ctx.fillStyle = r.pat;
-  ctx.fillRect(0, 0, width, height);
+  // ① 골 = 옅은 회색 곱하기(빈 종이에 결이 보이게) ② 이랑 = 흰 하이라이트(물감 위 결은 밝은 점으로)
   ctx.globalCompositeOperation = "multiply";
-  ctx.globalAlpha = strength * 0.4;
+  ctx.globalAlpha = strength;
   ctx.fillStyle = r.shadow;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = strength * 0.55;
+  ctx.fillStyle = r.hi;
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
   return true;
