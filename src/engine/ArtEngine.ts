@@ -322,7 +322,7 @@ export class ArtEngine {
     // 종이는 "마지막 비지우개 브러시" 기준 — 지우개로 바꿔도 화선지가 유지된다
     const wasHanji = this.paperBrushId === "inkbrush";
     if (id !== "eraser") this.paperBrushId = id;
-    if (wasHanji !== (this.paperBrushId === "inkbrush")) this.requestComposite(); // 종이(틴트) 즉시 갱신
+    if (wasHanji !== (this.paperBrushId === "inkbrush")) this.requestComposite();
   }
   private paperBrushId: BrushId = "pencil";
   setColor(rgb: RGB | string): void {
@@ -422,8 +422,9 @@ export class ArtEngine {
    * 사용자 판정). 실제 수채화지도 빈 종이의 결은 거의 안 보이고 칠한 곳에서 드러난다 —
    * 획 내부 질감(paperGrain·edgeNoise·washCloud)은 cotton 필드를 그대로 쓴다(위 함수). */
   private paperTintKindForMode(): PaperKind {
-    const k = this.paperKindForMode();
-    return k === "cotton" ? "smooth" : k;
+    // 화면의 종이(캔버스)는 모드만 따른다 — 붓펜을 고르면 바탕 전체가 한지로 바뀌던 것은 «도구를 골랐는데
+    // 캔버스가 바뀐다»로 읽혔다(2026-10-08 사용자). 한지 결은 붓펜 획 안(paperKindForMode)에만 남긴다.
+    return this.mode === "oil" ? "linen" : "smooth";
   }
 
   private brushContext(): StrokeContext {
