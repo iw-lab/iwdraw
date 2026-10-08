@@ -447,7 +447,7 @@ export function drawPaperRelief(
   ctx.fillStyle = r.shadow;
   ctx.fillRect(0, 0, width, height);
   ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = strength * 0.55;
+  ctx.globalAlpha = strength * 0.4;
   ctx.fillStyle = r.hi;
   ctx.fillRect(0, 0, width, height);
   ctx.restore();

@@ -23,16 +23,17 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
 sys.path.insert(0, str(Path(__file__).parent))
-from texture_lib import fft_highpass, make_seamless, resize_area, seam_ratio, to_gray  # noqa: E402
+from texture_lib import fft_highpass, quilt_tile, resize_area, seam_ratio, to_gray  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-# 비스듬한 빛(레이킹 라이트)으로 뽑은 젯소 캔버스 — 평평한 조명 사진(firefly-linen-1)은 요철 음영이 약하고
-# 가로 실만 두드러졌다(2026-10-08 사용자 «파이어플라이로 3D 느낌으로 뽑으면?» → 맞는 지적)
-SRC = ROOT / "assets-src/textures/sources/firefly-canvas3d.png"
+# 젯소로 메운 고운 캔버스(Firefly canvasfine) — 아트봉봉 캔버스처럼 고르고 부드러운 결.
+# 레이킹 라이트 canvas3d 는 가로 실 줄이 강해 «가로 점선·얼룩»으로 보였다(2026-10-08 사용자 «기본 캔버스가 얼룩덜룩»)
+SRC = ROOT / "assets-src/textures/sources/firefly-canvasfine.png"
 OUT = ROOT / "public/textures/paper-linen-relief.png"
 PROV = ROOT / "assets-src/textures/PROVENANCE-relief.json"
 SIZE = 256  # 타일(캔버스 px)
-CROP = 896  # 원본 세로 전체 — 직조 칸 ≈30px → 타일 ≈8.5px. 512 는 결이 굵다(2026-10-08 사용자 «캔버스 점을 촘촘하게»)
+CROP = 384  # 원본 384px → 타일 256(결 ≈ 아트봉봉 화면과 같은 크기 — 시뮬 나란히 비교)
+OV = 64  # 퀼팅 겹침
 AMP = 52  # 128 ± AMP·(표준편차 단위) — 엔진의 soft-light 세기는 globalAlpha 로 따로 조절
 
 
@@ -40,15 +41,21 @@ def main() -> int:
     src = np.asarray(Image.open(SRC).convert("RGB"))
     g = to_gray(src)
     h, w = g.shape
-    y0 = (h - CROP) // 2
-    x0 = (w - CROP) // 2
-    t = resize_area(g[y0 : y0 + CROP, x0 : x0 + CROP], SIZE)
-    t = fft_highpass(make_seamless(t), 3)  # 조명 기울기·얼룩(타일당 3주기 이하) 제거
-    # 실 보풀 같은 1~2px 잔결을 살짝 눌러 부드러운 천 요철로(아트봉봉 결은 둥글다)
+    # 조명(σ≈12px 넘는 저주파) 제거 — 남겨 두면 퀼팅 경계가 밝기 단차 선으로 보였다
+    F = np.fft.fft2(g)
+    fy = np.fft.fftfreq(h)[:, None]
+    fx = np.fft.fftfreq(w)[None, :]
+    g = g - np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) * (2 * np.pi * 12) ** 2 / 2)))
+    n = CROP + OV
+    y0 = (h - n) // 2
+    x0 = (w - n) // 2
+    # 최소 오차 경계 퀼팅 + 경로 둘레 섞기 — 반 타일 크로스페이드는 고운 직조에서 십자 띠, 딱 자르면 점선
+    t = resize_area(quilt_tile(g[y0 : y0 + n, x0 : x0 + n], CROP), SIZE)
+    t = fft_highpass(t, 3)
     F = np.fft.fft2(t)
     fy = np.fft.fftfreq(SIZE)[:, None]
     fx = np.fft.fftfreq(SIZE)[None, :]
-    t = np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) / (2 * 0.16**2))))
+    t = np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) / (2 * 0.07**2))))  # 아트봉봉 결은 부드럽다(0.09 는 날카로웠다)
     t = (t - t.mean()) / max(1e-6, t.std())
     v = np.clip(128 + t * AMP, 0, 255).round().astype(np.uint8)
     seam = seam_ratio(v.astype(np.float64))
@@ -75,6 +82,7 @@ def main() -> int:
                 "source": str(SRC.relative_to(ROOT)),
                 "content_credentials": m.group(1) if m else None,
                 "crop": CROP,
+                "overlap": OV,
                 "size": SIZE,
                 "amp": AMP,
                 "seam_ratio": round(float(seam), 3),

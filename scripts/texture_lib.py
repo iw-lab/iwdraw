@@ -150,3 +150,58 @@ def patch_heterogeneity(tile: np.ndarray, patch: int = 32) -> tuple[float, float
     means = t.mean(axis=(1, 3))
     stds = t.std(axis=(1, 3))
     return float(np.abs(means - tile.mean()).max() / tile.std()), float(stds.std() / stds.mean())
+
+
+def periodic_component(img: np.ndarray) -> np.ndarray:
+    """Moisan 주기+평활 분해의 주기 성분 — 크로스페이드 없이 이음매를 없앤다.
+    make_seamless(반 타일 크로스페이드)는 결이 고운 사진에서 십자 띠가 보였다(2026-10-08 canvasfine 실측)."""
+    u = img.astype(np.float64)
+    m, n = u.shape
+    v = np.zeros_like(u)
+    v[0, :] += u[-1, :] - u[0, :]
+    v[-1, :] += u[0, :] - u[-1, :]
+    v[:, 0] += u[:, -1] - u[:, 0]
+    v[:, -1] += u[:, 0] - u[:, -1]
+    q = np.arange(m)[:, None]
+    r = np.arange(n)[None, :]
+    den = 2 * np.cos(2 * np.pi * q / m) + 2 * np.cos(2 * np.pi * r / n) - 4
+    den[0, 0] = 1
+    S = np.fft.fft2(v) / den
+    S[0, 0] = 0
+    return u - np.real(np.fft.ifft2(S))
+
+
+def _quilt_wrap_x(C: np.ndarray, n: int) -> np.ndarray:
+    """가로 이음매 — C(폭 n+ov)의 오른쪽 넘침 A 와 왼쪽 시작 B 를 최소 오차 경로(DP)로 잘라 붙인다.
+    결과(폭 n)의 오른쪽 끝 → 왼쪽 끝이 원본에서 실제로 이웃한 픽셀이 되어 무늬 위상까지 이어진다."""
+    ov = C.shape[1] - n
+    A = C[:, n:]
+    B = C[:, :ov]
+    E = (A - B) ** 2
+    h = E.shape[0]
+    cost = E.copy()
+    back = np.zeros(E.shape, dtype=int)
+    for y in range(1, h):
+        for x in range(ov):
+            lo, hi = max(0, x - 1), min(ov, x + 2)
+            k = lo + int(np.argmin(cost[y - 1, lo:hi]))
+            back[y, x] = k
+            cost[y, x] += cost[y - 1, k]
+    out = C[:, :n].copy()
+    cut = np.zeros(h, dtype=int)
+    x = int(np.argmin(cost[-1]))
+    for y in range(h - 1, -1, -1):
+        cut[y] = x
+        x = back[y, x]
+    # 경로 왼쪽 = 넘침(끝에서 이어짐), 오른쪽 = 원래 시작. 경로 둘레 ±feather px 는 섞는다 —
+    # 딱 자르면 경로가 실을 끊어 밝은 점선이 보였다(2026-10-08 canvasfine 시뮬)
+    feather = max(2, ov // 8)
+    xs = np.arange(ov)[None, :]
+    wA = np.clip((cut[:, None] - xs) / (2 * feather) + 0.5, 0, 1)
+    out[:, :ov] = A * wA + B * (1 - wA)
+    return out
+
+
+def quilt_tile(C: np.ndarray, n: int) -> np.ndarray:
+    """(n+ov)² 크롭 → 이음매 없는 n² 타일(가로·세로 최소 오차 경계)."""
+    return _quilt_wrap_x(_quilt_wrap_x(C, n).T, n).T

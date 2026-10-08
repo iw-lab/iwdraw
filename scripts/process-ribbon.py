@@ -24,6 +24,33 @@ import numpy as np
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
+sys.path.insert(0, str(Path(__file__).parent))
+from texture_lib import _quilt_wrap_x, to_gray  # noqa: E402
+
+# 물감 표면(붓털 이랑) — Firefly 레이킹 라이트 임파스토 사진. 띠 전체에 깔아 «물감이 쌓인» 질감을 낸다
+# (2026-10-08 사용자 «물감도 파이어플라이로 쌓이는 질감 표현 못하나?»)
+PAINT_SRC = Path(__file__).resolve().parent.parent / "assets-src/textures/sources/firefly-paint3d.png"
+PAINT = 0.28  # dev 단위 세기
+
+
+def paint_layer(width: int, height: int) -> np.ndarray:
+    """(height, width) 가로 반복 물감 이랑 — 평균 0, 표준편차 1"""
+    g = to_gray(np.asarray(Image.open(PAINT_SRC).convert("RGB")))
+    g = g[380:, :]  # 위쪽의 붓 그림 제외
+    h, w = g.shape
+    F = np.fft.fft2(g)
+    fy = np.fft.fftfreq(h)[:, None]
+    fx = np.fft.fftfreq(w)[None, :]
+    g = g - np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) * (2 * np.pi * 3) ** 2 / 2)))  # 조명·큰 굴곡 제거(σ 3px) — 큰 이랑은 띠에서 반복 무늬로 보였다
+    k = height / h  # 사진 세로 전체 → 띠 높이
+    seg = _quilt_wrap_x(g, w - 96)  # 가로 이음매 없이
+    t = np.asarray(
+        Image.fromarray(seg.astype(np.float32), mode="F").resize((round(seg.shape[1] * k), height), Image.Resampling.BOX)
+    )
+    t = (t - t.mean()) / max(1e-6, t.std())
+    reps = int(np.ceil(width / t.shape[1]))
+    return np.tile(t, (1, reps))[:, :width]
+
 ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "assets-src" / "textures"
 OUT = ROOT / "public" / "brush-tips" / "oil-ribbon.png"
@@ -141,6 +168,8 @@ def build(src_path: Path):
     xs = np.arange(dev.shape[1])[None, :]
     tail_w = np.clip((xs - (END[0] - 120)) / 240, 0, 1)  # 끝 구간 앞 120px 부터 서서히
     dev = dev * (BODY_STREAK + (1 - BODY_STREAK) * tail_w)
+    pl = paint_layer(dev.shape[1], dev.shape[0])
+    dev = dev + PAINT * pl * (1 - tail_w)
     # 테두리는 물감색 그대로(밝게) — 원본 사진은 가장자리가 그늘져 획 둘레에 검은 테가 돌았다
     # (2026-10-08 사용자 «테두리가 검은 빛, 아트봉봉은 흰빛»). 알파 경계에서 18줄 안쪽까지 셰이드를 1로 올린다.
     lift = edge_lift(A)
@@ -162,6 +191,7 @@ def build(src_path: Path):
     for e in edges[1:-1]:
         groove += np.exp(-((yy - e) ** 2) / (2 * 3.0**2))  # 가닥 사이 골
     dev_b = np.repeat(0.22 * levels[band_of] - 0.25 * groove, L.shape[1], 1) * BODY_STREAK * 1.5
+    dev_b = dev_b + PAINT * 0.8 * pl * (1 - tail_w)  # 가는 띠도 같은 물감 이랑(축소되면 평균되지만 큰 이랑은 남는다)
     # 가는 획: 테두리 흰 테 없이(rim 0) 가장자리 골만 지운다(12줄). 56줄 + 흰 테는 어두운 색에서
     # «가운데 검은 줄 + 바깥 흰 줄» 두 겹으로 갈라져 보였다(2026-10-08 사용자 ×3 확대 지적)
     lift_b = edge_lift(A, rows=12)
