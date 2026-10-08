@@ -149,7 +149,8 @@ test("캔버스 요철: 빈 종이·물감 위 결 · 파일 없으면 tint 폴�
   const rel = await paperPixels(page);
   const relTex = await strokeTexture(page);
   console.log("요철 빈 종이 결 표준편차", std(tint).toFixed(1), "→", std(rel).toFixed(1), "· 획 질감", tintTex.toFixed(2), "→", relTex.toFixed(2));
-  expect(std(rel)).toBeGreaterThan(std(tint) * 1.5);
+  // 1.5 → 1.25: 골 곱하기를 0.7배로 낮춤(물감 위 회색 망사, 2026-10-08) — 요철이 빠지면 1.0배라 여전히 잡힌다
+  expect(std(rel)).toBeGreaterThan(std(tint) * 1.25);
   expect(relTex).toBeGreaterThan(tintTex * 1.2);
   expect(diff(tint, rel)).toBeGreaterThan(3);
 });
