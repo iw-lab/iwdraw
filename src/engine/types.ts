@@ -70,7 +70,16 @@ export interface Dab {
    * 사각형으로 그린다. 붓자국 그림 한 장을 획 경로를 따라 이어 붙이는 용도(OilRibbon).
    * 없으면 지금까지처럼 팁 전체를 size×size 정사각형으로.
    */
-  slice?: { u0: number; u1: number; len: number };
+  slice?: {
+    u0: number;
+    u1: number;
+    len: number;
+    /**
+     * 이음 띠 — 있으면 사각 조각 대신 «앞 조각 중심(seg) → 이 dab 중심» 사다리꼴로 그린다(u0 → u1).
+     * 꺾이는 곳 바깥에 조각 모서리가 톱니처럼 삐져나오던 것을 없앤다(2026-10-08 사용자 «물레방아»).
+     */
+    seg?: { x: number; y: number; rot: number; size: number };
+  };
 }
 
 export interface BrushSettings {

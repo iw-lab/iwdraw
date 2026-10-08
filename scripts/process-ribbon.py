@@ -133,13 +133,11 @@ def build(src_path: Path):
     med = np.median(L[paint])
     rel = L / med
     # 붓결 대비 키우기 — 사진의 줄 명암(±3~5%)은 색을 곱하면 거의 안 보인다(첫 렌더 실측: 몸통이 단색)
-    shade = np.clip(0.86 + (rel - 1) * STREAK_GAIN, 0.45, 1.0)
+    dev = (rel - 1) * STREAK_GAIN
     # 테두리는 물감색 그대로(밝게) — 원본 사진은 가장자리가 그늘져 획 둘레에 검은 테가 돌았다
     # (2026-10-08 사용자 «테두리가 검은 빛, 아트봉봉은 흰빛»). 알파 경계에서 18줄 안쪽까지 셰이드를 1로 올린다.
     lift = edge_lift(A)
-    shade = shade * (1 - lift) + lift
-    rgb = np.where(A[..., None] > 0.004, (shade * 255)[..., None], 255.0).repeat(3, 2)
-    out = np.dstack([rgb, A[..., None] * 255]).round().astype(np.uint8)
+    out = pack_channels(dev, A, lift)
     # 가는 획용(획 폭 < 40px): 256 줄을 붓털 9가닥으로 묶고 대비를 더 키운다 — 원본은 몇 px 로
     # 줄어들면 가는 결이 평균으로 사라진다(유화붓 bristle-bold 와 같은 이유)
     bands = 9
@@ -168,15 +166,29 @@ def build(src_path: Path):
     for e in edges[1:-1]:
         groove += np.exp(-((yy - e) ** 2) / (2 * 2.5**2))  # 가닥 사이 골
     relb = Lb / med - 0.035 * groove
-    shade_b = np.clip(0.86 + (relb - 1) * STREAK_GAIN * 1.2, 0.5, 1.0)
+    dev_b = (relb - 1) * STREAK_GAIN * 1.2
     # 가는 획에선 18줄이 1px 도 안 된다 — 테두리 쪽 가닥 두 개 폭(≈56줄)까지 밝혀 «검은 테»로 안 읽히게
     lift_b = edge_lift(A, rows=56)
-    shade_b = shade_b * (1 - lift_b) + lift_b
-    rgb_b = np.where(A[..., None] > 0.004, (shade_b * 255)[..., None], 255.0).repeat(3, 2)
-    out_bold = np.dstack([rgb_b, A[..., None] * 255]).round().astype(np.uint8)
+    out_bold = pack_channels(dev_b, A, lift_b)
     info = dict(angle=round(float(ang), 2), crop=[int(top), int(bot), x0, x1], start_src=[x0, x0 + s_len], body_src=[b0, b0 + p_src],
                 body_period_tex=P, reps=reps, end_src=[e0, x1], body_cov=round(float(body_cov), 3))
     return out, out_bold, info
+
+
+def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray) -> np.ndarray:
+    """
+    R = 물감 명암(골만 살짝 어둡게, 하한 0.72) · G = 붓결 하이라이트(밝은 줄 → 셰이더가 흰빛을 섞는다) · B = R.
+    붓결을 어두운 골로만 그리면 획 전체가 고른 색보다 어둡고 «검은 느낌»이 났다(2026-10-08 사용자 두 번째 지적).
+    아트봉봉처럼 몸통은 제 색 그대로, 결은 밝은 줄로. 테두리는 어둡게 하지 않고 옅은 흰 테.
+    """
+    r = np.clip(1 + np.minimum(dev, 0) * 0.55, 0.72, 1.0)
+    g = np.clip(np.maximum(dev, 0) * 2.5, 0, 1)
+    r = r * (1 - lift) + lift
+    g = np.maximum(g * (1 - lift), lift * 0.5)
+    paint = A > 0.004
+    R = np.where(paint, r * 255, 255.0)
+    G = np.where(paint, g * 255, 128.0)  # 투명 이웃 필터링이 테두리 흰 테(0.5)와 같은 값이 되게
+    return np.dstack([R, G, R, A * 255]).round().astype(np.uint8)
 
 
 def edge_lift(A: np.ndarray, rows: int = 18) -> np.ndarray:

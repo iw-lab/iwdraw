@@ -14,6 +14,11 @@ export const RIBBON = {
   end: [1792, 2048] as const,
 };
 
+/** 띠 텍스처 팁인가 — R = 물감 명암(어둡게), G = 붓결 하이라이트(밝게), A = 물감 유무 */
+export function isRibbonTip(tip: string | undefined): boolean {
+  return tip === "ribbon" || tip === "ribbon-bold";
+}
+
 /** 텍스처 px → 획 px 배율은 «텍스처 높이 H ↔ 획 폭». 구간 길이(획 px) */
 export function ribbonLen(region: readonly [number, number], strokeWidth: number): number {
   return ((region[1] - region[0]) / RIBBON.H) * strokeWidth;

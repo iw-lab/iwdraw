@@ -1,5 +1,6 @@
 import type { BackendCaps, Dab, RGB } from "../types";
 import { getTipCanvas, getTipEpoch, getTipPixels, makeTipHighlightCanvas, unionDabBounds, type RendererBackend, type StrokeContext } from "./backend";
+import { isRibbonTip } from "./ribbon";
 import { applyImpastoRelief, applyWetEdge, compositeGlaze, growRect, IMPASTO_REACH, paperGrainTile, type PaperKind, type PxRect } from "./paper";
 import type { TipKind } from "../brushes/BrushBase";
 
@@ -26,6 +27,9 @@ uniform float u_size;    // px (획 폭 방향)
 uniform float u_len;     // px (획 진행 방향) — 일반 dab 은 u_size 와 같다
 uniform vec4 u_uvr;      // 팁 텍스처에서 쓸 구간(u0,v0,u1,v1) — 일반 dab 은 (0,0,1,1)
 uniform float u_rot;
+uniform float u_seg;     // 1 = 이음 띠(앞 중심 u_p0·법선 u_n0 → 이 dab), 0 = 회전 사각형
+uniform vec2 u_p0;
+uniform vec2 u_n0;       // 앞 끝의 반폭 법선(px)
 out vec2 v_uv;
 out vec2 v_px;      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
 void main() {
@@ -33,6 +37,12 @@ void main() {
   vec2 q = vec2(a_pos.x * u_len, a_pos.y * u_size);
   vec2 p = vec2(q.x * c - q.y * s, q.x * s + q.y * c);
   vec2 px = u_center + p;
+  if (u_seg > 0.5) {
+    // 사다리꼴: 왼쪽 변 = 앞 dab 중심의 폭 단면, 오른쪽 변 = 이 dab 중심의 폭 단면
+    vec2 n1 = vec2(-s, c) * (u_size * 0.5);
+    float t = a_pos.x + 0.5;
+    px = mix(u_p0, u_center, t) + mix(u_n0, n1, t) * (a_pos.y * 2.0);
+  }
   vec2 clip = (px / u_resolution) * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
   v_uv = mix(u_uvr.xy, u_uvr.zw, a_uv);
@@ -49,6 +59,7 @@ uniform float u_grain;      // 종이 결 강도 0~1 (dab 단위 실시간 — �
 uniform float u_grainLift;  // 1=결을 색 백화로(불투명 유지, 유화) / 0=알파 침식(수채 등)
 uniform sampler2D u_tipHl;  // 붓 방향 밝은 스트릭 맵(팁 UV) — 마른 붓털 하이라이트
 uniform float u_streaks;    // 스트릭 강도 0~1
+uniform float u_hlTip;      // 1 = 하이라이트를 팁 G 채널에서(납작붓 띠 — 붓결이 밝은 줄), 0 = u_tipHl
 uniform float u_cloud;      // 수채 농담 구름(저주파, 캔버스 고정) 강도 0~1
 uniform float u_edgeNoise;  // 가장자리 요철(알파<1 폴오프 영역만 침식, 캔버스 고정) 0~1
 uniform vec4 u_color;       // rgb(0..1) + alpha
@@ -87,7 +98,7 @@ void main() {
   float dk = 1.0 - max(col.r, max(col.g, col.b)); // 검을수록 1
   // 붓 방향 밝은 스트릭(마른 붓털 하이라이트) — 밝은 값은 wash(MAX)에서 살아남아
   // 덧칠 내부에도 붓결이 유지된다(어두운 골은 MAX가 지움 — i-scream 비교 실측)
-  float hl = texture(u_tipHl, v_uv).a * u_streaks;
+  float hl = mix(texture(u_tipHl, v_uv).a, t.g, u_hlTip) * u_streaks;
   // 백화 모드의 밝은 색: 결 이랑 흰색 혼입 + 스트릭. 합산 캡 0.34 — 0.5는 채도 높은
   // 색(로열블루)이 분필처럼 바랜다("흰색 섞은 듯", 2026-07-06 사용자 실측). 직조는
   // 획 전체에 상시 깔리는 항이라 특히 낮게(0.4) — 스트릭은 국소라 좀 더 허용.
@@ -420,6 +431,7 @@ export class WebGL2Backend implements RendererBackend {
     gl.uniform1f(gl.getUniformLocation(this.dabProg, "u_grain"), eraser ? 0 : this.ctx.paperGrain);
     gl.uniform1f(gl.getUniformLocation(this.dabProg, "u_grainLift"), this.ctx.grainLift ? 1 : 0);
     gl.uniform1f(gl.getUniformLocation(this.dabProg, "u_streaks"), eraser ? 0 : this.ctx.streaks);
+    gl.uniform1f(gl.getUniformLocation(this.dabProg, "u_hlTip"), isRibbonTip(this.ctx.tip) ? 1 : 0);
     gl.uniform1f(gl.getUniformLocation(this.dabProg, "u_cloud"), eraser ? 0 : this.ctx.washCloud);
     gl.uniform1f(
       gl.getUniformLocation(this.dabProg, "u_edgeNoise"),
@@ -433,6 +445,9 @@ export class WebGL2Backend implements RendererBackend {
     const uLen = gl.getUniformLocation(this.dabProg, "u_len");
     const uUvr = gl.getUniformLocation(this.dabProg, "u_uvr");
     const uColor = gl.getUniformLocation(this.dabProg, "u_color");
+    const uSeg = gl.getUniformLocation(this.dabProg, "u_seg");
+    const uP0 = gl.getUniformLocation(this.dabProg, "u_p0");
+    const uN0 = gl.getUniformLocation(this.dabProg, "u_n0");
 
     // dab별 팁 오버라이드(글리터 별 글린트) — 팁이 바뀔 때만 텍스처 리바인드.
     // 글리터도 베이스 dab이 연속이고 입자가 간헐이라 리바인드는 이벤트당 몇 회 수준.
@@ -452,6 +467,12 @@ export class WebGL2Backend implements RendererBackend {
       gl.uniform1f(uSize, dab.size);
       gl.uniform1f(uRot, dab.rotation);
       // 띠 조각(리본 붓) — 텍스처 가로 구간만, 획 방향 길이 len
+      const seg = dab.slice?.seg;
+      gl.uniform1f(uSeg, seg ? 1 : 0);
+      if (seg) {
+        gl.uniform2f(uP0, seg.x, seg.y);
+        gl.uniform2f(uN0, -Math.sin(seg.rot) * seg.size * 0.5, Math.cos(seg.rot) * seg.size * 0.5);
+      }
       if (dab.slice) {
         gl.uniform1f(uLen, dab.slice.len);
         gl.uniform4f(uUvr, dab.slice.u0, 0, dab.slice.u1, 1);

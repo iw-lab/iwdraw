@@ -92,4 +92,27 @@ describe("납작붓(리본 유화)", () => {
     expect(sig(pv)).toBe(second);
     expect(sig(b.end())).toBe(second);
   });
+
+  it("꺾이는 획도 조각이 앞 조각 단면에 그대로 이어 붙는다(바깥 톱니·틈 없음)", () => {
+    // 2026-10-08 사용자 «획획 꺾을 때 물레방아처럼 끊긴다» — 사각 조각을 돌려 찍으면 바깥쪽에 모서리가 부채처럼 삐져나왔다
+    const b = createBrush("oilribbon", mulberry32(1));
+    const out: Dab[] = [...b.begin({ x: 200, y: 100, pressure: 0.6, t: 0 }, SETTINGS)];
+    for (let k = 1; k <= 60; k++) {
+      const a = (k / 60) * Math.PI * 2; // 반지름 50 = 획 폭(45)과 비슷한 급한 고리
+      out.push(...b.move({ x: 150 + Math.cos(a) * 50, y: 100 + Math.sin(a) * 50, pressure: 0.6, t: k * 8 } as StrokePoint));
+    }
+    out.push(...b.end());
+    const segs = out.filter((d) => d.slice?.seg);
+    expect(segs.length).toBeGreaterThan(out.length - 3);
+    for (let i = 1; i < out.length; i++) {
+      const sg = out[i].slice!.seg;
+      if (!sg) continue;
+      const pv = out[i - 1];
+      expect(Math.hypot(sg.x - pv.x, sg.y - pv.y)).toBeLessThan(1e-9);
+      expect(sg.rot).toBeCloseTo(pv.rotation, 9);
+      expect(sg.size).toBeCloseTo(pv.size, 9);
+    }
+    // 폭은 이웃끼리 급변하지 않는다(가장자리 계단)
+    for (let i = 1; i < out.length; i++) expect(Math.abs(out[i].size - out[i - 1].size)).toBeLessThan(out[i].size * 0.06);
+  });
 });

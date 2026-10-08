@@ -2,6 +2,7 @@ import type { BackendCaps, Dab, RGB } from "../types";
 import { getTipCanvas, getTipEpoch, getTipPixels, unionDabBounds, type RendererBackend, type StrokeContext } from "./backend";
 import { applyImpastoRelief, applyPaperGrain, applyPaperGrainLift, applyWetEdge, compositeGlaze, growRect, IMPASTO_REACH, type PxRect } from "./paper";
 import type { TipKind } from "../brushes/BrushBase";
+import { isRibbonTip } from "./ribbon";
 
 /*
  * Canvas2DBackend: 크롬북 저사양/WebGL2 미지원 폴백.
@@ -58,6 +59,29 @@ export class Canvas2DBackend implements RendererBackend {
       c.width = tip.width;
       c.height = tip.height;
       const cx = c.getContext("2d")!;
+      if (isRibbonTip(kind)) {
+        // 띠 텍스처는 채널마다 뜻이 다르다(R 명암·G 하이라이트) — multiply 틴트면 G 가 색을 물들인다.
+        // GL 셰이더(DAB_FS)와 같은 식을 픽셀로.
+        cx.drawImage(tip, 0, 0);
+        const img = cx.getImageData(0, 0, c.width, c.height);
+        const d = img.data;
+        const k = this.ctx?.streaks ?? 0;
+        const dk = 1 - Math.max(color.r, color.g, color.b) / 255;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] === 0) continue;
+          const f = d[i] / 255;
+          const hl = (d[i + 1] / 255) * k;
+          const w = dk >= 0.6 ? Math.min(0.2, (1 - f) * 0.5 + hl * 0.5) * dk : Math.min(0.34, hl * 0.62);
+          const m = dk >= 0.6 ? 1 : f;
+          d[i] = color.r * m + (255 - color.r * m) * w;
+          d[i + 1] = color.g * m + (255 - color.g * m) * w;
+          d[i + 2] = color.b * m + (255 - color.b * m) * w;
+        }
+        cx.putImageData(img, 0, 0);
+        this.tintCache.set(key, c);
+        this.trimTintCache();
+        return c;
+      }
       // multiply 틴트: 팁의 밝기(셰이드 채널)가 물감 색의 명암으로 살아남는다(임파스토 줄무늬).
       // source-in은 밝기를 버리고 균일 색으로 채워 질감이 평평해진다.
       cx.drawImage(tip, 0, 0);
@@ -95,16 +119,20 @@ export class Canvas2DBackend implements RendererBackend {
       }
       cx.globalCompositeOperation = "source-over";
       this.tintCache.set(key, c);
-      // 캐시 폭주 방지
-      if (this.tintCache.size > 48) {
-        const first = this.tintCache.keys().next().value;
-        if (first) {
-          this.tintCache.delete(first);
-          this.mipCache.delete(first);
-        }
-      }
+      this.trimTintCache();
     }
     return c;
+  }
+
+  /** 캐시 폭주 방지 */
+  private trimTintCache(): void {
+    if (this.tintCache.size > 48) {
+      const first = this.tintCache.keys().next().value;
+      if (first) {
+        this.tintCache.delete(first);
+        this.mipCache.delete(first);
+      }
+    }
   }
 
   /**
@@ -220,6 +248,39 @@ export class Canvas2DBackend implements RendererBackend {
         // buildup+additive만 버퍼 내 가산. wash는 GL의 MAX와 짝 — 버퍼 안에서
         // lighter로 쌓으면 획 내부가 흰색으로 클리핑된다(글로우 실측: 속 빈 튜브).
         target.globalCompositeOperation = "lighter";
+      }
+      const seg = dab.slice?.seg;
+      if (dab.slice && seg) {
+        // 이음 띠 — 사다리꼴(앞 단면 → 이 단면)로 잘라 그 안에 띠를 평행사변형으로 입힌다.
+        // Canvas2D 는 사다리꼴 텍스처 매핑이 없어 평균 법선 평행사변형 + 클립으로 근사(GL 은 정확).
+        const src = this.sliceSource(dab.tip ?? this.ctx.tip, color, Math.max(s, seg.size));
+        const n0x = -Math.sin(seg.rot) * seg.size * 0.5;
+        const n0y = Math.cos(seg.rot) * seg.size * 0.5;
+        const n1x = -Math.sin(dab.rotation) * s * 0.5;
+        const n1y = Math.cos(dab.rotation) * s * 0.5;
+        const ax = dab.x - seg.x;
+        const ay = dab.y - seg.y;
+        const al = Math.hypot(ax, ay) || 1;
+        // 이웃 조각과 맞닿는 변이 안티에일리어싱으로 반투명 겹침(실선)이 되지 않게 진행 방향으로 0.6px 겹친다
+        const ex = (ax / al) * 0.6;
+        const ey = (ay / al) * 0.6;
+        target.beginPath();
+        target.moveTo(seg.x + n0x - ex, seg.y + n0y - ey);
+        target.lineTo(dab.x + n1x + ex, dab.y + n1y + ey);
+        target.lineTo(dab.x - n1x + ex, dab.y - n1y + ey);
+        target.lineTo(seg.x - n0x - ex, seg.y - n0y - ey);
+        target.closePath();
+        target.clip();
+        const nx = (n0x + n1x) * 1.25; // 평균 법선 × 폭(사다리꼴 모서리가 평행사변형 밖으로 안 나오게 여유)
+        const ny = (n0y + n1y) * 1.25;
+        const ext = 1.2 / al; // 진행 방향 양쪽 1.2px 더 — 이웃 조각과 맞닿는 곳 흰 틈 방지
+        const sx = dab.slice.u0 * src.width;
+        const sw = Math.max(1, (dab.slice.u1 - dab.slice.u0) * src.width);
+        // 단위 사각형 → (앞 중심 − 법선) 원점, x축 = 진행, y축 = 폭
+        target.transform(ax, ay, nx, ny, seg.x - nx / 2, seg.y - ny / 2);
+        target.drawImage(src, sx, 0, sw, src.height, -ext, 0, 1 + 2 * ext, 1);
+        target.restore();
+        continue;
       }
       target.translate(dab.x, dab.y);
       target.rotate(dab.rotation);

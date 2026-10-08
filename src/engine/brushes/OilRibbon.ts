@@ -34,7 +34,7 @@ export class OilRibbon extends BrushBase {
         strokeBlend: "wash",
         washOpacity: 1,
         grainLift: true,
-        streaks: 0, // 붓결은 텍스처가 담당
+        streaks: 1, // 붓결 하이라이트 = 띠 텍스처 G 채널(셰이더 u_hlTip) — 강도는 텍스처가 정한다
         impasto: 0.6,
         impastoShadow: 0, // 테두리 검은 테 제거 — 아트봉봉 붓자국은 둘레가 밝다(2026-10-08 사용자)
         wetMix: 0.4,
@@ -45,9 +45,12 @@ export class OilRibbon extends BrushBase {
     );
   }
 
-  /** 아직 내보내지 않은(끝 구간이 될 수도 있는) 조각과 그 호 길이 */
-  private queue: { d: Dab; arc: number }[] = [];
+  /** 아직 내보내지 않은(끝 구간이 될 수도 있는) 조각과 그 호 길이·앞 조각까지 거리 */
+  private queue: { d: Dab; arc: number; segLen: number }[] = [];
   private arcOf = new WeakMap<Dab, number>();
+  private segLenOf = new WeakMap<Dab, number>();
+  /** 앞 조각 단면(이음 띠의 왼쪽 변) */
+  private prev: { x: number; y: number; rot: number; size: number; arc: number } | null = null;
   private tapAt: StrokePoint | null = null;
 
   private width(): number {
@@ -69,13 +72,45 @@ export class OilRibbon extends BrushBase {
     return { u0: Math.max(lo, u - du / 2), u1: Math.min(hi, u + du / 2), len };
   }
 
-  /** 그리는 중의 위치(시작 → 몸통 반복) */
-  private liveSlice(arc: number): Dab["slice"] {
+  /**
+   * 이음 띠 조각 — 구간 안 비율 t 위치가 오른쪽 끝(u1), 앞 조각까지 거리 segLen 만큼 왼쪽(u0).
+   * 구간 시작을 넘으면 구간 안쪽으로 민다(폭 0 조각 = 텍셀 한 줄이 늘어난 띠가 된다).
+   */
+  private segAt(
+    region: readonly [number, number],
+    t: number,
+    regionLenPx: number,
+    segLen: number,
+    seg: NonNullable<NonNullable<Dab["slice"]>["seg"]>,
+  ): Dab["slice"] {
+    const lo = region[0] / RIBBON.W;
+    const du = Math.min(
+      ((segLen / Math.max(1, regionLenPx)) * (region[1] - region[0])) / RIBBON.W,
+      (region[1] - region[0]) / RIBBON.W,
+    );
+    const u1 = Math.max(ribbonU(region, t), lo + du);
+    return { u0: u1 - du, u1, len: segLen, seg };
+  }
+
+  /** 그리는 중의 위치(시작 → 몸통 반복) — 앞 조각이 있으면 이음 띠, 없으면 사각 조각 */
+  private liveSlice(arc: number, d: Dab): Dab["slice"] {
     const w = this.width();
     const ls = ribbonLen(RIBBON.start, w);
     const lb = ribbonLen(RIBBON.body, w);
-    if (arc < ls) return this.sliceAt(RIBBON.start, arc / ls, ls);
-    return this.sliceAt(RIBBON.body, ((arc - ls) % lb) / lb, lb);
+    const [region, t, len] =
+      arc < ls ? ([RIBBON.start, arc / ls, ls] as const) : ([RIBBON.body, ((arc - ls) % lb) / lb, lb] as const);
+    const p = this.prev;
+    if (!p) return this.sliceAt(region, t, len);
+    const segLen = Math.max(0.01, arc - p.arc);
+    this.segLenOf.set(d, segLen);
+    return this.segAt(region, t, len, segLen, { x: p.x, y: p.y, rot: p.rot, size: p.size });
+  }
+
+  /** 끝 구간으로 다시 매긴 조각(손 뗄 때·꼬리 미리보기 공용) */
+  private endSlice(q: { d: Dab; arc: number; segLen: number }, total: number, e: number): Dab["slice"] {
+    const t = (q.arc - (total - e)) / e;
+    const seg = q.d.slice?.seg;
+    return seg ? this.segAt(RIBBON.end, t, e, q.segLen, seg) : this.sliceAt(RIBBON.end, t, e);
   }
 
   /** 가는 획(폭 40px 미만)은 붓털을 굵게 묶은 띠 — 원본의 가는 결은 축소되면 평균으로 사라진다 */
@@ -86,20 +121,33 @@ export class OilRibbon extends BrushBase {
   protected override makeDab(p: StrokePoint, angle: number): Dab {
     const d = super.makeDab(p, angle);
     d.tip = this.tipFor();
-    d.slice = this.liveSlice(this.arc);
+    // 폭·방향을 획을 따라 매끈하게 — 이음 띠는 단면을 그대로 잇기 때문에 입력 이벤트마다 튀는
+    // 속도·필압 폭이 가장자리 계단으로 보였다(2026-10-08 지그재그 실측). 반 폭 거리에 걸쳐 따라간다.
+    const pv = this.prev;
+    if (pv) {
+      const w = this.width();
+      d.size = pv.size + (d.size - pv.size) * Math.min(1, (this.arc - pv.arc) / (w * 0.5));
+      let da = d.rotation - pv.rot;
+      da = Math.atan2(Math.sin(da), Math.cos(da));
+      d.rotation = pv.rot + da * Math.min(1, (this.arc - pv.arc) / (w * 0.25));
+    }
+    d.slice = this.liveSlice(this.arc, d);
     this.arcOf.set(d, this.arc);
+    this.prev = { x: d.x, y: d.y, rot: d.rotation, size: d.size, arc: this.arc };
     return d;
   }
 
   override begin(p: StrokePoint, settings: BrushSettings): Dab[] {
     this.queue = [];
+    this.prev = null;
     this.tapAt = p;
     super.begin(p, settings); // rotationFollowsStroke — 첫 조각은 방향이 정해질 때까지 보류된다
     return [];
   }
 
   override move(p: StrokePoint): Dab[] {
-    for (const d of super.move(p)) this.queue.push({ d, arc: this.arcOf.get(d) ?? this.traveled });
+    for (const d of super.move(p))
+      this.queue.push({ d, arc: this.arcOf.get(d) ?? this.traveled, segLen: this.segLenOf.get(d) ?? 0 });
     // 끝 구간 길이만큼 뒤처진 조각까지만 내보낸다
     const keepFrom = this.traveled - ribbonLen(RIBBON.end, this.width());
     let n = 0;
@@ -113,9 +161,7 @@ export class OilRibbon extends BrushBase {
     if (!this.queue.length || total <= w * 0.25) return [];
     const e = Math.min(ribbonLen(RIBBON.end, w), total * 0.5);
     // end() 와 같은 계산 — 손을 떼도 화면이 안 바뀐다(프리뷰=최종)
-    return this.queue.map((q) =>
-      q.arc > total - e ? { ...q.d, slice: this.sliceAt(RIBBON.end, (q.arc - (total - e)) / e, e) } : q.d,
-    );
+    return this.queue.map((q) => (q.arc > total - e ? { ...q.d, slice: this.endSlice(q, total, e) } : q.d));
   }
 
   override end(): Dab[] {
@@ -130,7 +176,7 @@ export class OilRibbon extends BrushBase {
     // 남은 조각 중 마지막 e(끝 구간 길이, 짧은 획이면 절반까지 줄임)를 끝 그림으로 다시 매긴다
     const e = Math.min(ribbonLen(RIBBON.end, w), total * 0.5);
     const out = this.queue.map((q) => {
-      if (q.arc > total - e) q.d.slice = this.sliceAt(RIBBON.end, (q.arc - (total - e)) / e, e);
+      if (q.arc > total - e) q.d.slice = this.endSlice(q, total, e);
       return q.d;
     });
     this.queue = [];
