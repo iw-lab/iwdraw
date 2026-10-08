@@ -1,7 +1,7 @@
 {
   "file": "public/brush-tips/oil-ribbon.png",
-  "sha256": "98adb3925b3360e0c4baced152faa7c075af46bce9480512186d117be8091ba1",
-  "bold_sha256": "d20a23ffc4bd129e32bd180ff811ab30d5e8926db82ff7b5d8f5ea6363f05fde",
+  "sha256": "152a97e07bd61e91d3a95b648c2a2c3d547654f670273ca0d2c98d1a2d580df6",
+  "bold_sha256": "817f77537bd6bffc51ffaaaaecc4965dbe796561dc5aee6b572fb29691edbd1d",
   "source": "sources/firefly-oilstroke.png",
   "source_sha256": "3d9e515b7c080d8bde28e6f13dcecb4ae31b6e9c82d7fa360bb10db83d34ccf3",
   "origin": "Adobe Firefly (Firefly Image 5) 2026-10-07 — prompts/oilstroke.txt",

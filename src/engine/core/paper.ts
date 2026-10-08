@@ -443,7 +443,7 @@ export function drawPaperRelief(
   ctx.save();
   // ① 골 = 옅은 회색 곱하기(빈 종이에 결이 보이게) ② 이랑 = 흰 하이라이트(물감 위 결은 밝은 점으로)
   ctx.globalCompositeOperation = "multiply";
-  ctx.globalAlpha = strength;
+  ctx.globalAlpha = strength * 0.7; // 캔버스 골 곱하기가 물감 위에서 회색 망사로 보였다(2026-10-08 «검은색이 많다»)
   ctx.fillStyle = r.shadow;
   ctx.fillRect(0, 0, width, height);
   ctx.globalCompositeOperation = "source-over";

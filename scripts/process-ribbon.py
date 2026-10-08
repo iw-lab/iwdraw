@@ -217,7 +217,7 @@ def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float =
     hgt = np.apply_along_axis(lambda c: np.convolve(c, k, mode="same"), 0, dev)
     emb = (hgt - np.roll(np.roll(hgt, 4, 0), 2, 1)) * EMBOSS
     shade = emb + dev * 0.35
-    r = np.clip(1 + np.minimum(shade, 0) * 0.6, 0.82, 1.0)  # 그늘은 옅게(검은 얼룩 금지)
+    r = np.clip(1 + np.minimum(shade, 0) * 0.3, 0.94, 1.0)  # 띠의 어두운 홈은 거의 없앤다 — 입체는 셰이더 빛 계산(검게 탁해짐, 2026-10-08)
     g = np.clip(np.maximum(shade, 0) * 3.4, 0, 1)
     # 테두리는 몸통 «평균» 명암으로 — 1(가장 밝음)로 올리면 밝은 색은 흰 테, 어두운 색은 (골이 밝아지는
     # 셰이더 특성상) 오히려 가장 어두운 테가 되어, 덧칠할 때마다 붓질 윤곽선이 낙서처럼 남았다(2026-10-08).

@@ -180,9 +180,14 @@ void main() {
     vec2 gsc = vec2(gx.x * rc - gx.y * rs, gx.x * rs + gx.y * rc); // 획 좌표 → 화면 좌표 기울기
     vec3 N = normalize(vec3(-gsc * 3.0, 1.0));
     vec3 L = normalize(vec3(-0.45, -0.55, 0.70)); // 왼쪽 위(화면 y 는 아래로 +)
-    float shade = clamp(1.0 + 0.6 * (dot(N, L) - L.z), 0.85, 1.14);
-    float spec = 0.025 * pow(max(dot(N, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 12.0);
-    col = mix(col, min(col * shade + spec, vec3(1.0)), u_paintAmt);
+    // 입체는 밝은 면이 맡는다 — 그늘은 아주 옅게(−4%)·같은 색 채도만 살짝. 그늘이 −15% 면 물감이
+    // 검게 탁해졌다(2026-10-08 사용자 «검은색이 너무 많이 들어감», 아트봉봉은 밝게 준다)
+    float d = 1.1 * (dot(N, L) - L.z);
+    float spec = 0.03 * pow(max(dot(N, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 12.0);
+    vec3 lit = d > 0.0
+      ? mix(col, vec3(1.0), min(d, 0.3) * 0.9) + spec
+      : col * (1.0 + max(d, -0.15) * 0.27);
+    col = mix(col, min(lit, vec3(1.0)), u_paintAmt);
   }
   frag = vec4(col * a, a);  // premultiplied
 }`;
