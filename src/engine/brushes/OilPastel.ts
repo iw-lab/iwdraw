@@ -23,6 +23,7 @@ export class OilPastel extends BrushBase {
         speedSpacing: 0.22, // 기름진 덩어리가 끊기는 결(크레용보다 약하게)
         speedAlpha: 0.1,
         washOpacity: 1,
+        edgeNoise: 0.55, // 가장자리 부슬거림 = 캔버스 고정 요철(팁 입자는 획을 따라 털 선이 됐다)
       },
       rng,
     );

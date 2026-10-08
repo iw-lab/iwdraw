@@ -253,9 +253,13 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   setMode: (m) => {
     const eng = get().engine;
+    const prev = get().brush;
     eng?.setMode(m);
+    // 엔진 setMode 는 모드 기본 붓으로 바꾼다 — 쓰던 도구를 그대로 유지(2026-10-08 사용자 «캔버스를 바꾸면
+    // 도구가 자동으로 바뀐다, 원래 쓰던 도구 그대로»). 도구 목록은 모드와 무관하게 같다.
+    eng?.setBrush(prev);
     eng?.setShapeInsert(null); // 모드 전환 = 도형 모드 해제
-    set({ mode: m, brush: eng?.brushId ?? get().brush, shapeInsert: null });
+    set({ mode: m, brush: prev, shapeInsert: null });
   },
   setBrush: (b) => {
     get().engine?.setBrush(b);

@@ -32,7 +32,7 @@ SRC = ROOT / "assets-src/textures/sources/firefly-canvasfine.png"
 OUT = ROOT / "public/textures/paper-linen-relief.png"
 PROV = ROOT / "assets-src/textures/PROVENANCE-relief.json"
 SIZE = 256  # 타일(캔버스 px)
-CROP = 384  # 원본 384px → 타일 256(결 ≈ 아트봉봉 화면과 같은 크기 — 시뮬 나란히 비교)
+CROP = 768  # 원본 768px → 타일 256 — 384 의 절반 간격(2026-10-08 사용자 «캔버스 간격 지금의 절반»)
 OV = 64  # 퀼팅 겹침
 AMP = 52  # 128 ± AMP·(표준편차 단위) — 엔진의 soft-light 세기는 globalAlpha 로 따로 조절
 
@@ -55,7 +55,7 @@ def main() -> int:
     F = np.fft.fft2(t)
     fy = np.fft.fftfreq(SIZE)[:, None]
     fx = np.fft.fftfreq(SIZE)[None, :]
-    t = np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) / (2 * 0.07**2))))  # 아트봉봉 결은 부드럽다(0.09 는 날카로웠다)
+    t = np.real(np.fft.ifft2(F * np.exp(-(fx**2 + fy**2) / (2 * 0.14**2))))  # 결이 절반 크기라 흐림 반경도 절반(0.07 이면 결이 지워진다)
     t = (t - t.mean()) / max(1e-6, t.std())
     v = np.clip(128 + t * AMP, 0, 255).round().astype(np.uint8)
     seam = seam_ratio(v.astype(np.float64))

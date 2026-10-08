@@ -68,5 +68,7 @@ test("유화 획이 밑색을 묻혀 와 섞인다(wet mixing)", async ({ page }
   );
   expect(control[0], "대조군은 순수 노랑 유지").toBeGreaterThan(215);
   expect(mixed[0], "패치 안 획은 청록이 섞여 R 하락").toBeLessThan(control[0] - 25);
-  expect(mixed[2], "패치 안 획은 B 상승(청록 방향)").toBeGreaterThan(control[2] + 8);
+  // 2026-10-08 wetMix 0.5 → 0.3(덧칠은 위에 «쌓이게», 사용자 요청) — 섞임은 R 하락(청록 방향)으로만 단언.
+  // B 는 노랑 위 청록이 대조군과 거의 같아(실측 +6 이하) 세기 축소 뒤 노이즈와 구분이 안 된다
+  expect(mixed[2], "패치 안 획은 B 가 떨어지지 않는다(청록 방향)").toBeGreaterThan(control[2]);
 });

@@ -599,7 +599,9 @@ export function applyImpastoRelief(
   sub(soft, bandCtx.canvas);
   soft.filter = "none";
 
-  const d = 2.2; // 물감 두께감의 스케일(px) — 굵기 비례가 아니라 물리적 고정
+  // 물감 두께감의 스케일(px) — 굵기 비례가 아니라 물리적 고정. 2.2 → 3.2: 덧칠한 물감이 아래 물감 위에
+  // «올라앉은» 단차가 더 보이게(2026-10-08 사용자 «중첩되는 느낌 유화 물감 조금 더 살려줘»)
+  const d = 3.2;
   const band = (dx: number, dy: number, color: string, alpha: number) => {
     bandCtx.clearRect(S.x, S.y, S.w, S.h);
     sub(bandCtx, soft.canvas);
@@ -617,8 +619,9 @@ export function applyImpastoRelief(
   };
   // shift(+d,+d)와의 차분 = 좌상단 림, shift(−d,−d)와의 차분 = 우하단 림.
   // 그림자를 하이라이트보다 살짝 약하게 — 아이 그림에서 어두운 테는 금방 "때"로 읽힌다.
-  band(d, d, "#ffffff", 0.22);
-  if (shadow > 0) band(-d, -d, "#1a1208", 0.15 * shadow);
+  band(d, d, "#ffffff", 0.32);
+  // 그늘은 옅은 갈색 — 검정 계열은 «검은 테·얼룩»으로 읽혔다(2026-10-08)
+  if (shadow > 0) band(-d, -d, "#4a3c2e", 0.22 * shadow);
   bandCtx.restore();
   soft.restore();
 }
@@ -631,8 +634,8 @@ export interface PxRect {
   h: number;
 }
 
-/** 임파스토 릴리프가 닿는 거리(px) — blur(2px) 커널 ≈ 6px + 오프셋 2.2 */
-export const IMPASTO_REACH = 9;
+/** 임파스토 릴리프가 닿는 거리(px) — blur(2px) 커널 ≈ 6px + 오프셋 3.2 (+여유) */
+export const IMPASTO_REACH = 11;
 
 /** r 을 m 만큼 넓혀 캔버스 안으로 자른다(정수) */
 export function growRect(r: PxRect, m: number, width: number, height: number): PxRect {

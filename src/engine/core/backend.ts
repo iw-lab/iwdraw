@@ -336,13 +336,9 @@ export function makeTipCanvas(tip: TipKind, size = 128): HTMLCanvasElement {
       ctx.beginPath();
       ctx.arc(r, r, r, 0, Math.PI * 2);
       ctx.fill();
-      // 가장자리 입자
-      for (let i = 0; i < 140; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const rad = r * (0.7 + Math.random() * 0.3);
-        ctx.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.5})`;
-        ctx.fillRect(r + Math.cos(a) * rad, r + Math.sin(a) * rad, 2.2, 2.2);
-      }
+      // 가장자리 입자는 넣지 않는다 — 팁이 진행 방향을 따라 돌아서 같은 입자가 획 가장자리를 따라
+      // 계속 지나가며 «털·가시» 선이 그어졌다(2026-10-08 사용자 «오일파스텔 모서리에 짝데기»).
+      // 부슬거림은 캔버스에 고정된 가장자리 요철(edgeNoise, OilPastel)이 맡는다.
       // 크리미 스트릭(셰이드 채널, rotationFollowsStroke로 진행 방향을 따름) —
       // 민무늬 플래토는 "진한 마커"로 읽힌다(2026-07-06 사용자 실측) → 버터가 뭉개진
       // 명암 결. 고정 시드: 로드마다 결 배치가 바뀌면 평균 셰이드 요동(색 게이트 교훈)
@@ -353,7 +349,8 @@ export function makeTipCanvas(tip: TipKind, size = 128): HTMLCanvasElement {
       };
       ctx.lineCap = "round";
       for (let i = 0; i < 7; i++) {
-        const y = size * (0.14 + (i / 7) * 0.72) + (crand() - 0.5) * 6;
+        // 결 줄은 가운데 띠(0.24~0.76)에만 — 바깥 줄은 가장자리에 붙어 어두운 털처럼 보였다
+        const y = size * (0.24 + (i / 7) * 0.52) + (crand() - 0.5) * 4;
         const half = Math.sqrt(Math.max(0, r * r - (y - r) * (y - r))) * 0.9;
         if (half < 4) continue;
         const v = 208 + Math.floor(crand() * 26);
