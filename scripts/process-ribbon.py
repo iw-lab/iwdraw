@@ -30,6 +30,7 @@ from texture_lib import _quilt_wrap_x, to_gray  # noqa: E402
 # 물감 표면(붓털 이랑) — Firefly 레이킹 라이트 임파스토 사진. 띠 전체에 깔아 «물감이 쌓인» 질감을 낸다
 # (2026-10-08 사용자 «물감도 파이어플라이로 쌓이는 질감 표현 못하나?»)
 PAINT_SRC = Path(__file__).resolve().parent.parent / "assets-src/textures/sources/firefly-paint3d.png"
+EMBOSS = 1.6  # 엠보스(높이 기울기 → 명암) 세기
 PAINT = 0.28  # dev 단위 세기
 
 
@@ -207,8 +208,17 @@ def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float =
     붓결을 어두운 골로만 그리면 획 전체가 고른 색보다 어둡고 «검은 느낌»이 났다(2026-10-08 사용자 두 번째 지적).
     아트봉봉처럼 몸통은 제 색 그대로, 결은 밝은 줄로. 테두리는 어둡게 하지 않고 옅은 흰 테.
     """
-    r = np.clip(1 + np.minimum(dev, 0) * 0.25, 0.9, 1.0)  # 골은 거의 안 어둡게 — 물감은 한 색(아트봉봉)
-    g = np.clip(np.maximum(dev, 0) * 3.4, 0, 1)  # 2.5 → 3.4: 2026-10-08 «붓결 더 강하게»(4.0 은 획이 하얗게 바램)
+    # 입체(엠보스): dev 를 물감 «높이»로 보고 빛(획 진행 방향 기준 위쪽·약간 앞)에서 본 기울기로 명암을 만든다.
+    # 밝은 줄만 있으면 납작한 인쇄처럼 보였다 — 아트봉봉 물감은 붓털 골마다 밝은 쪽·그늘진 쪽이 짝을 이룬다
+    # (2026-10-08 사용자 «이 물감의 3D 질감은 없는데?»). 평탄 성분(dev)도 조금 남긴다.
+    # 띠는 획에서 1/3~1/6 로 줄어 그려진다 — 높이를 세로 σ2.5 로 흐리고 4px 어긋나게 비춰야 골이 몇 px 로 남는다
+    k = np.exp(-(np.arange(-7, 8) ** 2) / (2 * 2.5**2))
+    k /= k.sum()
+    hgt = np.apply_along_axis(lambda c: np.convolve(c, k, mode="same"), 0, dev)
+    emb = (hgt - np.roll(np.roll(hgt, 4, 0), 2, 1)) * EMBOSS
+    shade = emb + dev * 0.35
+    r = np.clip(1 + np.minimum(shade, 0) * 0.6, 0.82, 1.0)  # 그늘은 옅게(검은 얼룩 금지)
+    g = np.clip(np.maximum(shade, 0) * 3.4, 0, 1)
     # 테두리는 몸통 «평균» 명암으로 — 1(가장 밝음)로 올리면 밝은 색은 흰 테, 어두운 색은 (골이 밝아지는
     # 셰이더 특성상) 오히려 가장 어두운 테가 되어, 덧칠할 때마다 붓질 윤곽선이 낙서처럼 남았다(2026-10-08).
     body = (A > 0.9) & (lift < 0.05)
