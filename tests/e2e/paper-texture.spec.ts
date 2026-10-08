@@ -77,6 +77,9 @@ async function strokeTexture(page: Page): Promise<number> {
 
 test("종이 결 팩: 배선 · 404 폴백 · 늦은 도착 세션 고정 · 획 질감 세기", async ({ page }) => {
   test.setTimeout(120_000);
+  // 이 시험은 multiply tint 경로(팩·폴백·세션 고정)를 잰다 — 캔버스 요철(relief)이 오면 그 위를 덮어
+  // 빈 종이가 팩/프로시저럴과 무관하게 같아진다(2026-10-08 도입). 요철은 아래 별도 시험에서.
+  await page.route("**/textures/paper-linen-relief.png", (r) => r.abort());
   await open(page, "&paper=proc");
   const proc = await paperPixels(page);
   const procTex = await strokeTexture(page);
@@ -107,6 +110,8 @@ test("종이 결 팩: 배선 · 404 폴백 · 늦은 도착 세션 고정 · 획
 
   // ③ 3초 늦게 도착 → 시간 제한(1.5s) 뒤라 버려져야 한다. 도착 뒤 한참 기다려도 그대로
   await page.route("**/textures/**", async (r) => {
+    // 요철은 표시 전용(획에 안 구워짐)이라 늦게 와도 되는 별개 자원 — 이 시험(결 필드 봉인) 밖이다
+    if (r.request().url().endsWith("/paper-linen-relief.png")) return r.abort();
     await new Promise((res) => setTimeout(res, 3000));
     await r.continue();
   });
@@ -118,4 +123,33 @@ test("종이 결 팩: 배선 · 404 폴백 · 늦은 도착 세션 고정 · 획
   console.log("빈 종이 차이(늦은 팩 vs 프로시저럴)", diff(proc, late).toFixed(3), "상태", JSON.stringify(lateSt));
   expect(diff(proc, late)).toBeLessThan(0.05);
   expect(lateSt.used).toEqual([]); // 늦게 온 파일은 어떤 필드에도 쓰이지 않았다
+});
+
+/*
+ * 캔버스 요철(relief, 2026-10-08 아트봉봉 비교) — Firefly 레이킹 라이트 캔버스에서 뽑은 높이 음영을
+ * 화면 맨 위에 soft-light + 연속 그림자 multiply 로 덮는다.
+ *  ① 빈 종이에도 결이 보인다(soft-light 만으로는 흰 바탕이 안 바뀐다) — tint 보다 결 변동이 크다
+ *  ② 물감 위에도 같은 결이 비친다 — 요철이 없을 때보다 획 안 고역 질감이 크다
+ *  ③ 요철 파일이 없으면 tint 로 돌아간다(빈 종이가 tint 와 같다)
+ */
+test("캔버스 요철: 빈 종이·물감 위 결 · 파일 없으면 tint 폴백", async ({ page }) => {
+  test.setTimeout(120_000);
+  const std = (a: number[]) => {
+    const m = a.reduce((s, v) => s + v, 0) / a.length;
+    return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length);
+  };
+  await page.route("**/textures/paper-linen-relief.png", (r) => r.abort());
+  await open(page, "");
+  const tint = await paperPixels(page);
+  const tintTex = await strokeTexture(page);
+  await page.unroute("**/textures/paper-linen-relief.png");
+
+  await open(page, "");
+  await page.waitForTimeout(500); // 요철 타일 로드 → 다시 그림
+  const rel = await paperPixels(page);
+  const relTex = await strokeTexture(page);
+  console.log("요철 빈 종이 결 표준편차", std(tint).toFixed(1), "→", std(rel).toFixed(1), "· 획 질감", tintTex.toFixed(2), "→", relTex.toFixed(2));
+  expect(std(rel)).toBeGreaterThan(std(tint) * 1.5);
+  expect(relTex).toBeGreaterThan(tintTex * 1.2);
+  expect(diff(tint, rel)).toBeGreaterThan(3);
 });

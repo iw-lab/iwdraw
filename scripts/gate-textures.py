@@ -135,6 +135,23 @@ def gate(pub: Path = PUB, src: Path = SRC) -> list[str]:
             if "firefly" in str(rpv.get("origin", "")).lower() and (not cc or cc not in (r.info.get("XML:com.adobe.xmp") or "")):
                 errs.append("oil-ribbon.png: Firefly Content Credentials 참조 누락(약관 §3.1)")
             print(f"  oil-ribbon.png: {r.size} {rp.stat().st_size // 1024}KB 출처 {rpv.get('origin', '')[:30]}")
+    # 캔버스 요철(public/textures/paper-linen-relief.png) — 회색 256 타일·원장 해시·Content Credentials
+    lp = pub / "paper-linen-relief.png"
+    lprov_p = src / "PROVENANCE-relief.json"
+    if lp.exists():
+        li = Image.open(lp)
+        if li.size != (256, 256) or li.mode != "L":
+            errs.append(f"paper-linen-relief.png: 256×256 L 이어야 한다(process-relief.py) — {li.size} {li.mode}")
+        if not lprov_p.exists():
+            errs.append("paper-linen-relief.png: PROVENANCE-relief.json 없음")
+        else:
+            lpv = json.loads(lprov_p.read_text())
+            if lpv.get("sha256") != sha(lp):
+                errs.append("paper-linen-relief.png: 해시가 원장과 다름(process-relief.py 를 거치지 않은 수정)")
+            cc = lpv.get("content_credentials")
+            if not cc or cc not in (li.info.get("XML:com.adobe.xmp") or ""):
+                errs.append("paper-linen-relief.png: Firefly Content Credentials 참조 누락(약관 §3.1)")
+        print(f"  paper-linen-relief.png: {li.size} {lp.stat().st_size // 1024}KB")
     if total > LIM["total_kb"]:
         errs.append(f"합계 {total:.0f}KB > {LIM['total_kb']}KB")
     return errs

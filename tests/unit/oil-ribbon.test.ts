@@ -115,4 +115,22 @@ describe("납작붓(리본 유화)", () => {
     // 폭은 이웃끼리 급변하지 않는다(가장자리 계단)
     for (let i = 1; i < out.length; i++) expect(Math.abs(out[i].size - out[i - 1].size)).toBeLessThan(out[i].size * 0.06);
   });
+
+  it("왔다 갔다 문지르면 붓이 반 바퀴 돌지 않는다(축 유지 — 부채꼴·너트 모양 없음)", () => {
+    // 2026-10-08 사용자 «한곳에 여러 번 칠했더니 낙서 같다» — 되돌림마다 단면이 180° 돌며 부채꼴이 생겼다
+    const b = createBrush("oilribbon", mulberry32(1));
+    const out: Dab[] = [...b.begin({ x: 100, y: 100, pressure: 0.6, t: 0 }, SETTINGS)];
+    let t = 0;
+    for (let pass = 0; pass < 6; pass++)
+      for (let k = 1; k <= 20; k++) {
+        const x = pass % 2 === 0 ? 100 + k * 10 : 300 - k * 10;
+        out.push(...b.move({ x, y: 100 + pass * 3, pressure: 0.6, t: (t += 8) } as StrokePoint));
+      }
+    out.push(...b.end());
+    // 붓 축은 거의 수평 그대로 — 방향(rotation)이 0 또는 π 근처, 그 사이(세로)로 돌지 않는다
+    for (const d of out) expect(Math.abs(Math.sin(d.rotation))).toBeLessThan(0.35);
+    // 되돌림에서 마이터 보정이 붙지 않는다(폭 그대로)
+    const w = Math.max(...out.map((d) => d.size));
+    expect(w).toBeLessThan(b.strokePx(SETTINGS.size) * 1.25);
+  });
 });

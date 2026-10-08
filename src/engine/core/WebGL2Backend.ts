@@ -407,7 +407,7 @@ export class WebGL2Backend implements RendererBackend {
     // wash: 픽셀별 최대 알파만 유지(MAX) → 겹침 포화 없이 팁 붓결이 획 전체에 보존.
     // (premultiplied + 스트로크 내 단색이라 채널별 max가 일관됨. 무지개 같은
     //  dab별 색 변화 브러시는 buildup을 유지해야 한다.)
-    if (this.ctx.wash) {
+    if (this.ctx.wash && !this.ctx.washOver) {
       gl.blendEquation(gl.MAX);
       gl.blendFunc(gl.ONE, gl.ONE);
     } else if (this.ctx.composite === "lighter") {

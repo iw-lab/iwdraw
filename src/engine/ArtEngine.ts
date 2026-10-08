@@ -21,7 +21,10 @@ import { History } from "./core/History";
 import { StrokeRecorder } from "./core/StrokeRecorder";
 import { AutoSave, type SavedState } from "./core/AutoSave";
 import { smearSegment } from "./tools/SmudgeTool";
-import { drawPaperTint, type PaperKind } from "./core/paper";
+import { drawPaperRelief, drawPaperTint, onPaperReliefLoad, type PaperKind } from "./core/paper";
+
+/** 캔버스 요철 soft-light 세기(0~1) — 아트봉봉 화면과 나란히 보고 맞춘 값(2026-10-08) */
+const PAPER_RELIEF_STRENGTH = 0.6;
 import { tilesForRect, copyTiles, readTiles, TileSnapshotCommand, type TileRect } from "./core/tiles";
 import type { Layer } from "./core/LayerStack";
 import { BrushBase, createBrush, MIN_DAB_PX, STROKE_BRUSHES } from "./brushes";
@@ -170,6 +173,7 @@ export class ArtEngine {
     this.layers = new LayerStack(opts.width, opts.height);
     this.history = new History(50);
     this.recorder = new StrokeRecorder();
+    this.offRelief = onPaperReliefLoad(() => this.requestComposite()); // 요철 타일이 늦게 오면 다시 그림
     this.autosave = new AutoSave(5000);
     this.stabilizer.setStrength(this.settings.stabilize);
     loadTipOverrides(); // AI 팁 알파맵 비동기 로드(실패 시 프로시저럴 폴백)
@@ -455,6 +459,7 @@ export class ArtEngine {
       wetEdge: brush.cfg.wetEdge * thin,
       impasto: brush.cfg.impasto,
       impastoShadow: brush.cfg.impastoShadow,
+      washOver: brush.cfg.washOver,
       grainLift: brush.cfg.grainLift,
       streaks: brush.cfg.streaks,
       washCloud: brush.cfg.washCloud,
@@ -1024,6 +1029,7 @@ export class ArtEngine {
       wetEdge: brush.cfg.wetEdge,
       impasto: brush.cfg.impasto,
       impastoShadow: brush.cfg.impastoShadow,
+      washOver: brush.cfg.washOver,
       grainLift: brush.cfg.grainLift,
       streaks: brush.cfg.streaks,
       washCloud: brush.cfg.washCloud,
@@ -1957,8 +1963,11 @@ export class ArtEngine {
     ctx.globalCompositeOperation = "destination-over";
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, this.width, this.height);
-    ctx.globalCompositeOperation = "multiply";
-    drawPaperTint(ctx, this.width, this.height, this.paperTintKindForMode());
+    const tintKind = this.paperTintKindForMode();
+    if (!drawPaperRelief(ctx, this.width, this.height, tintKind, PAPER_RELIEF_STRENGTH)) {
+      ctx.globalCompositeOperation = "multiply";
+      drawPaperTint(ctx, this.width, this.height, tintKind);
+    }
     ctx.globalCompositeOperation = "source-over";
     // 데칼코마니 가이드(표시 전용 — 내보내기·저장엔 미포함): 대칭축을 연한 점선으로.
     // 어느 선을 기준으로 접히는지 보여야 아이가 대칭을 이해하고 그린다(2026-07-09 요청).
@@ -2204,7 +2213,10 @@ export class ArtEngine {
     return this.cm.usingWebGL2;
   }
 
+  private offRelief: () => void;
+
   destroy(): void {
+    this.offRelief();
     cancelAnimationFrame(this.rafId);
     this.displayRo?.disconnect();
     this.displayRo = null;

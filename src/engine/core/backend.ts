@@ -29,6 +29,8 @@ export interface StrokeContext {
   wetEdge: number;
   /** 임파스토 릴리프 강도 0~1(유화) — endStroke에서 applyImpastoRelief */
   impasto: number;
+  /** wash 획 안 겹침을 MAX 대신 source-over 로(GL 전용 — 2D 는 원래 over 근사) */
+  washOver?: boolean;
   /** 임파스토 우하단 그림자 배율(기본 1) — 납작붓은 0: 테두리에 검은 테가 돌았다(2026-10-08) */
   impastoShadow?: number;
   /** 종이 결을 색 백화로(불투명 유지, 유화) — false면 알파 침식(수채 등) */

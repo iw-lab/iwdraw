@@ -165,6 +165,12 @@ export interface BrushConfig {
   /** wash 모드에서 스트로크 전체에 적용되는 기본 불투명도(진하기 슬라이더와 곱) */
   washOpacity: number;
   /**
+   * wash 획 안 겹침을 MAX 대신 덮어 칠하기(source-over)로 — 나중 붓질이 앞을 덮는다.
+   * 납작붓 띠는 하이라이트가 MAX 에서 이겨 겹친 자리마다 밝은 테두리가 소용돌이처럼 쌓였다(2026-10-08).
+   * 진하기는 wash 와 같이 합성 시 1회.
+   */
+  washOver: boolean;
+  /**
    * 진하기 슬라이더를 strokeOpacity(알파)가 아니라 브러시가 직접 색 희석으로 소비(수채).
    * 알파 <1 이면 darken이어도 겹칠 때마다 한 스텝씩 어두워져 겹침 경계가 얼룩이 된다.
    */
@@ -244,6 +250,7 @@ const DEFAULTS: Omit<BrushConfig, "id" | "tip"> = {
   dynamicHue: false,
   strokeBlend: "buildup",
   washOpacity: 1,
+  washOver: false,
   opacityAsDilution: false,
   washCloud: 0,
   edgeNoise: 0,

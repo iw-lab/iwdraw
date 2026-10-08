@@ -32,9 +32,13 @@ export class OilRibbon extends BrushBase {
         minSizeRatio: 0.7,
         composite: "source-over",
         rotationFollowsStroke: true,
-        paperGrain: 0.38, // 유화붓과 같은 캔버스 결 배어남
+        // 질감의 주역 = 화면 맨 위 캔버스 요철(paper.ts drawPaperRelief — 아트봉봉 비교 2026-10-08:
+        // 몸통은 한 색, 천 요철이 물감에 비친다). 물감 자체 결은 약하게 — 요철과 다른 무늬라 겹치면 지저분
+        paperGrain: 0.2,
+        edgeNoise: 0.5, // 가장자리를 천 결 따라 거칠게(붓 띠 알파 폴오프 구간만)
         strokeBlend: "wash",
         washOpacity: 1,
+        washOver: true, // 나중 붓질이 앞을 덮는다(MAX 면 겹친 자리마다 밝은 테가 쌓임)
         grainLift: true,
         streaks: 1, // 붓결 하이라이트 = 띠 텍스처 G 채널(셰이더 u_hlTip) — 강도는 텍스처가 정한다
         impasto: 0.6,
@@ -187,23 +191,41 @@ export class OilRibbon extends BrushBase {
    */
   private settle(d: Dab, arc: number): Dab {
     if (this.pts.length > 1) {
-      const h = this.width() * 0.2;
+      // 앞뒤 폭 35% — 20% 는 꺾임 꼭짓점에서 몇 조각 만에 휙 돌아 각졌다(2026-10-08 낙서 실측)
+      const h = this.width() * 0.35;
       const p0 = this.pointAt(arc - h);
       const pc = this.pointAt(arc);
       const p1 = this.pointAt(arc + h);
-      const tx = p1.x - p0.x;
-      const ty = p1.y - p0.y;
-      if (tx * tx + ty * ty > 1e-6) d.rotation = Math.atan2(ty, tx);
-      const ix = pc.x - p0.x;
-      const iy = pc.y - p0.y;
-      const ox = p1.x - pc.x;
-      const oy = p1.y - pc.y;
-      const li = Math.hypot(ix, iy);
-      const lo = Math.hypot(ox, oy);
+      const li = Math.hypot(pc.x - p0.x, pc.y - p0.y);
+      const lo = Math.hypot(p1.x - pc.x, p1.y - pc.y);
+      // 방향이 아니라 «축»으로 평균(각도 2배 평균) — 실제 납작붓은 왔다 갔다 문지를 때 180° 돌지 않는다.
+      // 방향으로 평균하면 되돌림마다 단면이 반 바퀴 돌며 부채꼴·너트 모양이 생겼다(2026-10-08 사용자 낙서).
+      let sx = 0;
+      let sy = 0;
+      const ti = Math.atan2(pc.y - p0.y, pc.x - p0.x);
+      const to = Math.atan2(p1.y - pc.y, p1.x - pc.x);
+      if (li > 1e-3) {
+        sx += Math.cos(2 * ti) * li;
+        sy += Math.sin(2 * ti) * li;
+      }
+      if (lo > 1e-3) {
+        sx += Math.cos(2 * to) * lo;
+        sy += Math.sin(2 * to) * lo;
+      }
+      if (sx * sx + sy * sy > 1e-9) {
+        let rot = Math.atan2(sy, sx) / 2;
+        // 앞 단면과 같은 쪽을 향하게(축은 π 주기) — 반대로 잡히면 이음 띠가 X 자로 꼬인다
+        if (this.lastOut) {
+          const dd = Math.atan2(Math.sin(rot - this.lastOut.rot), Math.cos(rot - this.lastOut.rot));
+          if (Math.abs(dd) > Math.PI / 2) rot += Math.PI;
+        }
+        d.rotation = rot;
+      }
       if (li > 1e-3 && lo > 1e-3) {
-        const cos = Math.max(-1, Math.min(1, (ix * ox + iy * oy) / (li * lo)));
-        const half = Math.acos(cos) / 2;
-        d.size *= Math.min(1.5, 1 / Math.max(1e-3, Math.cos(half)));
+        // 축 사이 각(0~90°)만큼 마이터 보정 — 꺾임에서 폭 유지, 되돌림(축 같음)은 보정 없음
+        let turn = Math.abs(ti - to) % Math.PI;
+        turn = Math.min(turn, Math.PI - turn);
+        d.size *= 1 / Math.cos(turn / 2);
       }
     }
     if (d.slice?.seg) {

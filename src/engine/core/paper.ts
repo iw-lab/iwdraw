@@ -363,6 +363,90 @@ export function applyPaperGrainLift(
   ctx.restore();
 }
 
+/*
+ * 캔버스 요철(릴리프) — Firefly 캔버스천 사진에서 뽑은 높이 음영(회색 128 = 중립, scripts/process-relief.py).
+ * 화면 맨 위에 soft-light 로 덮어 빈 종이와 물감 위에 같은 천 결(빛·그림자)이 비친다 — 아트봉봉 비교
+ * (2026-10-08 사용자: «그쪽은 종이 질감이 붓으로 자연스럽게 보이고 덧칠해도 위에 쌓이는 느낌»).
+ * multiply tint 는 그림자 한 가지라 하이라이트가 없어 가로줄로만 보였다. 표시 전용(내보내기 미포함, tint 와 같음).
+ */
+const RELIEF_URL: Partial<Record<PaperKind, string>> = { linen: "/textures/paper-linen-relief.png" };
+const relief = new Map<
+  PaperKind,
+  { state: "loading" | "ok" | "fail"; img: HTMLImageElement; pat?: CanvasPattern; shadow?: CanvasPattern }
+>();
+
+/**
+ * 요철 음영을 연속으로 곱하는 타일(밝은 곳 0 ~ 어두운 곳 진하게) — soft-light 는 흰 바탕을 못 바꿔
+ * 빈 종이에 결이 안 보인다. 골(128 미만)만 뽑으면 중간 밝기가 사라져 점선처럼 끊겼다(2026-10-08 실측).
+ */
+function reliefShadowTile(img: HTMLImageElement): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const x = c.getContext("2d")!;
+  x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < d.data.length; i += 4) {
+    const v = d.data[i];
+    d.data[i] = 78;
+    d.data[i + 1] = 72;
+    d.data[i + 2] = 64;
+    d.data[i + 3] = Math.max(0, Math.min(255, (200 - v) * 0.9));
+  }
+  x.putImageData(d, 0, 0);
+  return c;
+}
+const reliefListeners = new Set<() => void>();
+
+/** 요철 타일이 늦게 도착하면 다시 그리도록 — 반환값으로 해제 */
+export function onPaperReliefLoad(cb: () => void): () => void {
+  reliefListeners.add(cb);
+  return () => reliefListeners.delete(cb);
+}
+
+/** 요철을 덮었으면 true — 타일이 없거나(다른 종이)·아직 로드 중이면 false(호출측이 tint 로 대체) */
+export function drawPaperRelief(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  kind: PaperKind,
+  strength: number,
+): boolean {
+  const url = RELIEF_URL[kind];
+  if (!url || typeof Image === "undefined") return false;
+  let r = relief.get(kind);
+  if (!r) {
+    const img = new Image();
+    r = { state: "loading", img };
+    relief.set(kind, r);
+    const rr = r;
+    img.onload = () => {
+      rr.state = "ok";
+      for (const f of reliefListeners) f();
+    };
+    img.onerror = () => {
+      rr.state = "fail";
+    };
+    img.src = url;
+  }
+  if (r.state !== "ok") return false;
+  if (!r.pat) r.pat = ctx.createPattern(r.img, "repeat") ?? undefined;
+  if (!r.shadow) r.shadow = ctx.createPattern(reliefShadowTile(r.img), "repeat") ?? undefined;
+  if (!r.pat || !r.shadow) return false;
+  ctx.save();
+  // ① 빛·그림자 → 물감 위 요철 ② 골 그림자 곱하기 → 빈 종이와 물감 모두에 같은 천 결
+  ctx.globalCompositeOperation = "soft-light";
+  ctx.globalAlpha = strength;
+  ctx.fillStyle = r.pat;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = "multiply";
+  ctx.globalAlpha = strength * 0.4;
+  ctx.fillStyle = r.shadow;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+  return true;
+}
+
 /** 표시 캔버스에 종이 결 깔기(내보내기 비포함, compositeNow 전용 — 매 프레임 호출이라 패턴 캐시) */
 export function drawPaperTint(
   ctx: CanvasRenderingContext2D,

@@ -1,0 +1,10 @@
+{
+  "output": "public/textures/paper-linen-relief.png",
+  "sha256": "6b20ffd57fec99a4cc572af3e108c8938aea95d5e751c6ea54f8a7f58168d1a4",
+  "source": "assets-src/textures/sources/firefly-canvas3d.png",
+  "content_credentials": "https://cai-manifests.adobe.com/manifests/urn-c2pa-7a558228-dd1c-454c-8d22-8b170af9dc89-adobe",
+  "crop": 512,
+  "size": 256,
+  "amp": 52,
+  "seam_ratio": 0.89
+}

@@ -259,16 +259,17 @@ export class Canvas2DBackend implements RendererBackend {
         if (turn < 0.12) {
           // 거의 곧은 구간 = 진행 방향으로 1.5px 겹친 사각 조각. 1px 남짓한 사다리꼴을 클립하면 경계마다
           // 반투명 안티에일리어싱이 겹쳐 덜 칠해져 회색·물결무늬가 났다(2026-10-08 ×3 확대 실측).
-          const ax = dab.x - seg.x;
-          const ay = dab.y - seg.y;
-          const al = Math.hypot(ax, ay);
+          // 붓 축(단면 방향의 수직) 기준 — 조각 사이 방향으로 돌리면 되돌림 꼭짓점(조각 사이가 축과 수직)에서
+          // 폭만큼 긴 가시가 튀어나왔다(2026-10-08 낙서 실측)
+          const rot = seg.rot + Math.atan2(Math.sin(dab.rotation - seg.rot), Math.cos(dab.rotation - seg.rot)) / 2;
+          const al = Math.abs((dab.x - seg.x) * Math.cos(rot) + (dab.y - seg.y) * Math.sin(rot));
           const ext = 1.5;
-          const dupp = (dab.slice.u1 - dab.slice.u0) / Math.max(1e-3, al);
+          const dupp = (dab.slice.u1 - dab.slice.u0) / Math.max(0.5, al);
           const u0 = Math.max(0, dab.slice.u0 - ext * dupp);
           const u1 = Math.min(1, dab.slice.u1 + ext * dupp);
           const hs = (s + seg.size) / 2;
           target.translate((seg.x + dab.x) / 2, (seg.y + dab.y) / 2);
-          target.rotate(al > 1e-3 ? Math.atan2(ay, ax) : dab.rotation);
+          target.rotate(rot);
           const len = al + 2 * ext;
           target.drawImage(src, u0 * src.width, 0, Math.max(1, (u1 - u0) * src.width), src.height, -len / 2, -hs / 2, len, hs);
           target.restore();

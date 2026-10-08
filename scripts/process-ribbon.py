@@ -29,6 +29,7 @@ SRC_DIR = ROOT / "assets-src" / "textures"
 OUT = ROOT / "public" / "brush-tips" / "oil-ribbon.png"
 W, H = 2048, 256
 DETAIL = 0.2  # 몸통 조각 세부 — 0.35 는 몸통 반복마다 어두운 얼룩이 구슬처럼 줄지었다(2026-10-08)
+BODY_STREAK = 0.3  # 몸통 줄무늬 세기(끝 대비) — 2026-10-08 아트봉봉 비교로 낮춤
 STREAK_GAIN = 5.5  # 2026-10-08 사용자 «붓결 더 진하게» — 3.0 은 몸통이 거의 단색
 OUT_BOLD = ROOT / "public" / "brush-tips" / "oil-ribbon-bold.png"
 START, BODY, END = (0, 256), (256, 1792), (1792, 2048)
@@ -135,6 +136,11 @@ def build(src_path: Path):
     rel = L / med
     # 붓결 대비 키우기 — 사진의 줄 명암(±3~5%)은 색을 곱하면 거의 안 보인다(첫 렌더 실측: 몸통이 단색)
     dev = (rel - 1) * STREAK_GAIN
+    # 몸통 줄무늬는 약하게, 끝(마른 붓 갈라짐)으로 갈수록 원래 세기로 — 아트봉봉은 몸통이 거의 한 색이고
+    # 질감은 캔버스 결이 비쳐서 난다. 몸통에 줄무늬를 그려 넣으면 «억지로 만든» 느낌(2026-10-08 사용자 비교)
+    xs = np.arange(dev.shape[1])[None, :]
+    tail_w = np.clip((xs - (END[0] - 120)) / 240, 0, 1)  # 끝 구간 앞 120px 부터 서서히
+    dev = dev * (BODY_STREAK + (1 - BODY_STREAK) * tail_w)
     # 테두리는 물감색 그대로(밝게) — 원본 사진은 가장자리가 그늘져 획 둘레에 검은 테가 돌았다
     # (2026-10-08 사용자 «테두리가 검은 빛, 아트봉봉은 흰빛»). 알파 경계에서 18줄 안쪽까지 셰이드를 1로 올린다.
     lift = edge_lift(A)
@@ -155,7 +161,7 @@ def build(src_path: Path):
     groove = np.zeros_like(yy, dtype=float)
     for e in edges[1:-1]:
         groove += np.exp(-((yy - e) ** 2) / (2 * 3.0**2))  # 가닥 사이 골
-    dev_b = np.repeat(0.22 * levels[band_of] - 0.25 * groove, L.shape[1], 1)
+    dev_b = np.repeat(0.22 * levels[band_of] - 0.25 * groove, L.shape[1], 1) * BODY_STREAK * 1.5
     # 가는 획: 테두리 흰 테 없이(rim 0) 가장자리 골만 지운다(12줄). 56줄 + 흰 테는 어두운 색에서
     # «가운데 검은 줄 + 바깥 흰 줄» 두 겹으로 갈라져 보였다(2026-10-08 사용자 ×3 확대 지적)
     lift_b = edge_lift(A, rows=12)
@@ -165,7 +171,7 @@ def build(src_path: Path):
     return out, out_bold, info
 
 
-def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float = 0.5) -> np.ndarray:
+def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float = 0.2) -> np.ndarray:
     """
     R = 물감 명암(골만 살짝 어둡게, 하한 0.72) · G = 붓결 하이라이트(밝은 줄 → 셰이더가 흰빛을 섞는다) · B = R.
     붓결을 어두운 골로만 그리면 획 전체가 고른 색보다 어둡고 «검은 느낌»이 났다(2026-10-08 사용자 두 번째 지적).
@@ -173,8 +179,13 @@ def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float =
     """
     r = np.clip(1 + np.minimum(dev, 0) * 0.5, 0.76, 1.0)
     g = np.clip(np.maximum(dev, 0) * 3.4, 0, 1)  # 2.5 → 3.4: 2026-10-08 «붓결 더 강하게»(4.0 은 획이 하얗게 바램)
-    r = r * (1 - lift) + lift
-    g = np.maximum(g * (1 - lift), lift * rim)
+    # 테두리는 몸통 «평균» 명암으로 — 1(가장 밝음)로 올리면 밝은 색은 흰 테, 어두운 색은 (골이 밝아지는
+    # 셰이더 특성상) 오히려 가장 어두운 테가 되어, 덧칠할 때마다 붓질 윤곽선이 낙서처럼 남았다(2026-10-08).
+    body = (A > 0.9) & (lift < 0.05)
+    r_mean = float(r[body].mean()) if body.any() else 0.9
+    g_mean = float(g[body].mean()) if body.any() else 0.0
+    r = r * (1 - lift) + r_mean * lift
+    g = g * (1 - lift) + max(g_mean, rim * 0.5) * lift
     paint = A > 0.004
     R = np.where(paint, r * 255, 255.0)
     G = np.where(paint, g * 255, 128.0)  # 투명 이웃 필터링이 테두리 흰 테(0.5)와 같은 값이 되게
