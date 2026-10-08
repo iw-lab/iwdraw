@@ -1,0 +1,15 @@
+{
+  "output": "public/brush-tips/paint-height.png",
+  "sha256": "7796501458101de05ff55e2d20163c8c6e25f716fd678f783a91f1fa1e3eb729",
+  "source": "assets-src/textures/sources/firefly-paintheight.png",
+  "content_credentials": "https://cai-manifests.adobe.com/manifests/urn-c2pa-8e0c0daf-9ab4-45e9-9f18-bdfb22388810-adobe",
+  "crop": [
+    1024,
+    512,
+    96
+  ],
+  "size": [
+    512,
+    256
+  ]
+}

@@ -61,6 +61,8 @@ in vec2 v_px;
 in vec2 v_paint;
 in float v_rot;
 uniform float u_paintAmt;        // 물감 입체 조명 0 = 끔(납작붓만 1)
+uniform sampler2D u_paintHeight; // Firefly 물감 높이 타일(?relief=ff 비교 실험)
+uniform float u_paintTex;        // 1 = 높이를 위 텍스처에서, 0 = 절차 paintH(기본)
 uniform sampler2D u_tip;
 uniform sampler2D u_paper;  // 종이 결 타일(256, repeat) — 골짜기 알파
 uniform float u_grain;      // 종이 결 강도 0~1 (dab 단위 실시간 — 프리뷰=최종)
@@ -80,7 +82,12 @@ float pNoise(vec2 p) {
   return mix(mix(pHash(i), pHash(i + vec2(1.0, 0.0)), f.x),
              mix(pHash(i + vec2(0.0, 1.0)), pHash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
+float paintHTex(vec2 q) {
+  // 타일 512×256 → 캔버스 1000×500 px(홈 ≈ 3~4px 간격), 높이 대비 ×2.4(타일 표준편차 0.16 → 절차와 비슷하게)
+  return 0.5 + (texture(u_paintHeight, q / vec2(1000.0, 500.0)).r - 0.5) * 2.4;
+}
 float paintH(vec2 q) {
+  if (u_paintTex > 0.5) return paintHTex(q);
   float w = (pNoise(q / vec2(33.0, 23.0)) - 0.5) * 2.6; // 이랑이 획 축에서 살짝 흔들림(±1.3px)
   vec2 r = vec2(q.x, q.y + w);
   float n = 0.88 * pNoise(r / vec2(26.0, 3.0)) + 0.12 * pNoise(r / vec2(12.0, 1.6) + 17.0);
@@ -194,6 +201,15 @@ in vec2 v_uv;
 uniform sampler2D u_tex;
 out vec4 frag;
 void main() { frag = texture(u_tex, v_uv); }`;
+
+/** 물감 높이 출처 — 주소에 ?relief=ff 면 Firefly 높이 타일(비교 실험), 아니면 절차(기본, 2026-10-08 사용자 수용 상태) */
+function paintHeightMode(): "ff" | "proc" {
+  try {
+    return new URLSearchParams(globalThis.location?.search ?? "").get("relief") === "ff" ? "ff" : "proc";
+  } catch {
+    return "proc";
+  }
+}
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
   const sh = gl.createShader(type)!;
@@ -379,6 +395,31 @@ export class WebGL2Backend implements RendererBackend {
     return tex;
   }
 
+  /** Firefly 물감 높이 타일(?relief=ff 비교 실험) — 늦게 오면 그때부터 */
+  private paintHeightTex: WebGLTexture | null = null;
+  private paintHeightReady = false;
+  private paintHeightTexture(): WebGLTexture {
+    if (this.paintHeightTex) return this.paintHeightTex;
+    const gl = this.gl;
+    const tex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 128, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    this.paintHeightTex = tex;
+    const img = new Image();
+    img.onload = () => {
+      if (this.gl.isContextLost()) return;
+      this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+      this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
+      this.paintHeightReady = true;
+    };
+    img.src = "/brush-tips/paint-height.png";
+    return tex;
+  }
+
   /** 팁 하이라이트 스트릭 텍스처(팁 종류별) — 프로시저럴 고정(epoch 무관) */
   private tipHlTex = new Map<TipKind, WebGLTexture>();
 
@@ -486,6 +527,14 @@ export class WebGL2Backend implements RendererBackend {
     const uColor = gl.getUniformLocation(this.dabProg, "u_color");
     const uSeg = gl.getUniformLocation(this.dabProg, "u_seg");
     const uArc = gl.getUniformLocation(this.dabProg, "u_arc");
+    const useFF = paintHeightMode() === "ff";
+    gl.uniform1f(gl.getUniformLocation(this.dabProg, "u_paintTex"), useFF && this.paintHeightReady ? 1 : 0);
+    if (useFF) {
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, this.paintHeightTexture());
+      gl.uniform1i(gl.getUniformLocation(this.dabProg, "u_paintHeight"), 3);
+      gl.activeTexture(gl.TEXTURE0);
+    }
     gl.uniform1f(
       gl.getUniformLocation(this.dabProg, "u_paintAmt"),
       this.ctx.composite === "destination-out" || !isRibbonTip(this.ctx.tip) ? 0 : 1,

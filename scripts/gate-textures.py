@@ -152,6 +152,23 @@ def gate(pub: Path = PUB, src: Path = SRC) -> list[str]:
             if not cc or cc not in (li.info.get("XML:com.adobe.xmp") or ""):
                 errs.append("paper-linen-relief.png: Firefly Content Credentials 참조 누락(약관 §3.1)")
         print(f"  paper-linen-relief.png: {li.size} {lp.stat().st_size // 1024}KB")
+    # 물감 높이 타일(public/brush-tips/paint-height.png, ?relief=ff 비교 실험) — 원장 해시·Content Credentials
+    hp = pub.parent / "brush-tips" / "paint-height.png"
+    hprov_p = src / "PROVENANCE-paint-height.json"
+    if hp.exists():
+        hi = Image.open(hp)
+        if hi.size != (512, 256) or hi.mode != "L":
+            errs.append(f"paint-height.png: 512×256 L 이어야 한다 — {hi.size} {hi.mode}")
+        if not hprov_p.exists():
+            errs.append("paint-height.png: PROVENANCE-paint-height.json 없음")
+        else:
+            hpv = json.loads(hprov_p.read_text())
+            if hpv.get("sha256") != sha(hp):
+                errs.append("paint-height.png: 해시가 원장과 다름(process-paint-height.py 를 거치지 않은 수정)")
+            cc = hpv.get("content_credentials")
+            if not cc or cc not in (hi.info.get("XML:com.adobe.xmp") or ""):
+                errs.append("paint-height.png: Firefly Content Credentials 참조 누락(약관 §3.1)")
+        print(f"  paint-height.png: {hi.size} {hp.stat().st_size // 1024}KB")
     if total > LIM["total_kb"]:
         errs.append(f"합계 {total:.0f}KB > {LIM['total_kb']}KB")
     return errs
