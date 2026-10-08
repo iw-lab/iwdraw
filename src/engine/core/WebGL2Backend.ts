@@ -146,11 +146,13 @@ void main() {
     col = mix(col, vec3(1.0), bloom * 0.3);
   }
   if (u_paintAmt > 0.0) {
-    // 물감 표면 요철 — 획 굵기와 무관한 고정 크기(타일 200px)로 획 방향을 따라. 지형도처럼 «아주 약간»
+    // 물감 표면 요철 — 획 굵기와 무관한 고정 크기(타일 170px)로 획 방향을 따라. 지형도처럼 «아주 약간»
     // 솟은 느낌만: 밝은 면은 흰빛, 골은 제 색이 조금 진해진다(2026-10-08 사용자)
-    float pr = (texture(u_paintRelief, v_paint / 200.0).r - 0.5) * 2.0;
-    col = mix(col, vec3(1.0), max(pr, 0.0) * 0.32 * u_paintAmt);
-    col *= 1.0 - max(-pr, 0.0) * 0.22 * u_paintAmt;
+    // 세기 0.32/0.22 → 0.5/0.34: 아트봉봉 화면 수준으로(2026-10-08 사용자 «요철 좀 더, 이 정도로»)
+    // 획 방향으로 2.6배 늘려 길쭉한 붓털 이랑으로(아트봉봉 이랑은 가늘고 길다)
+    float pr = (texture(u_paintRelief, v_paint / vec2(420.0, 160.0)).r - 0.5) * 2.0;
+    col = mix(col, vec3(1.0), max(pr, 0.0) * 0.5 * u_paintAmt);
+    col *= 1.0 - max(-pr, 0.0) * 0.34 * u_paintAmt;
   }
   frag = vec4(col * a, a);  // premultiplied
 }`;
