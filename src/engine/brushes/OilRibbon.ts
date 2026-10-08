@@ -2,6 +2,8 @@ import { BrushBase } from "./BrushBase";
 import type { BrushSettings, Dab, StrokePoint } from "../types";
 import { RIBBON, ribbonLen, ribbonU } from "../core/ribbon";
 
+type Seg = NonNullable<NonNullable<Dab["slice"]>["seg"]>;
+
 /**
  * 납작붓(리본 유화) — 붓자국 그림 한 장(Firefly 생성, public/brush-tips/oil-ribbon.png)을
  * 획 경로를 따라 얇은 조각으로 잘라 이어 붙인다(2026-10-07 아트봉봉 비교 — 도장을 찍는 유화붓은
@@ -52,6 +54,10 @@ export class OilRibbon extends BrushBase {
   /** 앞 조각 단면(이음 띠의 왼쪽 변) */
   private prev: { x: number; y: number; rot: number; size: number; arc: number } | null = null;
   private tapAt: StrokePoint | null = null;
+  /** 이 획에서 만든 조각 중심(호 길이순) — 앞뒤를 같이 보는 진행 방향 계산용 */
+  private pts: { x: number; y: number; arc: number }[] = [];
+  /** 마지막으로 확정해 내보낸 조각의 단면 — 다음 이음 띠의 왼쪽 변 */
+  private lastOut: Seg | null = null;
 
   private width(): number {
     return this.strokePx(this.settings.size);
@@ -127,12 +133,11 @@ export class OilRibbon extends BrushBase {
     if (pv) {
       const w = this.width();
       d.size = pv.size + (d.size - pv.size) * Math.min(1, (this.arc - pv.arc) / (w * 0.5));
-      let da = d.rotation - pv.rot;
-      da = Math.atan2(Math.sin(da), Math.cos(da));
-      d.rotation = pv.rot + da * Math.min(1, (this.arc - pv.arc) / (w * 0.25));
     }
+    // 방향(d.rotation)은 여기서 정하지 않는다 — 내보낼 때 앞뒤 경로를 함께 보고 정한다(settle)
     d.slice = this.liveSlice(this.arc, d);
     this.arcOf.set(d, this.arc);
+    this.pts.push({ x: d.x, y: d.y, arc: this.arc });
     this.prev = { x: d.x, y: d.y, rot: d.rotation, size: d.size, arc: this.arc };
     return d;
   }
@@ -140,6 +145,8 @@ export class OilRibbon extends BrushBase {
   override begin(p: StrokePoint, settings: BrushSettings): Dab[] {
     this.queue = [];
     this.prev = null;
+    this.pts = [];
+    this.lastOut = null;
     this.tapAt = p;
     super.begin(p, settings); // rotationFollowsStroke — 첫 조각은 방향이 정해질 때까지 보류된다
     return [];
@@ -152,7 +159,59 @@ export class OilRibbon extends BrushBase {
     const keepFrom = this.traveled - ribbonLen(RIBBON.end, this.width());
     let n = 0;
     while (n < this.queue.length && this.queue[n].arc <= keepFrom) n++;
-    return this.queue.splice(0, n).map((q) => q.d);
+    return this.queue.splice(0, n).map((q) => this.settle(q.d, q.arc));
+  }
+
+  /** 호 길이 a 의 경로 위 점(조각 중심 사이 선형 보간) */
+  private pointAt(a: number): { x: number; y: number } {
+    const P = this.pts;
+    let lo = 0;
+    let hi = P.length - 1;
+    if (a <= P[0].arc) return P[0];
+    if (a >= P[hi].arc) return P[hi];
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1;
+      if (P[m].arc <= a) lo = m;
+      else hi = m;
+    }
+    const t = (a - P[lo].arc) / Math.max(1e-9, P[hi].arc - P[lo].arc);
+    return { x: P[lo].x + (P[hi].x - P[lo].x) * t, y: P[lo].y + (P[hi].y - P[lo].y) * t };
+  }
+
+  /**
+   * 조각을 확정한다 — 방향 = 앞뒤 폭 20% 구간의 현(대칭이라 꺾일 때 늦게 돌지 않고, 입력 이벤트마다의
+   * 잔꺾임은 평균된다), 급한 꺾임에선 단면을 1/cos(꺾임/2) 만큼 넓혀(최대 1.5배) 폭이 줄지 않게.
+   * 앞 확정 조각의 단면을 이음 띠의 왼쪽 변으로 붙인다(2026-10-08 사용자 «꺾이는 부분이 너무 얇아짐»
+   * — 한쪽 지연 평활은 모서리를 얇게, 지연 0 은 이벤트마다 계단을 만들었다).
+   * 내보내기는 펜보다 끝 구간(획 폭)만큼 뒤라 «앞쪽» 경로가 이미 있다.
+   */
+  private settle(d: Dab, arc: number): Dab {
+    if (this.pts.length > 1) {
+      const h = this.width() * 0.2;
+      const p0 = this.pointAt(arc - h);
+      const pc = this.pointAt(arc);
+      const p1 = this.pointAt(arc + h);
+      const tx = p1.x - p0.x;
+      const ty = p1.y - p0.y;
+      if (tx * tx + ty * ty > 1e-6) d.rotation = Math.atan2(ty, tx);
+      const ix = pc.x - p0.x;
+      const iy = pc.y - p0.y;
+      const ox = p1.x - pc.x;
+      const oy = p1.y - pc.y;
+      const li = Math.hypot(ix, iy);
+      const lo = Math.hypot(ox, oy);
+      if (li > 1e-3 && lo > 1e-3) {
+        const cos = Math.max(-1, Math.min(1, (ix * ox + iy * oy) / (li * lo)));
+        const half = Math.acos(cos) / 2;
+        d.size *= Math.min(1.5, 1 / Math.max(1e-3, Math.cos(half)));
+      }
+    }
+    if (d.slice?.seg) {
+      if (this.lastOut) d.slice = { ...d.slice, seg: { ...this.lastOut } };
+      else d.slice = { u0: d.slice.u0, u1: d.slice.u1, len: d.slice.len };
+    }
+    this.lastOut = { x: d.x, y: d.y, rot: d.rotation, size: d.size };
+    return d;
   }
 
   override preview(): Dab[] {
@@ -160,8 +219,13 @@ export class OilRibbon extends BrushBase {
     const total = this.traveled;
     if (!this.queue.length || total <= w * 0.25) return [];
     const e = Math.min(ribbonLen(RIBBON.end, w), total * 0.5);
-    // end() 와 같은 계산 — 손을 떼도 화면이 안 바뀐다(프리뷰=최종)
-    return this.queue.map((q) => (q.arc > total - e ? { ...q.d, slice: this.endSlice(q, total, e) } : q.d));
+    // end() 와 같은 계산 — 손을 떼도 화면이 안 바뀐다(프리뷰=최종). 확정 상태는 되돌린다.
+    const keep = this.lastOut;
+    const out = this.queue.map((q) =>
+      this.settle({ ...q.d, slice: q.arc > total - e ? this.endSlice(q, total, e) : q.d.slice }, q.arc),
+    );
+    this.lastOut = keep;
+    return out;
   }
 
   override end(): Dab[] {
@@ -177,7 +241,7 @@ export class OilRibbon extends BrushBase {
     const e = Math.min(ribbonLen(RIBBON.end, w), total * 0.5);
     const out = this.queue.map((q) => {
       if (q.arc > total - e) q.d.slice = this.endSlice(q, total, e);
-      return q.d;
+      return this.settle(q.d, q.arc);
     });
     this.queue = [];
     return out;

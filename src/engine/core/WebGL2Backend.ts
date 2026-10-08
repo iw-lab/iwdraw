@@ -103,12 +103,13 @@ void main() {
   // 색(로열블루)이 분필처럼 바랜다("흰색 섞은 듯", 2026-07-06 사용자 실측). 직조는
   // 획 전체에 상시 깔리는 항이라 특히 낮게(0.4) — 스트릭은 국소라 좀 더 허용.
   // (0.3/0.32는 i-scream 대비 디테일 부족, 2026-07-10 사용자 실측 → 캡 안에서 소폭 상향)
-  vec3 darkened = mix(col * f, vec3(1.0), min(0.34, g * 0.4 * u_grainLift + hl * 0.62));
+  // 납작붓 띠(u_hlTip)는 붓결이 텍스처 G 에 국소로만 있어 캡을 더 연다(2026-10-08 «붓결 더 강하게»)
+  vec3 darkened = mix(col * f, vec3(1.0), min(mix(0.34, 0.44, u_hlTip), g * 0.4 * u_grainLift + hl * mix(0.62, 0.78, u_hlTip)));
   // 어두운 색 하이라이트는 상한 필수 — 깊은 골(f=0.6)에 비례 계수만 쓰면 골마다
   // 37% 백색 혼입 → 검정이 회색빛 + 흰 줄 스팸(실기기 실측). 0.2 캡이면
   // 결이 보이면서 검정은 검정으로 남는다(0.16은 i-scream 대비 디테일 부족 실측,
   // 백화·스트릭 기여도 같은 캡 안).
-  float lift = min(0.2, (1.0 - f) * 0.5 + g * 0.3 * u_grainLift + hl * 0.5) * dk;
+  float lift = min(mix(0.2, 0.3, u_hlTip), (1.0 - f) * 0.5 + g * 0.3 * u_grainLift + hl * 0.5) * dk;
   vec3 lightened = mix(col, vec3(1.0), lift);
   col = mix(darkened, lightened, step(0.6, dk));
   // 수채 농담 구름 — 종이가 물을 먹는 정도의 저주파 요동(옅은 자리/안료 고임).

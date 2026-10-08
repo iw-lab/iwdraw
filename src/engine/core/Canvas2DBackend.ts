@@ -71,7 +71,7 @@ export class Canvas2DBackend implements RendererBackend {
           if (d[i + 3] === 0) continue;
           const f = d[i] / 255;
           const hl = (d[i + 1] / 255) * k;
-          const w = dk >= 0.6 ? Math.min(0.2, (1 - f) * 0.5 + hl * 0.5) * dk : Math.min(0.34, hl * 0.62);
+          const w = dk >= 0.6 ? Math.min(0.3, (1 - f) * 0.5 + hl * 0.5) * dk : Math.min(0.44, hl * 0.78);
           const m = dk >= 0.6 ? 1 : f;
           d[i] = color.r * m + (255 - color.r * m) * w;
           d[i + 1] = color.g * m + (255 - color.g * m) * w;
@@ -251,34 +251,23 @@ export class Canvas2DBackend implements RendererBackend {
       }
       const seg = dab.slice?.seg;
       if (dab.slice && seg) {
-        // 이음 띠 — 사다리꼴(앞 단면 → 이 단면)로 잘라 그 안에 띠를 평행사변형으로 입힌다.
-        // Canvas2D 는 사다리꼴 텍스처 매핑이 없어 평균 법선 평행사변형 + 클립으로 근사(GL 은 정확).
+        // 이음 띠 — GL 과 같은 사다리꼴(앞 단면 → 이 단면)을 삼각형 두 개로 나눠 각각 정확한 아핀 매핑.
+        // 평행사변형 근사는 급한 꺾임(부채꼴 이음)에서 조각 사이가 비어 붓털이 부채살처럼 삐져나왔다(2026-10-08 실측).
         const src = this.sliceSource(dab.tip ?? this.ctx.tip, color, Math.max(s, seg.size));
         const n0x = -Math.sin(seg.rot) * seg.size * 0.5;
         const n0y = Math.cos(seg.rot) * seg.size * 0.5;
         const n1x = -Math.sin(dab.rotation) * s * 0.5;
         const n1y = Math.cos(dab.rotation) * s * 0.5;
-        const ax = dab.x - seg.x;
-        const ay = dab.y - seg.y;
-        const al = Math.hypot(ax, ay) || 1;
-        // 이웃 조각과 맞닿는 변이 안티에일리어싱으로 반투명 겹침(실선)이 되지 않게 진행 방향으로 0.6px 겹친다
-        const ex = (ax / al) * 0.6;
-        const ey = (ay / al) * 0.6;
-        target.beginPath();
-        target.moveTo(seg.x + n0x - ex, seg.y + n0y - ey);
-        target.lineTo(dab.x + n1x + ex, dab.y + n1y + ey);
-        target.lineTo(dab.x - n1x + ex, dab.y - n1y + ey);
-        target.lineTo(seg.x - n0x - ex, seg.y - n0y - ey);
-        target.closePath();
-        target.clip();
-        const nx = (n0x + n1x) * 1.25; // 평균 법선 × 폭(사다리꼴 모서리가 평행사변형 밖으로 안 나오게 여유)
-        const ny = (n0y + n1y) * 1.25;
-        const ext = 1.2 / al; // 진행 방향 양쪽 1.2px 더 — 이웃 조각과 맞닿는 곳 흰 틈 방지
-        const sx = dab.slice.u0 * src.width;
-        const sw = Math.max(1, (dab.slice.u1 - dab.slice.u0) * src.width);
-        // 단위 사각형 → (앞 중심 − 법선) 원점, x축 = 진행, y축 = 폭
-        target.transform(ax, ay, nx, ny, seg.x - nx / 2, seg.y - ny / 2);
-        target.drawImage(src, sx, 0, sw, src.height, -ext, 0, 1 + 2 * ext, 1);
+        const su0 = dab.slice.u0 * src.width;
+        const su1 = dab.slice.u1 * src.width;
+        const H = src.height;
+        // 꼭짓점: A(u0,0)=p0−n0 · B(u1,0)=p1−n1 · C(u1,1)=p1+n1 · D(u0,1)=p0+n0 — GL 셰이더와 같은 배치
+        const A = [seg.x - n0x, seg.y - n0y, su0, 0];
+        const B = [dab.x - n1x, dab.y - n1y, su1, 0];
+        const Cq = [dab.x + n1x, dab.y + n1y, su1, H];
+        const D = [seg.x + n0x, seg.y + n0y, su0, H];
+        this.texTri(target, src, A, B, D); // globalAlpha·합성은 위 save 상태를 물려받는다
+        this.texTri(target, src, D, B, Cq);
         target.restore();
         continue;
       }
@@ -296,6 +285,50 @@ export class Canvas2DBackend implements RendererBackend {
       target.restore();
     }
     if (eraser) target.restore();
+  }
+
+  /**
+   * 텍스처 삼각형 — 점 = [x, y, 원본 sx, 원본 sy]. 원본 삼각형을 대상 삼각형으로 보내는 아핀 변환을 걸고
+   * 대상 삼각형(무게중심에서 0.6px 부풀림 — 이웃 삼각형과 안티에일리어싱 실선 방지)으로 잘라 그린다.
+   */
+  private texTri(t: CanvasRenderingContext2D, src: HTMLCanvasElement, p0: number[], p1: number[], p2: number[]): void {
+    const ux = p1[2] - p0[2];
+    const uy = p1[3] - p0[3];
+    const vx = p2[2] - p0[2];
+    const vy = p2[3] - p0[3];
+    const det = ux * vy - vx * uy;
+    if (Math.abs(det) < 1e-6) return;
+    const pux = p1[0] - p0[0];
+    const puy = p1[1] - p0[1];
+    const pvx = p2[0] - p0[0];
+    const pvy = p2[1] - p0[1];
+    const a = (pux * vy - pvx * uy) / det;
+    const c = (pvx * ux - pux * vx) / det;
+    const b = (puy * vy - pvy * uy) / det;
+    const d = (pvy * ux - puy * vx) / det;
+    const e = p0[0] - a * p0[2] - c * p0[3];
+    const f = p0[1] - b * p0[2] - d * p0[3];
+    const cx = (p0[0] + p1[0] + p2[0]) / 3;
+    const cy = (p0[1] + p1[1] + p2[1]) / 3;
+    const grow = (p: number[]) => {
+      const dx = p[0] - cx;
+      const dy = p[1] - cy;
+      const l = Math.hypot(dx, dy) || 1;
+      return [p[0] + (dx / l) * 0.6, p[1] + (dy / l) * 0.6];
+    };
+    const [q0, q1, q2] = [grow(p0), grow(p1), grow(p2)];
+    t.save();
+    t.beginPath();
+    t.moveTo(q0[0], q0[1]);
+    t.lineTo(q1[0], q1[1]);
+    t.lineTo(q2[0], q2[1]);
+    t.closePath();
+    t.clip();
+    t.transform(a, b, c, d, e, f);
+    const sx0 = Math.max(0, Math.floor(Math.min(p0[2], p1[2], p2[2])) - 1);
+    const sx1 = Math.min(src.width, Math.ceil(Math.max(p0[2], p1[2], p2[2])) + 1);
+    t.drawImage(src, sx0, 0, Math.max(1, sx1 - sx0), src.height, sx0, 0, Math.max(1, sx1 - sx0), src.height);
+    t.restore();
   }
 
   private liveBuf: CanvasRenderingContext2D | null = null;

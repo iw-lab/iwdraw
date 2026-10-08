@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "assets-src" / "textures"
 OUT = ROOT / "public" / "brush-tips" / "oil-ribbon.png"
 W, H = 2048, 256
+DETAIL = 0.2  # 몸통 조각 세부 — 0.35 는 몸통 반복마다 어두운 얼룩이 구슬처럼 줄지었다(2026-10-08)
 STREAK_GAIN = 5.5  # 2026-10-08 사용자 «붓결 더 진하게» — 3.0 은 몸통이 거의 단색
 OUT_BOLD = ROOT / "public" / "brush-tips" / "oil-ribbon-bold.png"
 START, BODY, END = (0, 256), (256, 1792), (1792, 2048)
@@ -108,13 +109,13 @@ def build(src_path: Path):
     per[:, :fade] = det[:, n - fade :] * (1 - w) + det[:, :fade] * w  # 가로 주기화
     reps = int(np.ceil(body_tex_len / per.shape[1]))
     det_t = np.tile(per, (1, reps))[:, :body_tex_len]
-    body_l = prof_l + 0.35 * det_t
+    body_l = prof_l + DETAIL * det_t
     body_a = np.repeat(prof_a, body_tex_len, 1)
     P = per.shape[1]
     # 시작 구간 오른쪽 30% 를 몸통 프로필로 이어 준다(시작→몸통 연속)
     bw = int((START[1] - START[0]) * 0.3)
     ww = np.linspace(0, 1, bw)[None, :]
-    lum_s[:, -bw:] = lum_s[:, -bw:] * (1 - ww) + (prof_l + 0.35 * det_t[:, :1]) * ww
+    lum_s[:, -bw:] = lum_s[:, -bw:] * (1 - ww) + (prof_l + DETAIL * det_t[:, :1]) * ww
     al_s[:, -bw:] = al_s[:, -bw:] * (1 - ww) + prof_a * ww
     lum_e, al_e = crop(lum, e0, x1 + 2, e_len_tex), crop(alpha, e0, x1 + 2, e_len_tex)
     # 끝 구간 왼쪽 25% 를 몸통 프로필에서 출발(몸통→끝 연속 — 끝은 아무 위상에서나 붙는다)
@@ -181,8 +182,8 @@ def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray) -> np.ndarra
     붓결을 어두운 골로만 그리면 획 전체가 고른 색보다 어둡고 «검은 느낌»이 났다(2026-10-08 사용자 두 번째 지적).
     아트봉봉처럼 몸통은 제 색 그대로, 결은 밝은 줄로. 테두리는 어둡게 하지 않고 옅은 흰 테.
     """
-    r = np.clip(1 + np.minimum(dev, 0) * 0.55, 0.72, 1.0)
-    g = np.clip(np.maximum(dev, 0) * 2.5, 0, 1)
+    r = np.clip(1 + np.minimum(dev, 0) * 0.5, 0.76, 1.0)
+    g = np.clip(np.maximum(dev, 0) * 3.4, 0, 1)  # 2.5 → 3.4: 2026-10-08 «붓결 더 강하게»(4.0 은 획이 하얗게 바램)
     r = r * (1 - lift) + lift
     g = np.maximum(g * (1 - lift), lift * 0.5)
     paint = A > 0.004
