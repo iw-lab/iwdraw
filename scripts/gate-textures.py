@@ -152,23 +152,6 @@ def gate(pub: Path = PUB, src: Path = SRC) -> list[str]:
             if not cc or cc not in (li.info.get("XML:com.adobe.xmp") or ""):
                 errs.append("paper-linen-relief.png: Firefly Content Credentials 참조 누락(약관 §3.1)")
         print(f"  paper-linen-relief.png: {li.size} {lp.stat().st_size // 1024}KB")
-    # 물감 표면 요철(public/brush-tips/paint-relief.png) — 납작붓 셰이더 전용, 원장 해시·Content Credentials
-    pp = pub.parent / "brush-tips" / "paint-relief.png"
-    pprov_p = src / "PROVENANCE-paint-relief.json"
-    if pp.exists():
-        pi = Image.open(pp)
-        if pi.size != (256, 256) or pi.mode != "L":
-            errs.append(f"paint-relief.png: 256×256 L 이어야 한다 — {pi.size} {pi.mode}")
-        if not pprov_p.exists():
-            errs.append("paint-relief.png: PROVENANCE-paint-relief.json 없음")
-        else:
-            ppv = json.loads(pprov_p.read_text())
-            if ppv.get("sha256") != sha(pp):
-                errs.append("paint-relief.png: 해시가 원장과 다름(process-paint-relief.py 를 거치지 않은 수정)")
-            cc = ppv.get("content_credentials")
-            if not cc or cc not in (pi.info.get("XML:com.adobe.xmp") or ""):
-                errs.append("paint-relief.png: Firefly Content Credentials 참조 누락(약관 §3.1)")
-        print(f"  paint-relief.png: {pi.size} {pp.stat().st_size // 1024}KB")
     if total > LIM["total_kb"]:
         errs.append(f"합계 {total:.0f}KB > {LIM['total_kb']}KB")
     return errs

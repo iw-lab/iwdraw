@@ -33,7 +33,8 @@ uniform vec2 u_n0;       // 앞 끝의 반폭 법선(px)
 uniform vec2 u_arc;      // 조각 양 끝의 지나온 거리(px) — 물감 요철 좌표
 out vec2 v_uv;
 out vec2 v_px;
-out vec2 v_paint;   // 획 방향 고정 픽셀 좌표(지나온 거리, 폭 방향 px)      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
+out vec2 v_paint;   // 획 방향 고정 픽셀 좌표(지나온 거리, 폭 방향 px)
+out float v_rot;    // 획 방향(물감 입체 조명의 기울기 회전)      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
 void main() {
   float c = cos(u_rot); float s = sin(u_rot);
   vec2 q = vec2(a_pos.x * u_len, a_pos.y * u_size);
@@ -49,6 +50,7 @@ void main() {
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
   v_uv = mix(u_uvr.xy, u_uvr.zw, a_uv);
   v_paint = vec2(mix(u_arc.x, u_arc.y, a_uv.x), a_uv.y * u_size);
+  v_rot = u_rot;
   v_px = px;
 }`;
 
@@ -57,8 +59,8 @@ precision highp float;
 in vec2 v_uv;
 in vec2 v_px;
 in vec2 v_paint;
-uniform sampler2D u_paintRelief; // 물감 표면 요철(회색 128 = 중립, 납작붓만)
-uniform float u_paintAmt;        // 0 = 끔
+in float v_rot;
+uniform float u_paintAmt;        // 물감 입체 조명 0 = 끔(납작붓만 1)
 uniform sampler2D u_tip;
 uniform sampler2D u_paper;  // 종이 결 타일(256, repeat) — 골짜기 알파
 uniform float u_grain;      // 종이 결 강도 0~1 (dab 단위 실시간 — 프리뷰=최종)
@@ -70,6 +72,20 @@ uniform float u_cloud;      // 수채 농담 구름(저주파, 캔버스 고정)
 uniform float u_edgeNoise;  // 가장자리 요철(알파<1 폴오프 영역만 침식, 캔버스 고정) 0~1
 uniform vec4 u_color;       // rgb(0..1) + alpha
 out vec4 frag;
+// 물감 붓털 이랑 높이(0~1) — 획 좌표(진행, 폭) px. 길쭉한 값 잡음 2겹 + 약한 휨(결정론: 같은 획 = 같은 그림)
+float pHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float pNoise(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(pHash(i), pHash(i + vec2(1.0, 0.0)), f.x),
+             mix(pHash(i + vec2(0.0, 1.0)), pHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float paintH(vec2 q) {
+  float w = (pNoise(q / vec2(33.0, 23.0)) - 0.5) * 2.6; // 이랑이 획 축에서 살짝 흔들림(±1.3px)
+  vec2 r = vec2(q.x, q.y + w);
+  float n = 0.88 * pNoise(r / vec2(26.0, 3.0)) + 0.12 * pNoise(r / vec2(12.0, 1.6) + 17.0);
+  return smoothstep(0.32, 0.78, n);
+}
 void main() {
   vec4 t = texture(u_tip, v_uv);
   // u_color.a는 1을 넘을 수 있다(수채: 팁 플래토 0.94×필압을 뚫고 내부를 포화시키는 부스트).
@@ -146,19 +162,20 @@ void main() {
     col = mix(col, vec3(1.0), bloom * 0.3);
   }
   if (u_paintAmt > 0.0) {
-    // 물감 표면 요철 — 획 굵기와 무관한 고정 크기로 획 방향을 따라(띠에 구우면 굵기에 비례해 나무껍질이 됐다).
-    // 이랑 = 높이가 급하게 바뀌는 곳만 — 폭 방향 2px 차이(기울기)로 한쪽 비탈은 밝게, 반대쪽은 그늘(짝).
-    // 약한 기복은 버려 이랑 사이를 매끈하게, 큰 얼룩 단위로 일부 구역은 비워 성기게(아트봉봉 비교 2026-10-08).
-    // 값 그대로 명암을 쓰면 촘촘한 점·어두운 얼룩이 됐다. 획 방향으로 2.6배 늘려 가늘고 긴 이랑.
-    vec2 q = v_paint / vec2(420.0, 160.0);
-    float h0 = texture(u_paintRelief, q).r;
-    float h1 = texture(u_paintRelief, q + vec2(0.0, 2.0 / 160.0)).r;
-    float e = (h0 - h1) * 5.0;
-    float ridge = smoothstep(0.24, 0.6, abs(e)) * sign(e);
-    float zone = smoothstep(0.5, 0.66, texture(u_paintRelief, v_paint / vec2(1500.0, 520.0) + vec2(0.37, 0.61)).r);
-    ridge *= zone * u_paintAmt;
-    col = mix(col, vec3(1.0), max(ridge, 0.0) * 0.42);
-    col *= 1.0 - max(-ridge, 0.0) * 0.2;
+    // 물감 입체 = 높이 지도 + 화면 고정 빛(왼쪽 위) 법선 조명. 아트봉봉 원본 픽셀 분석(2026-10-08, GPT 비전 +
+    // 메인 확대 확인): 이랑 폭 ≈3px·간격 ≈10px·길이 10~35px(캔버스 px), 획 방향, 끊기고 살짝 휨.
+    // 밝은 쪽 ≈+13% · 그늘 ≈−14%(회색이 아니라 같은 색이 짙어짐). 흰 선 더하기는 «긁힌 자국»으로 읽혔다.
+    // 획 굵기와 무관한 고정 px(v_paint = 지나온 거리, 폭 방향 px).
+    vec2 q = v_paint;
+    vec2 gx = vec2(paintH(q + vec2(1.0, 0.0)) - paintH(q - vec2(1.0, 0.0)),
+                   paintH(q + vec2(0.0, 1.0)) - paintH(q - vec2(0.0, 1.0))) * 0.5;
+    float rc = cos(v_rot); float rs = sin(v_rot);
+    vec2 gsc = vec2(gx.x * rc - gx.y * rs, gx.x * rs + gx.y * rc); // 획 좌표 → 화면 좌표 기울기
+    vec3 N = normalize(vec3(-gsc * 3.0, 1.0));
+    vec3 L = normalize(vec3(-0.45, -0.55, 0.70)); // 왼쪽 위(화면 y 는 아래로 +)
+    float shade = clamp(1.0 + 0.6 * (dot(N, L) - L.z), 0.85, 1.14);
+    float spec = 0.025 * pow(max(dot(N, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 12.0);
+    col = mix(col, min(col * shade + spec, vec3(1.0)), u_paintAmt);
   }
   frag = vec4(col * a, a);  // premultiplied
 }`;
@@ -362,35 +379,6 @@ export class WebGL2Backend implements RendererBackend {
     return tex;
   }
 
-  /** 물감 표면 요철(public/brush-tips/paint-relief.png) — 늦게 오면 그때부터 켠다, 실패면 끔 */
-  private paintReliefTex: WebGLTexture | null = null;
-  private paintReliefReady = false;
-  private paintReliefTexture(): WebGLTexture {
-    if (this.paintReliefTex) return this.paintReliefTex;
-    const gl = this.gl;
-    const tex = gl.createTexture()!;
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 128, 255]));
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    this.paintReliefTex = tex;
-    if (typeof Image !== "undefined") {
-      const img = new Image();
-      img.onload = () => {
-        if (this.gl.isContextLost()) return;
-        this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
-        this.gl.generateMipmap(this.gl.TEXTURE_2D);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_LINEAR);
-        this.paintReliefReady = true;
-      };
-      img.src = "/brush-tips/paint-relief.png";
-    }
-    return tex;
-  }
-
   /** 팁 하이라이트 스트릭 텍스처(팁 종류별) — 프로시저럴 고정(epoch 무관) */
   private tipHlTex = new Map<TipKind, WebGLTexture>();
 
@@ -498,13 +486,9 @@ export class WebGL2Backend implements RendererBackend {
     const uColor = gl.getUniformLocation(this.dabProg, "u_color");
     const uSeg = gl.getUniformLocation(this.dabProg, "u_seg");
     const uArc = gl.getUniformLocation(this.dabProg, "u_arc");
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, this.paintReliefTexture());
-    gl.uniform1i(gl.getUniformLocation(this.dabProg, "u_paintRelief"), 3);
-    gl.activeTexture(gl.TEXTURE0);
     gl.uniform1f(
       gl.getUniformLocation(this.dabProg, "u_paintAmt"),
-      this.ctx.composite === "destination-out" || !isRibbonTip(this.ctx.tip) || !this.paintReliefReady ? 0 : 1,
+      this.ctx.composite === "destination-out" || !isRibbonTip(this.ctx.tip) ? 0 : 1,
     );
     const uP0 = gl.getUniformLocation(this.dabProg, "u_p0");
     const uN0 = gl.getUniformLocation(this.dabProg, "u_n0");

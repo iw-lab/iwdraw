@@ -40,7 +40,7 @@ export class OilRibbon extends BrushBase {
         washOpacity: 1,
         washOver: true, // 나중 붓질이 앞을 덮는다(MAX 면 겹친 자리마다 밝은 테가 쌓임)
         grainLift: true,
-        streaks: 1, // 붓결 하이라이트 = 띠 텍스처 G 채널(셰이더 u_hlTip) — 강도는 텍스처가 정한다
+        streaks: 0, // 흰 하이라이트 줄은 «긁힌 자국»으로 읽혔다 — 입체는 셰이더 법선 조명(u_paintAmt)이 맡는다(2026-10-08)
         // 덧칠하면 물감이 쌓이는 느낌 — 새 획 둘레의 두께 음영(하이라이트+옅은 그림자)이 아래 물감 위에 선다
         // (2026-10-08 사용자 요청). 그림자는 옅게: 0 이던 때는 «검은 테» 지적 때문(그건 텍스처 가장자리가 원인이었다)
         impasto: 0.8,
