@@ -146,13 +146,19 @@ void main() {
     col = mix(col, vec3(1.0), bloom * 0.3);
   }
   if (u_paintAmt > 0.0) {
-    // 물감 표면 요철 — 획 굵기와 무관한 고정 크기(타일 170px)로 획 방향을 따라. 지형도처럼 «아주 약간»
-    // 솟은 느낌만: 밝은 면은 흰빛, 골은 제 색이 조금 진해진다(2026-10-08 사용자)
-    // 세기 0.32/0.22 → 0.5/0.34: 아트봉봉 화면 수준으로(2026-10-08 사용자 «요철 좀 더, 이 정도로»)
-    // 획 방향으로 2.6배 늘려 길쭉한 붓털 이랑으로(아트봉봉 이랑은 가늘고 길다)
-    float pr = (texture(u_paintRelief, v_paint / vec2(420.0, 160.0)).r - 0.5) * 2.0;
-    col = mix(col, vec3(1.0), max(pr, 0.0) * 0.5 * u_paintAmt);
-    col *= 1.0 - max(-pr, 0.0) * 0.34 * u_paintAmt;
+    // 물감 표면 요철 — 획 굵기와 무관한 고정 크기로 획 방향을 따라(띠에 구우면 굵기에 비례해 나무껍질이 됐다).
+    // 이랑 = 높이가 급하게 바뀌는 곳만 — 폭 방향 2px 차이(기울기)로 한쪽 비탈은 밝게, 반대쪽은 그늘(짝).
+    // 약한 기복은 버려 이랑 사이를 매끈하게, 큰 얼룩 단위로 일부 구역은 비워 성기게(아트봉봉 비교 2026-10-08).
+    // 값 그대로 명암을 쓰면 촘촘한 점·어두운 얼룩이 됐다. 획 방향으로 2.6배 늘려 가늘고 긴 이랑.
+    vec2 q = v_paint / vec2(420.0, 160.0);
+    float h0 = texture(u_paintRelief, q).r;
+    float h1 = texture(u_paintRelief, q + vec2(0.0, 2.0 / 160.0)).r;
+    float e = (h0 - h1) * 5.0;
+    float ridge = smoothstep(0.24, 0.6, abs(e)) * sign(e);
+    float zone = smoothstep(0.5, 0.66, texture(u_paintRelief, v_paint / vec2(1500.0, 520.0) + vec2(0.37, 0.61)).r);
+    ridge *= zone * u_paintAmt;
+    col = mix(col, vec3(1.0), max(ridge, 0.0) * 0.42);
+    col *= 1.0 - max(-ridge, 0.0) * 0.2;
   }
   frag = vec4(col * a, a);  // premultiplied
 }`;
