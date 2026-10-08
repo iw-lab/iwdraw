@@ -79,6 +79,8 @@ export interface Dab {
      * 꺾이는 곳 바깥에 조각 모서리가 톱니처럼 삐져나오던 것을 없앤다(2026-10-08 사용자 «물레방아»).
      */
     seg?: { x: number; y: number; rot: number; size: number };
+    /** 조각 왼쪽·오른쪽 끝의 지나온 거리(px) — 물감 요철을 획 굵기와 무관한 고정 크기로 획을 따라 입힐 때 */
+    arc?: [number, number];
   };
 }
 

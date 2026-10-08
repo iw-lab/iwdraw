@@ -250,6 +250,7 @@ export class OilRibbon extends BrushBase {
       if (this.lastOut) d.slice = { ...d.slice, seg: { ...this.lastOut } };
       else d.slice = { u0: d.slice.u0, u1: d.slice.u1, len: d.slice.len };
     }
+    if (d.slice) d.slice = { ...d.slice, arc: d.slice.seg ? [arc - d.slice.len, arc] : [arc - d.slice.len / 2, arc + d.slice.len / 2] };
     this.lastOut = { x: d.x, y: d.y, rot: d.rotation, size: d.size };
     return d;
   }

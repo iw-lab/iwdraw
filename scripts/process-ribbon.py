@@ -30,7 +30,7 @@ from texture_lib import _quilt_wrap_x, to_gray  # noqa: E402
 # 물감 표면(붓털 이랑) — Firefly 레이킹 라이트 임파스토 사진. 띠 전체에 깔아 «물감이 쌓인» 질감을 낸다
 # (2026-10-08 사용자 «물감도 파이어플라이로 쌓이는 질감 표현 못하나?»)
 PAINT_SRC = Path(__file__).resolve().parent.parent / "assets-src/textures/sources/firefly-paint3d.png"
-EMBOSS = 1.6  # 엠보스(높이 기울기 → 명암) 세기
+EMBOSS = 0.4  # 띠에 굽는 붓결 엠보스 — 1.6 은 획을 따라 긴 평행선(지도 등고선)이 됐다. 입체는 셰이더 물감 요철이 맡는다(2026-10-08)
 PAINT = 0.28  # dev 단위 세기
 
 
@@ -57,7 +57,7 @@ SRC_DIR = ROOT / "assets-src" / "textures"
 OUT = ROOT / "public" / "brush-tips" / "oil-ribbon.png"
 W, H = 2048, 256
 DETAIL = 0.2  # 몸통 조각 세부 — 0.35 는 몸통 반복마다 어두운 얼룩이 구슬처럼 줄지었다(2026-10-08)
-BODY_STREAK = 0.3  # 몸통 줄무늬 세기(끝 대비) — 2026-10-08 아트봉봉 비교로 낮춤
+BODY_STREAK = 0.15  # 몸통 줄무늬 세기(끝 대비) — 2026-10-08 아트봉봉 비교로 낮춤
 STREAK_GAIN = 5.5  # 2026-10-08 사용자 «붓결 더 진하게» — 3.0 은 몸통이 거의 단색
 OUT_BOLD = ROOT / "public" / "brush-tips" / "oil-ribbon-bold.png"
 START, BODY, END = (0, 256), (256, 1792), (1792, 2048)

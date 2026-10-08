@@ -1,0 +1,9 @@
+{
+  "output": "public/brush-tips/paint-relief.png",
+  "sha256": "ef160851e3e252de8aede1843323f98d0ee41cbcbd865b3b2ec1ddaee8cb2409",
+  "source": "assets-src/textures/sources/firefly-paintdab.png",
+  "content_credentials": "https://cai-manifests.adobe.com/manifests/urn-c2pa-c1ee9714-10b7-4ae7-a1ea-a1b65e7056b6-adobe",
+  "crop": 768,
+  "size": 256,
+  "seam_ratio": 0.757
+}

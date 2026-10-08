@@ -30,8 +30,10 @@ uniform float u_rot;
 uniform float u_seg;     // 1 = 이음 띠(앞 중심 u_p0·법선 u_n0 → 이 dab), 0 = 회전 사각형
 uniform vec2 u_p0;
 uniform vec2 u_n0;       // 앞 끝의 반폭 법선(px)
+uniform vec2 u_arc;      // 조각 양 끝의 지나온 거리(px) — 물감 요철 좌표
 out vec2 v_uv;
-out vec2 v_px;      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
+out vec2 v_px;
+out vec2 v_paint;   // 획 방향 고정 픽셀 좌표(지나온 거리, 폭 방향 px)      // 캔버스 픽셀 좌표(종이 결 샘플용 — dab이 아니라 캔버스에 고정)
 void main() {
   float c = cos(u_rot); float s = sin(u_rot);
   vec2 q = vec2(a_pos.x * u_len, a_pos.y * u_size);
@@ -46,6 +48,7 @@ void main() {
   vec2 clip = (px / u_resolution) * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
   v_uv = mix(u_uvr.xy, u_uvr.zw, a_uv);
+  v_paint = vec2(mix(u_arc.x, u_arc.y, a_uv.x), a_uv.y * u_size);
   v_px = px;
 }`;
 
@@ -53,6 +56,9 @@ const DAB_FS = `#version 300 es
 precision highp float;
 in vec2 v_uv;
 in vec2 v_px;
+in vec2 v_paint;
+uniform sampler2D u_paintRelief; // 물감 표면 요철(회색 128 = 중립, 납작붓만)
+uniform float u_paintAmt;        // 0 = 끔
 uniform sampler2D u_tip;
 uniform sampler2D u_paper;  // 종이 결 타일(256, repeat) — 골짜기 알파
 uniform float u_grain;      // 종이 결 강도 0~1 (dab 단위 실시간 — 프리뷰=최종)
@@ -138,6 +144,13 @@ void main() {
     // 물이 고였다 마른 밝은 bloom — 넓은 램프(좁으면 표백 점, 실측). 밝은 색 전용.
     float bloom = smoothstep(0.58, 0.9, n1) * u_cloud * lum;
     col = mix(col, vec3(1.0), bloom * 0.3);
+  }
+  if (u_paintAmt > 0.0) {
+    // 물감 표면 요철 — 획 굵기와 무관한 고정 크기(타일 200px)로 획 방향을 따라. 지형도처럼 «아주 약간»
+    // 솟은 느낌만: 밝은 면은 흰빛, 골은 제 색이 조금 진해진다(2026-10-08 사용자)
+    float pr = (texture(u_paintRelief, v_paint / 200.0).r - 0.5) * 2.0;
+    col = mix(col, vec3(1.0), max(pr, 0.0) * 0.32 * u_paintAmt);
+    col *= 1.0 - max(-pr, 0.0) * 0.22 * u_paintAmt;
   }
   frag = vec4(col * a, a);  // premultiplied
 }`;
@@ -341,6 +354,35 @@ export class WebGL2Backend implements RendererBackend {
     return tex;
   }
 
+  /** 물감 표면 요철(public/brush-tips/paint-relief.png) — 늦게 오면 그때부터 켠다, 실패면 끔 */
+  private paintReliefTex: WebGLTexture | null = null;
+  private paintReliefReady = false;
+  private paintReliefTexture(): WebGLTexture {
+    if (this.paintReliefTex) return this.paintReliefTex;
+    const gl = this.gl;
+    const tex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 128, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    this.paintReliefTex = tex;
+    if (typeof Image !== "undefined") {
+      const img = new Image();
+      img.onload = () => {
+        if (this.gl.isContextLost()) return;
+        this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
+        this.gl.generateMipmap(this.gl.TEXTURE_2D);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_LINEAR);
+        this.paintReliefReady = true;
+      };
+      img.src = "/brush-tips/paint-relief.png";
+    }
+    return tex;
+  }
+
   /** 팁 하이라이트 스트릭 텍스처(팁 종류별) — 프로시저럴 고정(epoch 무관) */
   private tipHlTex = new Map<TipKind, WebGLTexture>();
 
@@ -447,6 +489,15 @@ export class WebGL2Backend implements RendererBackend {
     const uUvr = gl.getUniformLocation(this.dabProg, "u_uvr");
     const uColor = gl.getUniformLocation(this.dabProg, "u_color");
     const uSeg = gl.getUniformLocation(this.dabProg, "u_seg");
+    const uArc = gl.getUniformLocation(this.dabProg, "u_arc");
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.paintReliefTexture());
+    gl.uniform1i(gl.getUniformLocation(this.dabProg, "u_paintRelief"), 3);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1f(
+      gl.getUniformLocation(this.dabProg, "u_paintAmt"),
+      this.ctx.composite === "destination-out" || !isRibbonTip(this.ctx.tip) || !this.paintReliefReady ? 0 : 1,
+    );
     const uP0 = gl.getUniformLocation(this.dabProg, "u_p0");
     const uN0 = gl.getUniformLocation(this.dabProg, "u_n0");
 
@@ -470,6 +521,8 @@ export class WebGL2Backend implements RendererBackend {
       // 띠 조각(리본 붓) — 텍스처 가로 구간만, 획 방향 길이 len
       const seg = dab.slice?.seg;
       gl.uniform1f(uSeg, seg ? 1 : 0);
+      const arc = dab.slice?.arc;
+      gl.uniform2f(uArc, arc ? arc[0] : 0, arc ? arc[1] : 0);
       if (seg) {
         gl.uniform2f(uP0, seg.x, seg.y);
         gl.uniform2f(uN0, -Math.sin(seg.rot) * seg.size * 0.5, Math.cos(seg.rot) * seg.size * 0.5);
