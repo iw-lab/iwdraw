@@ -254,6 +254,26 @@ export class Canvas2DBackend implements RendererBackend {
         // 이음 띠 — GL 과 같은 사다리꼴(앞 단면 → 이 단면)을 삼각형 두 개로 나눠 각각 정확한 아핀 매핑.
         // 평행사변형 근사는 급한 꺾임(부채꼴 이음)에서 조각 사이가 비어 붓털이 부채살처럼 삐져나왔다(2026-10-08 실측).
         const src = this.sliceSource(dab.tip ?? this.ctx.tip, color, Math.max(s, seg.size));
+        let turn = dab.rotation - seg.rot;
+        turn = Math.abs(Math.atan2(Math.sin(turn), Math.cos(turn)));
+        if (turn < 0.12) {
+          // 거의 곧은 구간 = 진행 방향으로 1.5px 겹친 사각 조각. 1px 남짓한 사다리꼴을 클립하면 경계마다
+          // 반투명 안티에일리어싱이 겹쳐 덜 칠해져 회색·물결무늬가 났다(2026-10-08 ×3 확대 실측).
+          const ax = dab.x - seg.x;
+          const ay = dab.y - seg.y;
+          const al = Math.hypot(ax, ay);
+          const ext = 1.5;
+          const dupp = (dab.slice.u1 - dab.slice.u0) / Math.max(1e-3, al);
+          const u0 = Math.max(0, dab.slice.u0 - ext * dupp);
+          const u1 = Math.min(1, dab.slice.u1 + ext * dupp);
+          const hs = (s + seg.size) / 2;
+          target.translate((seg.x + dab.x) / 2, (seg.y + dab.y) / 2);
+          target.rotate(al > 1e-3 ? Math.atan2(ay, ax) : dab.rotation);
+          const len = al + 2 * ext;
+          target.drawImage(src, u0 * src.width, 0, Math.max(1, (u1 - u0) * src.width), src.height, -len / 2, -hs / 2, len, hs);
+          target.restore();
+          continue;
+        }
         const n0x = -Math.sin(seg.rot) * seg.size * 0.5;
         const n0y = Math.cos(seg.rot) * seg.size * 0.5;
         const n1x = -Math.sin(dab.rotation) * s * 0.5;

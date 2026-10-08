@@ -143,40 +143,29 @@ def build(src_path: Path):
     # 줄어들면 가는 결이 평균으로 사라진다(유화붓 bristle-bold 와 같은 이유)
     bands = 9
     edges = np.linspace(0, H, bands + 1).astype(int)
-    # 몸통의 줄별 프로필 하나를 세로로 흐려 굵은 가닥으로 묶고, 획 방향으로는 일정하게 깐다.
-    # (띠별 열 중앙값 = 벽돌 무늬, 2D 흐림 = 얼룩 — 2026-10-08 시각 확인. 시작·끝 모양은 알파가 만든다)
-    prof = np.median(L[:, START[1] : BODY[1]], 1)
-    sig = H / bands / 3
-    kk = np.arange(-int(3 * sig), int(3 * sig) + 1)
-    ker = np.exp(-(kk**2) / (2 * sig**2))
-    ker /= ker.sum()
-    prof = np.convolve(np.pad(prof, len(kk) // 2, mode="edge"), ker, mode="valid")
-    # 원본 조명의 넓은 명암(아래쪽 절반이 통째로 어두움 → 가는 획이 원통처럼 보임)을 빼고 가닥 무늬만 남긴다
-    s2 = 40
-    k2 = np.arange(-3 * s2, 3 * s2 + 1)
-    g2 = np.exp(-(k2**2) / (2 * s2**2))
-    g2 /= g2.sum()
-    trend = np.convolve(np.pad(prof, len(k2) // 2, mode="edge"), g2, mode="valid")
-    prof = prof - trend + med
-    Lb = np.repeat(prof[:, None], L.shape[1], 1)
-    # 가닥 대비를 일정하게(줄 명암 표준편차 2.5%) — 흐림·추세 제거로 얼마나 줄었든 같은 진하기로 되돌린다
-    dev = Lb[:, START[1] : BODY[1]] / med - 1
-    Lb = med * (1 + (Lb / med - 1) * (0.025 / max(1e-4, float(dev[A[:, START[1] : BODY[1]] > 0.8].std()))))
+    # 가닥 9개를 폭 전체에 고르게 — 밝기는 고정 시드 난수(가닥마다 밝음/어두움 교대 섞임), 가닥 사이는 골.
+    # 원본 줄별 밝기를 쓰면 사진 가장자리 줄만 밝아 가는 획에서 «바깥 흰 줄»로 떨어져 보였다(2026-10-08).
+    # 획 방향으로 일정해야 가는 획에서도 결이 곧게 이어진다. 시작·끝 모양은 알파가 만든다.
+    rng = np.random.default_rng(20261008)
+    levels = rng.uniform(-1, 1, bands)
+    levels[::2] = np.abs(levels[::2])  # 밝은 가닥·어두운 가닥이 번갈아 — 한쪽으로 쏠리지 않게
+    levels[1::2] = -np.abs(levels[1::2])
     yy = np.arange(H)[:, None]
+    band_of = np.minimum(bands - 1, (yy * bands) // H)
     groove = np.zeros_like(yy, dtype=float)
     for e in edges[1:-1]:
-        groove += np.exp(-((yy - e) ** 2) / (2 * 2.5**2))  # 가닥 사이 골
-    relb = Lb / med - 0.035 * groove
-    dev_b = (relb - 1) * STREAK_GAIN * 1.2
-    # 가는 획에선 18줄이 1px 도 안 된다 — 테두리 쪽 가닥 두 개 폭(≈56줄)까지 밝혀 «검은 테»로 안 읽히게
-    lift_b = edge_lift(A, rows=56)
-    out_bold = pack_channels(dev_b, A, lift_b)
+        groove += np.exp(-((yy - e) ** 2) / (2 * 3.0**2))  # 가닥 사이 골
+    dev_b = np.repeat(0.22 * levels[band_of] - 0.25 * groove, L.shape[1], 1)
+    # 가는 획: 테두리 흰 테 없이(rim 0) 가장자리 골만 지운다(12줄). 56줄 + 흰 테는 어두운 색에서
+    # «가운데 검은 줄 + 바깥 흰 줄» 두 겹으로 갈라져 보였다(2026-10-08 사용자 ×3 확대 지적)
+    lift_b = edge_lift(A, rows=12)
+    out_bold = pack_channels(dev_b, A, lift_b, rim=0.0)
     info = dict(angle=round(float(ang), 2), crop=[int(top), int(bot), x0, x1], start_src=[x0, x0 + s_len], body_src=[b0, b0 + p_src],
                 body_period_tex=P, reps=reps, end_src=[e0, x1], body_cov=round(float(body_cov), 3))
     return out, out_bold, info
 
 
-def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray) -> np.ndarray:
+def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray, rim: float = 0.5) -> np.ndarray:
     """
     R = 물감 명암(골만 살짝 어둡게, 하한 0.72) · G = 붓결 하이라이트(밝은 줄 → 셰이더가 흰빛을 섞는다) · B = R.
     붓결을 어두운 골로만 그리면 획 전체가 고른 색보다 어둡고 «검은 느낌»이 났다(2026-10-08 사용자 두 번째 지적).
@@ -185,7 +174,7 @@ def pack_channels(dev: np.ndarray, A: np.ndarray, lift: np.ndarray) -> np.ndarra
     r = np.clip(1 + np.minimum(dev, 0) * 0.5, 0.76, 1.0)
     g = np.clip(np.maximum(dev, 0) * 3.4, 0, 1)  # 2.5 → 3.4: 2026-10-08 «붓결 더 강하게»(4.0 은 획이 하얗게 바램)
     r = r * (1 - lift) + lift
-    g = np.maximum(g * (1 - lift), lift * 0.5)
+    g = np.maximum(g * (1 - lift), lift * rim)
     paint = A > 0.004
     R = np.where(paint, r * 255, 255.0)
     G = np.where(paint, g * 255, 128.0)  # 투명 이웃 필터링이 테두리 흰 테(0.5)와 같은 값이 되게
