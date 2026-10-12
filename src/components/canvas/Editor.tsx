@@ -182,7 +182,7 @@ function useAutoHeaderLabels(
    * 다시 재면 그 틈이 닫힌다. 상태가 그대로면 지문 가드에 걸려 실제 측정은 안 일어난다. */
   const scheduleRecheck = () => {
     if (recheckRef.current !== null) return;
-    recheckRef.current = requestAnimationFrame(() => {
+    recheckRef.current = requestAnimationFrame(() => { // gb-juice-ok 헤더 라벨 폭 재측정(플레이어 행동 아님)
       recheckRef.current = null;
       measureRef.current(true);
     });

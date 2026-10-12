@@ -49,9 +49,9 @@ export function PerfHud() {
           ch: Math.round((el?.clientHeight ?? 0) * (window.devicePixelRatio || 1)),
         });
       }
-      raf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(tick); // gb-juice-ok 성능 계측 오버레이 틱(플레이어 행동 아님)
     };
-    raf = requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick); // gb-juice-ok 성능 계측 오버레이 틱(플레이어 행동 아님)
     return () => cancelAnimationFrame(raf);
   }, []);
 

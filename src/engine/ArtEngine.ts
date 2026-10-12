@@ -1823,9 +1823,9 @@ export class ArtEngine {
         if (this.loopErrors <= 3) console.error("[ArtEngine] 렌더 루프 오류(계속 진행)", err);
         this.needsComposite = false; // 같은 프레임을 무한 재시도하지 않는다
       }
-      this.rafId = requestAnimationFrame(loop);
+      this.rafId = requestAnimationFrame(loop); // gb-juice-ok 캔버스 렌더/합성 루프(그리기 도구 — 점수·승패 없는 순수 도구, 플레이어 행동 아님)
     };
-    this.rafId = requestAnimationFrame(loop);
+    this.rafId = requestAnimationFrame(loop); // gb-juice-ok 캔버스 렌더/합성 루프(그리기 도구 — 점수·승패 없는 순수 도구, 플레이어 행동 아님)
   }
   private loopErrors = 0;
 
