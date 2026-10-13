@@ -103,6 +103,9 @@ CREATE TABLE IF NOT EXISTS collab_rooms (
   created_at      INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
 CREATE INDEX IF NOT EXISTS collab_rooms_code_idx ON collab_rooms(code) WHERE closed_at IS NULL;
+-- FK CASCADE(classes/teachers 삭제) 검사가 전체 훑기 하던 자리 — 2026-10-13 migrations/
+CREATE INDEX IF NOT EXISTS collab_rooms_class_idx ON collab_rooms(class_id);
+CREATE INDEX IF NOT EXISTS collab_rooms_host_idx ON collab_rooms(host_teacher_id);
 
 -- ── 도안 배포(과제): 학급당 활성 1건 — 새 배포 시 이전 것을 비활성화 ──
 CREATE TABLE IF NOT EXISTS assignments (
@@ -116,6 +119,8 @@ CREATE TABLE IF NOT EXISTS assignments (
   created_at  INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
 CREATE INDEX IF NOT EXISTS assignments_class_idx ON assignments(class_id, is_active);
+-- 배포 도안 조회의 ORDER BY created_at 까지 받침 — 2026-10-13 migrations/
+CREATE INDEX IF NOT EXISTS assignments_class_active_created_idx ON assignments(class_id, is_active, created_at);
 
 -- ── 학급코드 브루트포스 방어: join 시도 기록 ──
 CREATE TABLE IF NOT EXISTS join_attempts (
