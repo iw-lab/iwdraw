@@ -52,6 +52,7 @@ import { drawTextOnCtx, ensureFontReady, textAspect, type TextItem } from "./too
 import { recognizeSketch } from "./recognizer/SketchMatch";
 import type { StrokeContext } from "./core/backend";
 import { blendToComposite } from "./core/backend";
+import { BASE_RADIUS, MIN_COVERAGE, PAINT_RADIUS, hintMatches, meanColor, strokeHint, visiblePaint } from "./core/eyedropper";
 import type { TipKind } from "./brushes/BrushBase";
 import { loadTipOverrides } from "./core/tipLoader";
 
@@ -745,32 +746,53 @@ export class ArtEngine {
     this.scheduleAutoSave();
   }
 
-  /** 스포이트 — 보이는 레이어들을 흰 종이 위에 합성한 색(종이 결 틴트는 제외: 그리기 색 기준) */
+  /** 스포이트 — «찍은 색으로 칠하면 원래와 똑같이» (판정 근거·실측 = core/eyedropper.ts 머리말)
+   *  ① 칠한 곳: 가장 잘 보이는 레이어의 물감 색(불투명도 가중 평균) — 그 자리를 마지막으로 칠한 획의
+   *     색과 같은 계열이면 그 획 색 그대로(유화·수채처럼 색을 바꿔 칠하는 붓도 왕복이 같다)
+   *  ② 칠 없는 곳(도안·명화·불러온 그림): 흰 종이 위 합성색의 작은 범위 평균(종이 결 틴트 제외) */
   private pickCtx: CanvasRenderingContext2D | null = null;
 
   private pickColor(x: number, y: number): RGB {
+    const cx = Math.max(0, Math.min(this.width - 1, Math.round(x)));
+    const cy = Math.max(0, Math.min(this.height - 1, Math.round(y)));
+    const win = (r: number) => {
+      const x0 = Math.max(0, cx - r);
+      const y0 = Math.max(0, cy - r);
+      return { x0, y0, w: Math.min(this.width, cx + r + 1) - x0, h: Math.min(this.height, cy + r + 1) - y0 };
+    };
+
+    // ① 위에서부터 픽셀마다 보이는 몫이 가장 큰 그리기 레이어(도안=곱하기·원본은 «물감»이 아니라 뺀다)
+    const pw = win(PAINT_RADIUS);
+    const drawable = this.layers.list.filter((l) => l.visible && !l.isLineart && !l.isBase).reverse();
+    const best = visiblePaint(drawable.map((l) => ({ data: l.ctx.getImageData(pw.x0, pw.y0, pw.w, pw.h).data, opacity: l.opacity })));
+    if (best && best.share >= MIN_COVERAGE) {
+      const layer = drawable[best.index];
+      const hint = strokeHint(this.recorder.getLog(), layer.id, cx, cy, this.width, this.height, best.color);
+      if (hint && hintMatches(hint.brush, hint.color, best.color)) return { ...hint.color };
+      return best.color;
+    }
+
+    // ② 칠이 없는 곳 — 보이는 레이어 전부를 흰 종이에 합성한 작은 창의 평균
+    const bw = win(BASE_RADIUS);
     if (!this.pickCtx) {
       const c = document.createElement("canvas");
-      c.width = c.height = 1;
+      c.width = c.height = BASE_RADIUS * 2 + 1;
       this.pickCtx = c.getContext("2d", { willReadFrequently: true })!;
     }
     const ctx = this.pickCtx;
-    const sx = Math.max(0, Math.min(this.width - 1, Math.round(x)));
-    const sy = Math.max(0, Math.min(this.height - 1, Math.round(y)));
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, 1, 1);
+    ctx.fillRect(0, 0, bw.w, bw.h);
     for (const layer of this.layers.list) {
       if (!layer.visible) continue;
       ctx.globalAlpha = layer.opacity;
       ctx.globalCompositeOperation = blendToComposite(layer.blend);
-      ctx.drawImage(layer.canvas, sx, sy, 1, 1, 0, 0, 1, 1);
+      ctx.drawImage(layer.canvas, bw.x0, bw.y0, bw.w, bw.h, 0, 0, bw.w, bw.h);
     }
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
-    const d = ctx.getImageData(0, 0, 1, 1).data;
-    return { r: d[0], g: d[1], b: d[2] };
+    return meanColor(ctx.getImageData(0, 0, bw.w, bw.h).data);
   }
 
   /** 획 시작 전 상태 — 더티 타일만 */
@@ -2089,6 +2111,14 @@ export class ArtEngine {
   /* ── AutoSave ── */
   private scheduleAutoSave(): void {
     this.autosave.schedule(() => this.snapshotState());
+  }
+  /** 지금 그림을 저장하고 끝날 때까지 기다린다(안전 새로고침 직전) — false 면 저장 실패 */
+  saveNow(): Promise<boolean> {
+    return this.autosave.saveAndWait(() => this.snapshotState());
+  }
+  /** 획을 긋는 중이거나 떠 있는 도장·글씨가 있으면 true — 이때는 새로고침하지 않는다 */
+  get busy(): boolean {
+    return this.brush !== null || this.smudging || !!this.pending;
   }
   /*
    * ⚠️ toDataURL(동기 PNG 인코딩 + base64 문자열)로 전 레이어를 굽던 것을 toBlob으로 교체.
