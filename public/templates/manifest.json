@@ -103,7 +103,7 @@
       "theme": "animals",
       "title": "동물",
       "category": "animals",
-      "count": 40,
+      "count": 39,
       "cover": "/templates/animals/animals_low_01.webp",
       "items": [
         {
@@ -136,17 +136,10 @@
         },
         {
           "id": "animals_low_05",
-          "title": "헤엄치는 오리",
+          "title": "물 뿜는 코끼리",
           "grade": "low",
           "image": "/templates/animals/animals_low_05.webp",
           "thumb": "/templates/_thumbs/animals/animals_low_05.webp"
-        },
-        {
-          "id": "animals_low_06",
-          "title": "물 뿜는 코끼리",
-          "grade": "low",
-          "image": "/templates/animals/animals_low_06.webp",
-          "thumb": "/templates/_thumbs/animals/animals_low_06.webp"
         },
         {
           "id": "animals_low_07",
@@ -676,16 +669,9 @@
       "theme": "dinosaurs",
       "title": "공룡",
       "category": "animals",
-      "count": 40,
-      "cover": "/templates/dinosaurs/dinosaurs_low_01.webp",
+      "count": 39,
+      "cover": "/templates/dinosaurs/dinosaurs_low_02.webp",
       "items": [
-        {
-          "id": "dinosaurs_low_01",
-          "title": "아기 티라노",
-          "grade": "low",
-          "image": "/templates/dinosaurs/dinosaurs_low_01.webp",
-          "thumb": "/templates/_thumbs/dinosaurs/dinosaurs_low_01.webp"
-        },
         {
           "id": "dinosaurs_low_02",
           "title": "트리케라톱스",
@@ -960,13 +946,13 @@
           "thumb": "/templates/_thumbs/dinosaurs/dinosaurs_high_08.webp"
         }
       ],
-      "coverThumb": "/templates/_thumbs/dinosaurs/dinosaurs_low_01.webp"
+      "coverThumb": "/templates/_thumbs/dinosaurs/dinosaurs_low_02.webp"
     },
     "sea": {
       "theme": "sea",
       "title": "바다생물",
       "category": "animals",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/sea/sea_low_01.webp",
       "items": [
         {
@@ -1073,13 +1059,6 @@
           "grade": "low",
           "image": "/templates/sea/sea_low_15.webp",
           "thumb": "/templates/_thumbs/sea/sea_low_15.webp"
-        },
-        {
-          "id": "sea_low_16",
-          "title": "거품 부는 물고기",
-          "grade": "low",
-          "image": "/templates/sea/sea_low_16.webp",
-          "thumb": "/templates/_thumbs/sea/sea_low_16.webp"
         },
         {
           "id": "sea_low_17",
@@ -1234,13 +1213,6 @@
           "grade": "high",
           "image": "/templates/sea/sea_high_06.webp",
           "thumb": "/templates/_thumbs/sea/sea_high_06.webp"
-        },
-        {
-          "id": "sea_high_07",
-          "title": "심해의 빛나는 물고기",
-          "grade": "high",
-          "image": "/templates/sea/sea_high_07.webp",
-          "thumb": "/templates/_thumbs/sea/sea_high_07.webp"
         },
         {
           "id": "sea_high_08",
@@ -1546,215 +1518,201 @@
       "theme": "safari",
       "title": "사파리",
       "category": "animals",
-      "count": 30,
+      "count": 28,
       "cover": "/templates/safari/safari_low_01.webp",
       "items": [
         {
           "id": "safari_low_01",
-          "title": "safari_low_01",
+          "title": "아기 사자",
           "grade": "low",
           "image": "/templates/safari/safari_low_01.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_01.webp"
         },
         {
           "id": "safari_low_02",
-          "title": "safari_low_02",
+          "title": "기린",
           "grade": "low",
           "image": "/templates/safari/safari_low_02.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_02.webp"
         },
         {
           "id": "safari_low_03",
-          "title": "safari_low_03",
+          "title": "얼룩말",
           "grade": "low",
           "image": "/templates/safari/safari_low_03.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_03.webp"
         },
         {
           "id": "safari_low_04",
-          "title": "safari_low_04",
+          "title": "아기 코끼리",
           "grade": "low",
           "image": "/templates/safari/safari_low_04.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_04.webp"
         },
         {
           "id": "safari_low_05",
-          "title": "safari_low_05",
+          "title": "하마",
           "grade": "low",
           "image": "/templates/safari/safari_low_05.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_05.webp"
         },
         {
           "id": "safari_low_06",
-          "title": "safari_low_06",
+          "title": "코뿔소",
           "grade": "low",
           "image": "/templates/safari/safari_low_06.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_06.webp"
         },
         {
           "id": "safari_low_07",
-          "title": "safari_low_07",
+          "title": "미어캣",
           "grade": "low",
           "image": "/templates/safari/safari_low_07.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_07.webp"
         },
         {
           "id": "safari_low_08",
-          "title": "safari_low_08",
+          "title": "혹멧돼지",
           "grade": "low",
           "image": "/templates/safari/safari_low_08.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_08.webp"
         },
         {
           "id": "safari_low_09",
-          "title": "safari_low_09",
+          "title": "치타",
           "grade": "low",
           "image": "/templates/safari/safari_low_09.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_09.webp"
         },
         {
           "id": "safari_low_10",
-          "title": "safari_low_10",
+          "title": "아카시아 나무",
           "grade": "low",
           "image": "/templates/safari/safari_low_10.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_10.webp"
         },
         {
           "id": "safari_low_11",
-          "title": "safari_low_11",
+          "title": "원숭이",
           "grade": "low",
           "image": "/templates/safari/safari_low_11.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_11.webp"
         },
         {
           "id": "safari_low_12",
-          "title": "safari_low_12",
+          "title": "타조",
           "grade": "low",
           "image": "/templates/safari/safari_low_12.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_12.webp"
         },
         {
           "id": "safari_low_13",
-          "title": "safari_low_13",
+          "title": "가젤",
           "grade": "low",
           "image": "/templates/safari/safari_low_13.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_13.webp"
         },
         {
           "id": "safari_low_14",
-          "title": "safari_low_14",
+          "title": "악어",
           "grade": "low",
           "image": "/templates/safari/safari_low_14.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_14.webp"
         },
         {
           "id": "safari_low_15",
-          "title": "safari_low_15",
+          "title": "사파리 지프",
           "grade": "low",
           "image": "/templates/safari/safari_low_15.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_15.webp"
         },
         {
           "id": "safari_low_16",
-          "title": "safari_low_16",
+          "title": "물웅덩이",
           "grade": "low",
           "image": "/templates/safari/safari_low_16.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_16.webp"
         },
         {
           "id": "safari_low_17",
-          "title": "safari_low_17",
+          "title": "플라밍고",
           "grade": "low",
           "image": "/templates/safari/safari_low_17.webp",
           "thumb": "/templates/_thumbs/safari/safari_low_17.webp"
         },
         {
           "id": "safari_mid_01",
-          "title": "safari_mid_01",
+          "title": "사자 가족",
           "grade": "low",
           "image": "/templates/safari/safari_mid_01.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_01.webp"
         },
         {
-          "id": "safari_mid_02",
-          "title": "safari_mid_02",
-          "grade": "low",
-          "image": "/templates/safari/safari_mid_02.webp",
-          "thumb": "/templates/_thumbs/safari/safari_mid_02.webp"
-        },
-        {
-          "id": "safari_mid_03",
-          "title": "safari_mid_03",
-          "grade": "low",
-          "image": "/templates/safari/safari_mid_03.webp",
-          "thumb": "/templates/_thumbs/safari/safari_mid_03.webp"
-        },
-        {
           "id": "safari_mid_04",
-          "title": "safari_mid_04",
+          "title": "미어캣 가족",
           "grade": "low",
           "image": "/templates/safari/safari_mid_04.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_04.webp"
         },
         {
           "id": "safari_mid_06",
-          "title": "safari_mid_06",
+          "title": "치타와 가젤",
           "grade": "low",
           "image": "/templates/safari/safari_mid_06.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_06.webp"
         },
         {
           "id": "safari_mid_07",
-          "title": "safari_mid_07",
+          "title": "강가의 하마와 악어",
           "grade": "low",
           "image": "/templates/safari/safari_mid_07.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_07.webp"
         },
         {
           "id": "safari_mid_08",
-          "title": "safari_mid_08",
+          "title": "플라밍고 무리",
           "grade": "low",
           "image": "/templates/safari/safari_mid_08.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_08.webp"
         },
         {
           "id": "safari_mid_09",
-          "title": "safari_mid_09",
+          "title": "나무 위 원숭이들",
           "grade": "low",
           "image": "/templates/safari/safari_mid_09.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_09.webp"
         },
         {
           "id": "safari_mid_10",
-          "title": "safari_mid_10",
+          "title": "코뿔소와 새",
           "grade": "low",
           "image": "/templates/safari/safari_mid_10.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_10.webp"
         },
         {
           "id": "safari_mid_11",
-          "title": "safari_mid_11",
+          "title": "얼룩말 무리",
           "grade": "low",
           "image": "/templates/safari/safari_mid_11.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_11.webp"
         },
         {
           "id": "safari_mid_12",
-          "title": "safari_mid_12",
+          "title": "타조와 새끼들",
           "grade": "low",
           "image": "/templates/safari/safari_mid_12.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_12.webp"
         },
         {
           "id": "safari_mid_13",
-          "title": "safari_mid_13",
+          "title": "물 마시는 기린",
           "grade": "low",
           "image": "/templates/safari/safari_mid_13.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_13.webp"
         },
         {
           "id": "safari_mid_14",
-          "title": "safari_mid_14",
+          "title": "바위 위 사자",
           "grade": "low",
           "image": "/templates/safari/safari_mid_14.webp",
           "thumb": "/templates/_thumbs/safari/safari_mid_14.webp"
@@ -1766,7 +1724,7 @@
       "theme": "farm",
       "title": "농장",
       "category": "animals",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/farm/farm_low_01.webp",
       "items": [
         {
@@ -1852,13 +1810,6 @@
           "grade": "low",
           "image": "/templates/farm/farm_low_12.webp",
           "thumb": "/templates/_thumbs/farm/farm_low_12.webp"
-        },
-        {
-          "id": "farm_low_13",
-          "title": "허수아비",
-          "grade": "low",
-          "image": "/templates/farm/farm_low_13.webp",
-          "thumb": "/templates/_thumbs/farm/farm_low_13.webp"
         },
         {
           "id": "farm_low_14",
@@ -2041,13 +1992,6 @@
           "grade": "high",
           "image": "/templates/farm/farm_high_08.webp",
           "thumb": "/templates/_thumbs/farm/farm_high_08.webp"
-        },
-        {
-          "id": "farm_mid_07",
-          "title": "풍차와 연못",
-          "grade": "high",
-          "image": "/templates/farm/farm_mid_07.webp",
-          "thumb": "/templates/_thumbs/farm/farm_mid_07.webp"
         }
       ],
       "coverThumb": "/templates/_thumbs/farm/farm_low_01.webp"
@@ -2056,16 +2000,9 @@
       "theme": "seasons",
       "title": "사계절",
       "category": "season_event",
-      "count": 40,
-      "cover": "/templates/seasons/seasons_low_01.webp",
+      "count": 38,
+      "cover": "/templates/seasons/seasons_low_02.webp",
       "items": [
-        {
-          "id": "seasons_low_01",
-          "title": "봄 벚꽃",
-          "grade": "low",
-          "image": "/templates/seasons/seasons_low_01.webp",
-          "thumb": "/templates/_thumbs/seasons/seasons_low_01.webp"
-        },
         {
           "id": "seasons_low_02",
           "title": "여름 바닷가",
@@ -2228,13 +2165,6 @@
           "thumb": "/templates/_thumbs/seasons/seasons_mid_07.webp"
         },
         {
-          "id": "seasons_mid_08",
-          "title": "비 오는 날",
-          "grade": "mid",
-          "image": "/templates/seasons/seasons_mid_08.webp",
-          "thumb": "/templates/_thumbs/seasons/seasons_mid_08.webp"
-        },
-        {
           "id": "seasons_mid_09",
           "title": "낙엽 날리는 가을",
           "grade": "mid",
@@ -2340,18 +2270,18 @@
           "thumb": "/templates/_thumbs/seasons/seasons_high_08.webp"
         }
       ],
-      "coverThumb": "/templates/_thumbs/seasons/seasons_low_01.webp"
+      "coverThumb": "/templates/_thumbs/seasons/seasons_low_02.webp"
     },
     "holidays": {
       "theme": "holidays",
       "title": "명절·기념일",
       "category": "season_event",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/holidays/holidays_low_01.webp",
       "items": [
         {
           "id": "holidays_low_01",
-          "title": "설날 세배",
+          "title": "한복 입고 세배하는 아이",
           "grade": "low",
           "image": "/templates/holidays/holidays_low_01.webp",
           "thumb": "/templates/_thumbs/holidays/holidays_low_01.webp"
@@ -2406,13 +2336,6 @@
           "thumb": "/templates/_thumbs/holidays/holidays_low_08.webp"
         },
         {
-          "id": "holidays_low_09",
-          "title": "어린이날 풍선",
-          "grade": "low",
-          "image": "/templates/holidays/holidays_low_09.webp",
-          "thumb": "/templates/_thumbs/holidays/holidays_low_09.webp"
-        },
-        {
           "id": "holidays_low_10",
           "title": "새해 종",
           "grade": "low",
@@ -2439,13 +2362,6 @@
           "grade": "low",
           "image": "/templates/holidays/holidays_low_13.webp",
           "thumb": "/templates/_thumbs/holidays/holidays_low_13.webp"
-        },
-        {
-          "id": "holidays_low_14",
-          "title": "떡 한 개",
-          "grade": "low",
-          "image": "/templates/holidays/holidays_low_14.webp",
-          "thumb": "/templates/_thumbs/holidays/holidays_low_14.webp"
         },
         {
           "id": "holidays_low_15",
@@ -2505,7 +2421,7 @@
         },
         {
           "id": "holidays_mid_06",
-          "title": "설날 세배",
+          "title": "할아버지 할머니께 세배",
           "grade": "mid",
           "image": "/templates/holidays/holidays_mid_06.webp",
           "thumb": "/templates/_thumbs/holidays/holidays_mid_06.webp"
@@ -2926,7 +2842,7 @@
       "theme": "sports",
       "title": "운동·스포츠",
       "category": "season_event",
-      "count": 40,
+      "count": 37,
       "cover": "/templates/sports/sports_low_01.webp",
       "items": [
         {
@@ -3014,13 +2930,6 @@
           "thumb": "/templates/_thumbs/sports/sports_low_12.webp"
         },
         {
-          "id": "sports_low_13",
-          "title": "배드민턴",
-          "grade": "low",
-          "image": "/templates/sports/sports_low_13.webp",
-          "thumb": "/templates/_thumbs/sports/sports_low_13.webp"
-        },
-        {
           "id": "sports_low_14",
           "title": "훌라후프",
           "grade": "low",
@@ -3084,13 +2993,6 @@
           "thumb": "/templates/_thumbs/sports/sports_mid_05.webp"
         },
         {
-          "id": "sports_mid_06",
-          "title": "테니스 서브",
-          "grade": "mid",
-          "image": "/templates/sports/sports_mid_06.webp",
-          "thumb": "/templates/_thumbs/sports/sports_mid_06.webp"
-        },
-        {
           "id": "sports_mid_07",
           "title": "결승선 달리기",
           "grade": "mid",
@@ -3117,13 +3019,6 @@
           "grade": "mid",
           "image": "/templates/sports/sports_mid_10.webp",
           "thumb": "/templates/_thumbs/sports/sports_mid_10.webp"
-        },
-        {
-          "id": "sports_mid_11",
-          "title": "배구 선수",
-          "grade": "mid",
-          "image": "/templates/sports/sports_mid_11.webp",
-          "thumb": "/templates/_thumbs/sports/sports_mid_11.webp"
         },
         {
           "id": "sports_mid_12",
@@ -3216,7 +3111,7 @@
       "theme": "camping",
       "title": "캠핑·모험",
       "category": "season_event",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/camping/camping_low_01.webp",
       "items": [
         {
@@ -3239,13 +3134,6 @@
           "grade": "low",
           "image": "/templates/camping/camping_low_03.webp",
           "thumb": "/templates/_thumbs/camping/camping_low_03.webp"
-        },
-        {
-          "id": "camping_low_04",
-          "title": "손전등",
-          "grade": "low",
-          "image": "/templates/camping/camping_low_04.webp",
-          "thumb": "/templates/_thumbs/camping/camping_low_04.webp"
         },
         {
           "id": "camping_low_05",
@@ -3365,13 +3253,6 @@
           "grade": "mid",
           "image": "/templates/camping/camping_mid_04.webp",
           "thumb": "/templates/_thumbs/camping/camping_mid_04.webp"
-        },
-        {
-          "id": "camping_mid_05",
-          "title": "마시멜로 굽는 아이",
-          "grade": "mid",
-          "image": "/templates/camping/camping_mid_05.webp",
-          "thumb": "/templates/_thumbs/camping/camping_mid_05.webp"
         },
         {
           "id": "camping_mid_06",
@@ -3506,7 +3387,7 @@
       "theme": "food",
       "title": "음식",
       "category": "season_event",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/food/food_low_01.webp",
       "items": [
         {
@@ -3550,13 +3431,6 @@
           "grade": "low",
           "image": "/templates/food/food_low_06.webp",
           "thumb": "/templates/_thumbs/food/food_low_06.webp"
-        },
-        {
-          "id": "food_low_07",
-          "title": "사과",
-          "grade": "low",
-          "image": "/templates/food/food_low_07.webp",
-          "thumb": "/templates/_thumbs/food/food_low_07.webp"
         },
         {
           "id": "food_low_08",
@@ -3655,13 +3529,6 @@
           "grade": "mid",
           "image": "/templates/food/food_mid_04.webp",
           "thumb": "/templates/_thumbs/food/food_mid_04.webp"
-        },
-        {
-          "id": "food_mid_05",
-          "title": "밥과 반찬",
-          "grade": "mid",
-          "image": "/templates/food/food_mid_05.webp",
-          "thumb": "/templates/_thumbs/food/food_mid_05.webp"
         },
         {
           "id": "food_mid_06",
@@ -4006,7 +3873,8 @@
           "id": "fruits_veggies_mid_13",
           "title": "오렌지 한 쌍",
           "grade": "mid",
-          "image": "/templates/fruits_veggies/fruits_veggies_mid_13.webp"
+          "image": "/templates/fruits_veggies/fruits_veggies_mid_13.webp",
+          "thumb": "/templates/_thumbs/fruits_veggies/fruits_veggies_mid_13.webp"
         },
         {
           "id": "fruits_veggies_mid_14",
@@ -4085,7 +3953,7 @@
       "theme": "tradition",
       "title": "전통문화",
       "category": "curriculum",
-      "count": 40,
+      "count": 36,
       "cover": "/templates/tradition/tradition_low_01.webp",
       "items": [
         {
@@ -4131,13 +3999,6 @@
           "thumb": "/templates/_thumbs/tradition/tradition_low_06.webp"
         },
         {
-          "id": "tradition_low_07",
-          "title": "장구",
-          "grade": "low",
-          "image": "/templates/tradition/tradition_low_07.webp",
-          "thumb": "/templates/_thumbs/tradition/tradition_low_07.webp"
-        },
-        {
           "id": "tradition_low_08",
           "title": "노리개",
           "grade": "low",
@@ -4166,13 +4027,6 @@
           "thumb": "/templates/_thumbs/tradition/tradition_low_11.webp"
         },
         {
-          "id": "tradition_low_12",
-          "title": "팽이",
-          "grade": "low",
-          "image": "/templates/tradition/tradition_low_12.webp",
-          "thumb": "/templates/_thumbs/tradition/tradition_low_12.webp"
-        },
-        {
           "id": "tradition_low_13",
           "title": "청사초롱",
           "grade": "low",
@@ -4185,13 +4039,6 @@
           "grade": "low",
           "image": "/templates/tradition/tradition_low_14.webp",
           "thumb": "/templates/_thumbs/tradition/tradition_low_14.webp"
-        },
-        {
-          "id": "tradition_low_15",
-          "title": "하회탈",
-          "grade": "low",
-          "image": "/templates/tradition/tradition_low_15.webp",
-          "thumb": "/templates/_thumbs/tradition/tradition_low_15.webp"
         },
         {
           "id": "tradition_low_16",
@@ -4264,13 +4111,6 @@
           "thumb": "/templates/_thumbs/tradition/tradition_mid_08.webp"
         },
         {
-          "id": "tradition_mid_09",
-          "title": "전통 혼례",
-          "grade": "mid",
-          "image": "/templates/tradition/tradition_mid_09.webp",
-          "thumb": "/templates/_thumbs/tradition/tradition_mid_09.webp"
-        },
-        {
           "id": "tradition_mid_10",
           "title": "도자기 빚기",
           "grade": "mid",
@@ -4283,13 +4123,6 @@
           "grade": "mid",
           "image": "/templates/tradition/tradition_mid_11.webp",
           "thumb": "/templates/_thumbs/tradition/tradition_mid_11.webp"
-        },
-        {
-          "id": "tradition_mid_12",
-          "title": "부채춤",
-          "grade": "mid",
-          "image": "/templates/tradition/tradition_mid_12.webp",
-          "thumb": "/templates/_thumbs/tradition/tradition_mid_12.webp"
         },
         {
           "id": "tradition_mid_13",
@@ -4313,6 +4146,13 @@
           "thumb": "/templates/_thumbs/tradition/tradition_mid_15.webp"
         },
         {
+          "id": "tradition_mid_16",
+          "title": "부채춤",
+          "grade": "mid",
+          "image": "/templates/tradition/tradition_mid_16.webp",
+          "thumb": "/templates/_thumbs/tradition/tradition_mid_16.webp"
+        },
+        {
           "id": "tradition_high_01",
           "title": "민속촌 풍경",
           "grade": "high",
@@ -4321,24 +4161,10 @@
         },
         {
           "id": "tradition_high_02",
-          "title": "민속촌 풍경",
+          "title": "민속촌 장날",
           "grade": "high",
           "image": "/templates/tradition/tradition_high_02.webp",
           "thumb": "/templates/_thumbs/tradition/tradition_high_02.webp"
-        },
-        {
-          "id": "tradition_high_03",
-          "title": "궁궐 마당",
-          "grade": "high",
-          "image": "/templates/tradition/tradition_high_03.webp",
-          "thumb": "/templates/_thumbs/tradition/tradition_high_03.webp"
-        },
-        {
-          "id": "tradition_high_04",
-          "title": "탈춤 축제",
-          "grade": "high",
-          "image": "/templates/tradition/tradition_high_04.webp",
-          "thumb": "/templates/_thumbs/tradition/tradition_high_04.webp"
         },
         {
           "id": "tradition_high_05",
@@ -4367,6 +4193,20 @@
           "grade": "high",
           "image": "/templates/tradition/tradition_high_08.webp",
           "thumb": "/templates/_thumbs/tradition/tradition_high_08.webp"
+        },
+        {
+          "id": "tradition_high_09",
+          "title": "전통 혼례",
+          "grade": "high",
+          "image": "/templates/tradition/tradition_high_09.webp",
+          "thumb": "/templates/_thumbs/tradition/tradition_high_09.webp"
+        },
+        {
+          "id": "tradition_high_10",
+          "title": "궁궐 마당",
+          "grade": "high",
+          "image": "/templates/tradition/tradition_high_10.webp",
+          "thumb": "/templates/_thumbs/tradition/tradition_high_10.webp"
         }
       ],
       "coverThumb": "/templates/_thumbs/tradition/tradition_low_01.webp"
@@ -4375,7 +4215,7 @@
       "theme": "jobs",
       "title": "직업",
       "category": "curriculum",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/jobs/jobs_low_01.webp",
       "items": [
         {
@@ -4526,25 +4366,11 @@
           "thumb": "/templates/_thumbs/jobs/jobs_mid_04.webp"
         },
         {
-          "id": "jobs_mid_05",
-          "title": "요리하는 셰프",
-          "grade": "mid",
-          "image": "/templates/jobs/jobs_mid_05.webp",
-          "thumb": "/templates/_thumbs/jobs/jobs_mid_05.webp"
-        },
-        {
           "id": "jobs_mid_06",
           "title": "건설 노동자",
           "grade": "mid",
           "image": "/templates/jobs/jobs_mid_06.webp",
           "thumb": "/templates/_thumbs/jobs/jobs_mid_06.webp"
-        },
-        {
-          "id": "jobs_mid_07",
-          "title": "과학자",
-          "grade": "mid",
-          "image": "/templates/jobs/jobs_mid_07.webp",
-          "thumb": "/templates/_thumbs/jobs/jobs_mid_07.webp"
         },
         {
           "id": "jobs_mid_08",
@@ -4665,7 +4491,7 @@
       "theme": "vehicles",
       "title": "탈것",
       "category": "curriculum",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/vehicles/vehicles_low_01.webp",
       "items": [
         {
@@ -4810,7 +4636,7 @@
         },
         {
           "id": "vehicles_mid_04",
-          "title": "돛단배",
+          "title": "바다 위 돛단배",
           "grade": "mid",
           "image": "/templates/vehicles/vehicles_mid_04.webp",
           "thumb": "/templates/_thumbs/vehicles/vehicles_mid_04.webp"
@@ -4821,13 +4647,6 @@
           "grade": "mid",
           "image": "/templates/vehicles/vehicles_mid_05.webp",
           "thumb": "/templates/_thumbs/vehicles/vehicles_mid_05.webp"
-        },
-        {
-          "id": "vehicles_mid_06",
-          "title": "언덕 위 열기구",
-          "grade": "mid",
-          "image": "/templates/vehicles/vehicles_mid_06.webp",
-          "thumb": "/templates/_thumbs/vehicles/vehicles_mid_06.webp"
         },
         {
           "id": "vehicles_mid_07",
@@ -4940,13 +4759,6 @@
           "grade": "high",
           "image": "/templates/vehicles/vehicles_high_07.webp",
           "thumb": "/templates/_thumbs/vehicles/vehicles_high_07.webp"
-        },
-        {
-          "id": "vehicles_high_08",
-          "title": "로켓 발사대",
-          "grade": "high",
-          "image": "/templates/vehicles/vehicles_high_08.webp",
-          "thumb": "/templates/_thumbs/vehicles/vehicles_high_08.webp"
         }
       ],
       "coverThumb": "/templates/_thumbs/vehicles/vehicles_low_01.webp"
@@ -4955,7 +4767,7 @@
       "theme": "space",
       "title": "우주",
       "category": "curriculum",
-      "count": 40,
+      "count": 37,
       "cover": "/templates/space/space_low_01.webp",
       "items": [
         {
@@ -5027,13 +4839,6 @@
           "grade": "low",
           "image": "/templates/space/space_low_10.webp",
           "thumb": "/templates/_thumbs/space/space_low_10.webp"
-        },
-        {
-          "id": "space_low_11",
-          "title": "로켓",
-          "grade": "low",
-          "image": "/templates/space/space_low_11.webp",
-          "thumb": "/templates/_thumbs/space/space_low_11.webp"
         },
         {
           "id": "space_low_12",
@@ -5134,13 +4939,6 @@
           "thumb": "/templates/_thumbs/space/space_mid_08.webp"
         },
         {
-          "id": "space_mid_09",
-          "title": "태양계 행성들",
-          "grade": "mid",
-          "image": "/templates/space/space_mid_09.webp",
-          "thumb": "/templates/_thumbs/space/space_mid_09.webp"
-        },
-        {
           "id": "space_mid_10",
           "title": "별자리",
           "grade": "mid",
@@ -5218,13 +5016,6 @@
           "thumb": "/templates/_thumbs/space/space_high_05.webp"
         },
         {
-          "id": "space_high_06",
-          "title": "별자리 관측",
-          "grade": "high",
-          "image": "/templates/space/space_high_06.webp",
-          "thumb": "/templates/_thumbs/space/space_high_06.webp"
-        },
-        {
           "id": "space_high_07",
           "title": "로켓 발사 구경",
           "grade": "high",
@@ -5245,7 +5036,7 @@
       "theme": "school",
       "title": "학교생활",
       "category": "curriculum",
-      "count": 39,
+      "count": 38,
       "cover": "/templates/school/school_low_01.webp",
       "items": [
         {
@@ -5466,13 +5257,6 @@
           "thumb": "/templates/_thumbs/school/school_mid_15.webp"
         },
         {
-          "id": "school_high_01",
-          "title": "운동회 한마당",
-          "grade": "high",
-          "image": "/templates/school/school_high_01.webp",
-          "thumb": "/templates/_thumbs/school/school_high_01.webp"
-        },
-        {
           "id": "school_high_02",
           "title": "운동회 한마당",
           "grade": "high",
@@ -5528,7 +5312,7 @@
       "theme": "music",
       "title": "악기·음악",
       "category": "curriculum",
-      "count": 40,
+      "count": 35,
       "cover": "/templates/music/music_low_01.webp",
       "items": [
         {
@@ -5537,13 +5321,6 @@
           "grade": "low",
           "image": "/templates/music/music_low_01.webp",
           "thumb": "/templates/_thumbs/music/music_low_01.webp"
-        },
-        {
-          "id": "music_low_02",
-          "title": "드럼",
-          "grade": "low",
-          "image": "/templates/music/music_low_02.webp",
-          "thumb": "/templates/_thumbs/music/music_low_02.webp"
         },
         {
           "id": "music_low_03",
@@ -5567,13 +5344,6 @@
           "thumb": "/templates/_thumbs/music/music_low_05.webp"
         },
         {
-          "id": "music_low_06",
-          "title": "탬버린",
-          "grade": "low",
-          "image": "/templates/music/music_low_06.webp",
-          "thumb": "/templates/_thumbs/music/music_low_06.webp"
-        },
-        {
           "id": "music_low_07",
           "title": "음표",
           "grade": "low",
@@ -5593,13 +5363,6 @@
           "grade": "low",
           "image": "/templates/music/music_low_09.webp",
           "thumb": "/templates/_thumbs/music/music_low_09.webp"
-        },
-        {
-          "id": "music_low_10",
-          "title": "실로폰",
-          "grade": "low",
-          "image": "/templates/music/music_low_10.webp",
-          "thumb": "/templates/_thumbs/music/music_low_10.webp"
         },
         {
           "id": "music_low_11",
@@ -5672,13 +5435,6 @@
           "thumb": "/templates/_thumbs/music/music_mid_03.webp"
         },
         {
-          "id": "music_mid_04",
-          "title": "바이올린 연주",
-          "grade": "mid",
-          "image": "/templates/music/music_mid_04.webp",
-          "thumb": "/templates/_thumbs/music/music_mid_04.webp"
-        },
-        {
           "id": "music_mid_05",
           "title": "플루트 연주",
           "grade": "mid",
@@ -5726,13 +5482,6 @@
           "grade": "mid",
           "image": "/templates/music/music_mid_11.webp",
           "thumb": "/templates/_thumbs/music/music_mid_11.webp"
-        },
-        {
-          "id": "music_mid_12",
-          "title": "악보대",
-          "grade": "mid",
-          "image": "/templates/music/music_mid_12.webp",
-          "thumb": "/templates/_thumbs/music/music_mid_12.webp"
         },
         {
           "id": "music_mid_13",
@@ -5818,7 +5567,7 @@
       "theme": "flowers",
       "title": "꽃·식물",
       "category": "curriculum",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/flowers/flowers_low_01.webp",
       "items": [
         {
@@ -5955,25 +5704,11 @@
           "thumb": "/templates/_thumbs/flowers/flowers_mid_02.webp"
         },
         {
-          "id": "flowers_mid_03",
-          "title": "선인장",
-          "grade": "mid",
-          "image": "/templates/flowers/flowers_mid_03.webp",
-          "thumb": "/templates/_thumbs/flowers/flowers_mid_03.webp"
-        },
-        {
           "id": "flowers_mid_04",
           "title": "창가 화분들",
           "grade": "mid",
           "image": "/templates/flowers/flowers_mid_04.webp",
           "thumb": "/templates/_thumbs/flowers/flowers_mid_04.webp"
-        },
-        {
-          "id": "flowers_mid_05",
-          "title": "사과나무",
-          "grade": "mid",
-          "image": "/templates/flowers/flowers_mid_05.webp",
-          "thumb": "/templates/_thumbs/flowers/flowers_mid_05.webp"
         },
         {
           "id": "flowers_mid_07",
@@ -6108,7 +5843,7 @@
       "theme": "princess_fantasy",
       "title": "공주·판타지",
       "category": "fantasy",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/princess_fantasy/princess_fantasy_low_01.webp",
       "items": [
         {
@@ -6203,13 +5938,6 @@
           "thumb": "/templates/_thumbs/princess_fantasy/princess_fantasy_low_13.webp"
         },
         {
-          "id": "princess_fantasy_low_14",
-          "title": "요정 버섯집",
-          "grade": "low",
-          "image": "/templates/princess_fantasy/princess_fantasy_low_14.webp",
-          "thumb": "/templates/_thumbs/princess_fantasy/princess_fantasy_low_14.webp"
-        },
-        {
           "id": "princess_fantasy_low_15",
           "title": "유리구두",
           "grade": "low",
@@ -6294,13 +6022,6 @@
           "thumb": "/templates/_thumbs/princess_fantasy/princess_fantasy_mid_09.webp"
         },
         {
-          "id": "princess_fantasy_mid_10",
-          "title": "장미정원의 공주",
-          "grade": "mid",
-          "image": "/templates/princess_fantasy/princess_fantasy_mid_10.webp",
-          "thumb": "/templates/_thumbs/princess_fantasy/princess_fantasy_mid_10.webp"
-        },
-        {
           "id": "princess_fantasy_mid_11",
           "title": "도개교 성",
           "grade": "mid",
@@ -6344,7 +6065,7 @@
         },
         {
           "id": "princess_fantasy_high_02",
-          "title": "판타지 왕국",
+          "title": "무지개 성과 아기 용",
           "grade": "high",
           "image": "/templates/princess_fantasy/princess_fantasy_high_02.webp",
           "thumb": "/templates/_thumbs/princess_fantasy/princess_fantasy_high_02.webp"
@@ -6398,7 +6119,7 @@
       "theme": "robots",
       "title": "로봇·기계",
       "category": "fantasy",
-      "count": 40,
+      "count": 39,
       "cover": "/templates/robots/robots_low_01.webp",
       "items": [
         {
@@ -6612,13 +6333,6 @@
           "thumb": "/templates/_thumbs/robots/robots_mid_13.webp"
         },
         {
-          "id": "robots_mid_14",
-          "title": "로봇 밴드",
-          "grade": "mid",
-          "image": "/templates/robots/robots_mid_14.webp",
-          "thumb": "/templates/_thumbs/robots/robots_mid_14.webp"
-        },
-        {
           "id": "robots_mid_15",
           "title": "공장 로봇 팔",
           "grade": "mid",
@@ -6688,271 +6402,257 @@
       "theme": "pirates",
       "title": "해적·보물섬",
       "category": "fantasy",
-      "count": 38,
+      "count": 36,
       "cover": "/templates/pirates/pirates_high_01.webp",
       "items": [
         {
           "id": "pirates_high_01",
-          "title": "pirates_high_01",
+          "title": "보물섬으로 항해",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_01.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_01.webp"
         },
         {
           "id": "pirates_high_02",
-          "title": "pirates_high_02",
+          "title": "보물섬 탐험",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_02.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_02.webp"
         },
         {
           "id": "pirates_high_03",
-          "title": "pirates_high_03",
+          "title": "돛 올리는 해적들",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_03.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_03.webp"
         },
         {
           "id": "pirates_high_04",
-          "title": "pirates_high_04",
+          "title": "바닷속 보물선",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_04.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_04.webp"
         },
         {
           "id": "pirates_high_05",
-          "title": "pirates_high_05",
+          "title": "해적선 정박",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_05.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_05.webp"
         },
         {
           "id": "pirates_high_06",
-          "title": "pirates_high_06",
+          "title": "항로 계획",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_06.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_06.webp"
         },
         {
           "id": "pirates_high_07",
-          "title": "pirates_high_07",
+          "title": "보물 동굴",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_07.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_07.webp"
         },
         {
           "id": "pirates_high_08",
-          "title": "pirates_high_08",
+          "title": "보물 발견 잔치",
           "grade": "low",
           "image": "/templates/pirates/pirates_high_08.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_high_08.webp"
         },
         {
           "id": "pirates_low_01",
-          "title": "pirates_low_01",
+          "title": "해적 선장",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_01.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_01.webp"
         },
         {
           "id": "pirates_low_02",
-          "title": "pirates_low_02",
+          "title": "앵무새",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_02.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_02.webp"
         },
         {
           "id": "pirates_low_04",
-          "title": "pirates_low_04",
+          "title": "해적선",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_04.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_04.webp"
         },
         {
           "id": "pirates_low_05",
-          "title": "pirates_low_05",
+          "title": "보물지도",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_05.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_05.webp"
         },
         {
           "id": "pirates_low_06",
-          "title": "pirates_low_06",
+          "title": "문어",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_06.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_06.webp"
         },
         {
           "id": "pirates_low_07",
-          "title": "pirates_low_07",
+          "title": "조타 키",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_07.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_07.webp"
         },
         {
           "id": "pirates_low_08",
-          "title": "pirates_low_08",
+          "title": "게",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_08.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_08.webp"
         },
         {
           "id": "pirates_low_09",
-          "title": "pirates_low_09",
+          "title": "부표",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_09.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_09.webp"
         },
         {
           "id": "pirates_low_10",
-          "title": "pirates_low_10",
+          "title": "야자수 섬",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_10.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_10.webp"
         },
         {
           "id": "pirates_low_11",
-          "title": "pirates_low_11",
+          "title": "유리병 편지",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_11.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_11.webp"
         },
         {
           "id": "pirates_low_12",
-          "title": "pirates_low_12",
+          "title": "닻",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_12.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_12.webp"
         },
         {
           "id": "pirates_low_13",
-          "title": "pirates_low_13",
+          "title": "해적 깃발",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_13.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_13.webp"
         },
         {
           "id": "pirates_low_14",
-          "title": "pirates_low_14",
+          "title": "사과 통",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_14.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_14.webp"
         },
         {
           "id": "pirates_low_15",
-          "title": "pirates_low_15",
+          "title": "망원경",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_15.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_15.webp"
         },
         {
-          "id": "pirates_low_16",
-          "title": "pirates_low_16",
-          "grade": "low",
-          "image": "/templates/pirates/pirates_low_16.webp",
-          "thumb": "/templates/_thumbs/pirates/pirates_low_16.webp"
-        },
-        {
           "id": "pirates_low_17",
-          "title": "pirates_low_17",
+          "title": "작은 보트",
           "grade": "low",
           "image": "/templates/pirates/pirates_low_17.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_low_17.webp"
         },
         {
           "id": "pirates_mid_01",
-          "title": "pirates_mid_01",
+          "title": "보물 찾기 계획",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_01.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_01.webp"
         },
         {
           "id": "pirates_mid_02",
-          "title": "pirates_mid_02",
+          "title": "섬 옆 항해",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_02.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_02.webp"
         },
         {
-          "id": "pirates_mid_03",
-          "title": "pirates_mid_03",
-          "grade": "low",
-          "image": "/templates/pirates/pirates_mid_03.webp",
-          "thumb": "/templates/_thumbs/pirates/pirates_mid_03.webp"
-        },
-        {
           "id": "pirates_mid_04",
-          "title": "pirates_mid_04",
+          "title": "돛대 오르기",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_04.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_04.webp"
         },
         {
           "id": "pirates_mid_05",
-          "title": "pirates_mid_05",
+          "title": "해변으로 노 젓기",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_05.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_05.webp"
         },
         {
           "id": "pirates_mid_06",
-          "title": "pirates_mid_06",
+          "title": "돌고래와 인사",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_06.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_06.webp"
         },
         {
           "id": "pirates_mid_07",
-          "title": "pirates_mid_07",
+          "title": "보물 발견",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_07.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_07.webp"
         },
         {
           "id": "pirates_mid_08",
-          "title": "pirates_mid_08",
+          "title": "파도 헤치기",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_08.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_08.webp"
         },
         {
           "id": "pirates_mid_09",
-          "title": "pirates_mid_09",
+          "title": "지도 배달",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_09.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_09.webp"
         },
         {
           "id": "pirates_mid_10",
-          "title": "pirates_mid_10",
+          "title": "배 안 요리",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_10.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_10.webp"
         },
         {
           "id": "pirates_mid_12",
-          "title": "pirates_mid_12",
+          "title": "섬 관찰",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_12.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_12.webp"
         },
         {
           "id": "pirates_mid_13",
-          "title": "pirates_mid_13",
+          "title": "보물 지키는 게",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_13.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_13.webp"
         },
         {
           "id": "pirates_mid_14",
-          "title": "pirates_mid_14",
+          "title": "깃발 꽂기",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_14.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_14.webp"
         },
         {
           "id": "pirates_mid_15",
-          "title": "pirates_mid_15",
+          "title": "해적선 갑판",
           "grade": "low",
           "image": "/templates/pirates/pirates_mid_15.webp",
           "thumb": "/templates/_thumbs/pirates/pirates_mid_15.webp"
@@ -6969,49 +6669,49 @@
       "items": [
         {
           "id": "circus_high_01",
-          "title": "circus_high_01",
+          "title": "서커스 대공연",
           "grade": "low",
           "image": "/templates/circus/circus_high_01.webp",
           "thumb": "/templates/_thumbs/circus/circus_high_01.webp"
         },
         {
           "id": "circus_high_02",
-          "title": "circus_high_02",
+          "title": "공중그네 대곡예",
           "grade": "low",
           "image": "/templates/circus/circus_high_02.webp",
           "thumb": "/templates/_thumbs/circus/circus_high_02.webp"
         },
         {
           "id": "circus_high_03",
-          "title": "circus_high_03",
+          "title": "서커스 퍼레이드",
           "grade": "low",
           "image": "/templates/circus/circus_high_03.webp",
           "thumb": "/templates/_thumbs/circus/circus_high_03.webp"
         },
         {
           "id": "circus_high_05",
-          "title": "circus_high_05",
+          "title": "단장과 여러 공연",
           "grade": "low",
           "image": "/templates/circus/circus_high_05.webp",
           "thumb": "/templates/_thumbs/circus/circus_high_05.webp"
         },
         {
           "id": "circus_high_06",
-          "title": "circus_high_06",
+          "title": "인간 피라미드",
           "grade": "low",
           "image": "/templates/circus/circus_high_06.webp",
           "thumb": "/templates/_thumbs/circus/circus_high_06.webp"
         },
         {
           "id": "circus_high_07",
-          "title": "circus_high_07",
+          "title": "서커스 무대 뒤",
           "grade": "low",
           "image": "/templates/circus/circus_high_07.webp",
           "thumb": "/templates/_thumbs/circus/circus_high_07.webp"
         },
         {
           "id": "circus_high_08",
-          "title": "circus_high_08",
+          "title": "탑 사이 줄타기",
           "grade": "low",
           "image": "/templates/circus/circus_high_08.webp",
           "thumb": "/templates/_thumbs/circus/circus_high_08.webp"
@@ -7025,203 +6725,203 @@
         },
         {
           "id": "circus_low_02",
-          "title": "circus_low_02",
+          "title": "서커스 코끼리",
           "grade": "low",
           "image": "/templates/circus/circus_low_02.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_02.webp"
         },
         {
           "id": "circus_low_03",
-          "title": "circus_low_03",
+          "title": "공 받는 물개",
           "grade": "low",
           "image": "/templates/circus/circus_low_03.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_03.webp"
         },
         {
           "id": "circus_low_04",
-          "title": "circus_low_04",
+          "title": "외발자전거 원숭이",
           "grade": "low",
           "image": "/templates/circus/circus_low_04.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_04.webp"
         },
         {
           "id": "circus_low_05",
-          "title": "circus_low_05",
+          "title": "서커스 천막",
           "grade": "low",
           "image": "/templates/circus/circus_low_05.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_05.webp"
         },
         {
           "id": "circus_low_06",
-          "title": "circus_low_06",
+          "title": "의자 위 사자",
           "grade": "low",
           "image": "/templates/circus/circus_low_06.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_06.webp"
         },
         {
           "id": "circus_low_07",
-          "title": "circus_low_07",
+          "title": "저글링 곰",
           "grade": "low",
           "image": "/templates/circus/circus_low_07.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_07.webp"
         },
         {
           "id": "circus_low_08",
-          "title": "circus_low_08",
+          "title": "서커스 말",
           "grade": "low",
           "image": "/templates/circus/circus_low_08.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_08.webp"
         },
         {
           "id": "circus_low_09",
-          "title": "circus_low_09",
+          "title": "깃발 장식",
           "grade": "low",
           "image": "/templates/circus/circus_low_09.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_09.webp"
         },
         {
           "id": "circus_low_10",
-          "title": "circus_low_10",
+          "title": "마술 모자",
           "grade": "low",
           "image": "/templates/circus/circus_low_10.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_10.webp"
         },
         {
           "id": "circus_low_11",
-          "title": "circus_low_11",
+          "title": "훌라후프 강아지",
           "grade": "low",
           "image": "/templates/circus/circus_low_11.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_11.webp"
         },
         {
           "id": "circus_low_12",
-          "title": "circus_low_12",
+          "title": "서커스 공",
           "grade": "low",
           "image": "/templates/circus/circus_low_12.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_12.webp"
         },
         {
           "id": "circus_low_13",
-          "title": "circus_low_13",
+          "title": "단장",
           "grade": "low",
           "image": "/templates/circus/circus_low_13.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_13.webp"
         },
         {
           "id": "circus_low_14",
-          "title": "circus_low_14",
+          "title": "북 더미",
           "grade": "low",
           "image": "/templates/circus/circus_low_14.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_14.webp"
         },
         {
           "id": "circus_low_15",
-          "title": "circus_low_15",
+          "title": "그네 탄 앵무새",
           "grade": "low",
           "image": "/templates/circus/circus_low_15.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_15.webp"
         },
         {
           "id": "circus_low_16",
-          "title": "circus_low_16",
+          "title": "아이스크림 수레",
           "grade": "low",
           "image": "/templates/circus/circus_low_16.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_16.webp"
         },
         {
           "id": "circus_low_17",
-          "title": "circus_low_17",
+          "title": "물구나무 곡예사",
           "grade": "low",
           "image": "/templates/circus/circus_low_17.webp",
           "thumb": "/templates/_thumbs/circus/circus_low_17.webp"
         },
         {
           "id": "circus_mid_01",
-          "title": "circus_mid_01",
+          "title": "자전거 탄 광대",
           "grade": "low",
           "image": "/templates/circus/circus_mid_01.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_01.webp"
         },
         {
           "id": "circus_mid_02",
-          "title": "circus_mid_02",
+          "title": "코끼리와 원숭이 공연",
           "grade": "low",
           "image": "/templates/circus/circus_mid_02.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_02.webp"
         },
         {
           "id": "circus_mid_03",
-          "title": "circus_mid_03",
+          "title": "공중그네 곡예",
           "grade": "low",
           "image": "/templates/circus/circus_mid_03.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_03.webp"
         },
         {
           "id": "circus_mid_04",
-          "title": "circus_mid_04",
+          "title": "사자 쇼",
           "grade": "low",
           "image": "/templates/circus/circus_mid_04.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_04.webp"
         },
         {
           "id": "circus_mid_05",
-          "title": "circus_mid_05",
+          "title": "풍선 만드는 광대들",
           "grade": "low",
           "image": "/templates/circus/circus_mid_05.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_05.webp"
         },
         {
           "id": "circus_mid_07",
-          "title": "circus_mid_07",
+          "title": "물개와 강아지 묘기",
           "grade": "low",
           "image": "/templates/circus/circus_mid_07.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_07.webp"
         },
         {
           "id": "circus_mid_08",
-          "title": "circus_mid_08",
+          "title": "동물 악단",
           "grade": "low",
           "image": "/templates/circus/circus_mid_08.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_08.webp"
         },
         {
           "id": "circus_mid_09",
-          "title": "circus_mid_09",
+          "title": "토끼 마술",
           "grade": "low",
           "image": "/templates/circus/circus_mid_09.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_09.webp"
         },
         {
           "id": "circus_mid_10",
-          "title": "circus_mid_10",
+          "title": "역도 차력사",
           "grade": "low",
           "image": "/templates/circus/circus_mid_10.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_10.webp"
         },
         {
           "id": "circus_mid_11",
-          "title": "circus_mid_11",
+          "title": "대포 곡예 준비",
           "grade": "low",
           "image": "/templates/circus/circus_mid_11.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_11.webp"
         },
         {
           "id": "circus_mid_12",
-          "title": "circus_mid_12",
+          "title": "광대 자동차",
           "grade": "low",
           "image": "/templates/circus/circus_mid_12.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_12.webp"
         },
         {
           "id": "circus_mid_13",
-          "title": "circus_mid_13",
+          "title": "공 위 저글러",
           "grade": "low",
           "image": "/templates/circus/circus_mid_13.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_13.webp"
         },
         {
           "id": "circus_mid_14",
-          "title": "circus_mid_14",
+          "title": "서커스 입구",
           "grade": "low",
           "image": "/templates/circus/circus_mid_14.webp",
           "thumb": "/templates/_thumbs/circus/circus_mid_14.webp"
@@ -7233,7 +6933,7 @@
       "theme": "toys",
       "title": "장난감",
       "category": "fantasy",
-      "count": 40,
+      "count": 38,
       "cover": "/templates/toys/toys_low_01.webp",
       "items": [
         {
@@ -7286,13 +6986,6 @@
           "thumb": "/templates/_thumbs/toys/toys_low_07.webp"
         },
         {
-          "id": "toys_low_08",
-          "title": "고무오리",
-          "grade": "low",
-          "image": "/templates/toys/toys_low_08.webp",
-          "thumb": "/templates/_thumbs/toys/toys_low_08.webp"
-        },
-        {
           "id": "toys_low_09",
           "title": "요요",
           "grade": "low",
@@ -7333,13 +7026,6 @@
           "grade": "low",
           "image": "/templates/toys/toys_low_14.webp",
           "thumb": "/templates/_thumbs/toys/toys_low_14.webp"
-        },
-        {
-          "id": "toys_low_15",
-          "title": "꼬리 달린 연",
-          "grade": "low",
-          "image": "/templates/toys/toys_low_15.webp",
-          "thumb": "/templates/_thumbs/toys/toys_low_15.webp"
         },
         {
           "id": "toys_low_16",
@@ -8082,106 +7768,1615 @@
       "theme": "pc_zoo",
       "title": "동물원·수족관 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_zoo/pc_zoo_01_half.webp",
+      "items": [
+        {
+          "id": "pc_zoo_01_half",
+          "title": "사자 우리 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_01_half.webp"
+        },
+        {
+          "id": "pc_zoo_02_half",
+          "title": "코끼리 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_02_half.webp"
+        },
+        {
+          "id": "pc_zoo_03_half",
+          "title": "기린 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_03_half.webp"
+        },
+        {
+          "id": "pc_zoo_04_half",
+          "title": "원숭이 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_04_half.webp"
+        },
+        {
+          "id": "pc_zoo_05_half",
+          "title": "펭귄 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_05_half.webp"
+        },
+        {
+          "id": "pc_zoo_06_half",
+          "title": "수족관 물고기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_06_half.webp"
+        },
+        {
+          "id": "pc_zoo_07_half",
+          "title": "돌고래 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_07_half.webp"
+        },
+        {
+          "id": "pc_zoo_08_half",
+          "title": "바다거북 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_08_half.webp"
+        },
+        {
+          "id": "pc_zoo_09_half",
+          "title": "동물원 입구 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_09_half.webp"
+        },
+        {
+          "id": "pc_zoo_10_half",
+          "title": "사육사 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_zoo/pc_zoo_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_10_half.webp"
+        },
+        {
+          "id": "pc_zoo_01_quarter",
+          "title": "사자 우리 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_01_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_02_quarter",
+          "title": "코끼리 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_02_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_03_quarter",
+          "title": "기린 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_03_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_04_quarter",
+          "title": "원숭이 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_04_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_05_quarter",
+          "title": "펭귄 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_05_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_06_quarter",
+          "title": "수족관 물고기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_06_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_07_quarter",
+          "title": "돌고래 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_07_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_08_quarter",
+          "title": "바다거북 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_08_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_09_quarter",
+          "title": "동물원 입구 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_09_quarter.webp"
+        },
+        {
+          "id": "pc_zoo_10_quarter",
+          "title": "사육사 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_zoo/pc_zoo_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_zoo/pc_zoo_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_zoo/pc_zoo_01_half.webp"
     },
     "pc_farm": {
       "theme": "pc_farm",
       "title": "농장·시골 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_farm/pc_farm_01_half.webp",
+      "items": [
+        {
+          "id": "pc_farm_01_half",
+          "title": "헛간 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_01_half.webp"
+        },
+        {
+          "id": "pc_farm_02_half",
+          "title": "트랙터 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_02_half.webp"
+        },
+        {
+          "id": "pc_farm_03_half",
+          "title": "젖소 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_03_half.webp"
+        },
+        {
+          "id": "pc_farm_04_half",
+          "title": "닭과 병아리 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_04_half.webp"
+        },
+        {
+          "id": "pc_farm_05_half",
+          "title": "돼지 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_05_half.webp"
+        },
+        {
+          "id": "pc_farm_06_half",
+          "title": "양 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_06_half.webp"
+        },
+        {
+          "id": "pc_farm_07_half",
+          "title": "과수원 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_07_half.webp"
+        },
+        {
+          "id": "pc_farm_08_half",
+          "title": "채소밭 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_08_half.webp"
+        },
+        {
+          "id": "pc_farm_09_half",
+          "title": "허수아비 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_09_half.webp"
+        },
+        {
+          "id": "pc_farm_10_half",
+          "title": "농부 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_farm/pc_farm_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_10_half.webp"
+        },
+        {
+          "id": "pc_farm_01_quarter",
+          "title": "헛간 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_01_quarter.webp"
+        },
+        {
+          "id": "pc_farm_02_quarter",
+          "title": "트랙터 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_02_quarter.webp"
+        },
+        {
+          "id": "pc_farm_03_quarter",
+          "title": "젖소 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_03_quarter.webp"
+        },
+        {
+          "id": "pc_farm_04_quarter",
+          "title": "닭과 병아리 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_04_quarter.webp"
+        },
+        {
+          "id": "pc_farm_05_quarter",
+          "title": "돼지 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_05_quarter.webp"
+        },
+        {
+          "id": "pc_farm_06_quarter",
+          "title": "양 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_06_quarter.webp"
+        },
+        {
+          "id": "pc_farm_07_quarter",
+          "title": "과수원 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_07_quarter.webp"
+        },
+        {
+          "id": "pc_farm_08_quarter",
+          "title": "채소밭 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_08_quarter.webp"
+        },
+        {
+          "id": "pc_farm_09_quarter",
+          "title": "허수아비 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_09_quarter.webp"
+        },
+        {
+          "id": "pc_farm_10_quarter",
+          "title": "농부 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_farm/pc_farm_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_farm/pc_farm_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_farm/pc_farm_01_half.webp"
     },
     "pc_amusement": {
       "theme": "pc_amusement",
       "title": "놀이공원·축제 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 18,
+      "cover": "/templates/pc_amusement/pc_amusement_01_half.webp",
+      "items": [
+        {
+          "id": "pc_amusement_01_half",
+          "title": "회전목마 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_01_half.webp"
+        },
+        {
+          "id": "pc_amusement_02_half",
+          "title": "관람차 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_02_half.webp"
+        },
+        {
+          "id": "pc_amusement_03_half",
+          "title": "롤러코스터 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_03_half.webp"
+        },
+        {
+          "id": "pc_amusement_04_half",
+          "title": "범퍼카 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_04_half.webp"
+        },
+        {
+          "id": "pc_amusement_05_half",
+          "title": "솜사탕 가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_05_half.webp"
+        },
+        {
+          "id": "pc_amusement_06_half",
+          "title": "축제 무대 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_06_half.webp"
+        },
+        {
+          "id": "pc_amusement_07_half",
+          "title": "불꽃놀이 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_07_half.webp"
+        },
+        {
+          "id": "pc_amusement_08_half",
+          "title": "게임 부스 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_08_half.webp"
+        },
+        {
+          "id": "pc_amusement_09_half",
+          "title": "풍선 장수 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_amusement/pc_amusement_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_09_half.webp"
+        },
+        {
+          "id": "pc_amusement_01_quarter",
+          "title": "회전목마 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_01_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_02_quarter",
+          "title": "관람차 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_02_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_03_quarter",
+          "title": "롤러코스터 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_03_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_04_quarter",
+          "title": "범퍼카 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_04_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_05_quarter",
+          "title": "솜사탕 가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_05_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_06_quarter",
+          "title": "축제 무대 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_06_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_07_quarter",
+          "title": "불꽃놀이 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_07_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_08_quarter",
+          "title": "게임 부스 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_08_quarter.webp"
+        },
+        {
+          "id": "pc_amusement_09_quarter",
+          "title": "풍선 장수 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_amusement/pc_amusement_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_amusement/pc_amusement_09_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_amusement/pc_amusement_01_half.webp"
     },
     "pc_home": {
       "theme": "pc_home",
       "title": "우리 집·가족 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_home/pc_home_01_half.webp",
+      "items": [
+        {
+          "id": "pc_home_01_half",
+          "title": "거실 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_01_half.webp"
+        },
+        {
+          "id": "pc_home_02_half",
+          "title": "부엌 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_02_half.webp"
+        },
+        {
+          "id": "pc_home_03_half",
+          "title": "침실 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_03_half.webp"
+        },
+        {
+          "id": "pc_home_04_half",
+          "title": "욕실 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_04_half.webp"
+        },
+        {
+          "id": "pc_home_05_half",
+          "title": "가족 식사 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_05_half.webp"
+        },
+        {
+          "id": "pc_home_06_half",
+          "title": "정원 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_06_half.webp"
+        },
+        {
+          "id": "pc_home_07_half",
+          "title": "노는 아이들 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_07_half.webp"
+        },
+        {
+          "id": "pc_home_08_half",
+          "title": "강아지와 고양이 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_08_half.webp"
+        },
+        {
+          "id": "pc_home_09_half",
+          "title": "책 읽는 가족 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_09_half.webp"
+        },
+        {
+          "id": "pc_home_10_half",
+          "title": "생일 파티 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_home/pc_home_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_10_half.webp"
+        },
+        {
+          "id": "pc_home_01_quarter",
+          "title": "거실 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_01_quarter.webp"
+        },
+        {
+          "id": "pc_home_02_quarter",
+          "title": "부엌 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_02_quarter.webp"
+        },
+        {
+          "id": "pc_home_03_quarter",
+          "title": "침실 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_03_quarter.webp"
+        },
+        {
+          "id": "pc_home_04_quarter",
+          "title": "욕실 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_04_quarter.webp"
+        },
+        {
+          "id": "pc_home_05_quarter",
+          "title": "가족 식사 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_05_quarter.webp"
+        },
+        {
+          "id": "pc_home_06_quarter",
+          "title": "정원 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_06_quarter.webp"
+        },
+        {
+          "id": "pc_home_07_quarter",
+          "title": "노는 아이들 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_07_quarter.webp"
+        },
+        {
+          "id": "pc_home_08_quarter",
+          "title": "강아지와 고양이 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_08_quarter.webp"
+        },
+        {
+          "id": "pc_home_09_quarter",
+          "title": "책 읽는 가족 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_09_quarter.webp"
+        },
+        {
+          "id": "pc_home_10_quarter",
+          "title": "생일 파티 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_home/pc_home_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_home/pc_home_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_home/pc_home_01_half.webp"
     },
     "pc_friendship": {
       "theme": "pc_friendship",
       "title": "사이좋은 친구 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_friendship/pc_friendship_01_half.webp",
+      "items": [
+        {
+          "id": "pc_friendship_01_half",
+          "title": "화해하는 친구 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_01_half.webp"
+        },
+        {
+          "id": "pc_friendship_02_half",
+          "title": "일으켜 주기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_02_half.webp"
+        },
+        {
+          "id": "pc_friendship_03_half",
+          "title": "점심 나눠 먹기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_03_half.webp"
+        },
+        {
+          "id": "pc_friendship_04_half",
+          "title": "다 같이 놀기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_04_half.webp"
+        },
+        {
+          "id": "pc_friendship_05_half",
+          "title": "손 내밀기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_05_half.webp"
+        },
+        {
+          "id": "pc_friendship_06_half",
+          "title": "꼭 안아 주기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_06_half.webp"
+        },
+        {
+          "id": "pc_friendship_07_half",
+          "title": "이야기 들어주기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_07_half.webp"
+        },
+        {
+          "id": "pc_friendship_08_half",
+          "title": "위로해 주기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_08_half.webp"
+        },
+        {
+          "id": "pc_friendship_09_half",
+          "title": "선생님과 상담 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_09_half.webp"
+        },
+        {
+          "id": "pc_friendship_10_half",
+          "title": "함께 걷기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_friendship/pc_friendship_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_10_half.webp"
+        },
+        {
+          "id": "pc_friendship_01_quarter",
+          "title": "화해하는 친구 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_01_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_02_quarter",
+          "title": "일으켜 주기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_02_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_03_quarter",
+          "title": "점심 나눠 먹기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_03_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_04_quarter",
+          "title": "다 같이 놀기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_04_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_05_quarter",
+          "title": "손 내밀기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_05_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_06_quarter",
+          "title": "꼭 안아 주기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_06_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_07_quarter",
+          "title": "이야기 들어주기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_07_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_08_quarter",
+          "title": "위로해 주기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_08_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_09_quarter",
+          "title": "선생님과 상담 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_09_quarter.webp"
+        },
+        {
+          "id": "pc_friendship_10_quarter",
+          "title": "함께 걷기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_friendship/pc_friendship_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_friendship/pc_friendship_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_friendship/pc_friendship_01_half.webp"
     },
     "pc_city": {
       "theme": "pc_city",
       "title": "도시 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_city/pc_city_01_half.webp",
+      "items": [
+        {
+          "id": "pc_city_01_half",
+          "title": "도시 빌딩 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_01_half.webp"
+        },
+        {
+          "id": "pc_city_02_half",
+          "title": "신호등과 횡단보도 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_02_half.webp"
+        },
+        {
+          "id": "pc_city_03_half",
+          "title": "버스 정류장 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_03_half.webp"
+        },
+        {
+          "id": "pc_city_04_half",
+          "title": "택시 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_04_half.webp"
+        },
+        {
+          "id": "pc_city_05_half",
+          "title": "아파트 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_05_half.webp"
+        },
+        {
+          "id": "pc_city_06_half",
+          "title": "공원 벤치 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_06_half.webp"
+        },
+        {
+          "id": "pc_city_07_half",
+          "title": "가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_07_half.webp"
+        },
+        {
+          "id": "pc_city_08_half",
+          "title": "가로등과 우체통 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_08_half.webp"
+        },
+        {
+          "id": "pc_city_09_half",
+          "title": "강 위 다리 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_09_half.webp"
+        },
+        {
+          "id": "pc_city_10_half",
+          "title": "광장 분수 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_city/pc_city_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_10_half.webp"
+        },
+        {
+          "id": "pc_city_01_quarter",
+          "title": "도시 빌딩 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_01_quarter.webp"
+        },
+        {
+          "id": "pc_city_02_quarter",
+          "title": "신호등과 횡단보도 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_02_quarter.webp"
+        },
+        {
+          "id": "pc_city_03_quarter",
+          "title": "버스 정류장 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_03_quarter.webp"
+        },
+        {
+          "id": "pc_city_04_quarter",
+          "title": "택시 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_04_quarter.webp"
+        },
+        {
+          "id": "pc_city_05_quarter",
+          "title": "아파트 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_05_quarter.webp"
+        },
+        {
+          "id": "pc_city_06_quarter",
+          "title": "공원 벤치 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_06_quarter.webp"
+        },
+        {
+          "id": "pc_city_07_quarter",
+          "title": "가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_07_quarter.webp"
+        },
+        {
+          "id": "pc_city_08_quarter",
+          "title": "가로등과 우체통 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_08_quarter.webp"
+        },
+        {
+          "id": "pc_city_09_quarter",
+          "title": "강 위 다리 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_09_quarter.webp"
+        },
+        {
+          "id": "pc_city_10_quarter",
+          "title": "광장 분수 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_city/pc_city_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_city/pc_city_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_city/pc_city_01_half.webp"
     },
     "pc_market": {
       "theme": "pc_market",
       "title": "시장·가게 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_market/pc_market_01_half.webp",
+      "items": [
+        {
+          "id": "pc_market_01_half",
+          "title": "과일 가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_01_half.webp"
+        },
+        {
+          "id": "pc_market_02_half",
+          "title": "빵집 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_02_half.webp"
+        },
+        {
+          "id": "pc_market_03_half",
+          "title": "채소 가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_03_half.webp"
+        },
+        {
+          "id": "pc_market_04_half",
+          "title": "꽃집 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_04_half.webp"
+        },
+        {
+          "id": "pc_market_05_half",
+          "title": "아이스크림 수레 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_05_half.webp"
+        },
+        {
+          "id": "pc_market_06_half",
+          "title": "장난감 가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_06_half.webp"
+        },
+        {
+          "id": "pc_market_07_half",
+          "title": "장바구니 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_07_half.webp"
+        },
+        {
+          "id": "pc_market_08_half",
+          "title": "생선 가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_08_half.webp"
+        },
+        {
+          "id": "pc_market_09_half",
+          "title": "계산대 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_09_half.webp"
+        },
+        {
+          "id": "pc_market_10_half",
+          "title": "옷가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_market/pc_market_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_10_half.webp"
+        },
+        {
+          "id": "pc_market_01_quarter",
+          "title": "과일 가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_01_quarter.webp"
+        },
+        {
+          "id": "pc_market_02_quarter",
+          "title": "빵집 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_02_quarter.webp"
+        },
+        {
+          "id": "pc_market_03_quarter",
+          "title": "채소 가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_03_quarter.webp"
+        },
+        {
+          "id": "pc_market_04_quarter",
+          "title": "꽃집 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_04_quarter.webp"
+        },
+        {
+          "id": "pc_market_05_quarter",
+          "title": "아이스크림 수레 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_05_quarter.webp"
+        },
+        {
+          "id": "pc_market_06_quarter",
+          "title": "장난감 가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_06_quarter.webp"
+        },
+        {
+          "id": "pc_market_07_quarter",
+          "title": "장바구니 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_07_quarter.webp"
+        },
+        {
+          "id": "pc_market_08_quarter",
+          "title": "생선 가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_08_quarter.webp"
+        },
+        {
+          "id": "pc_market_09_quarter",
+          "title": "계산대 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_09_quarter.webp"
+        },
+        {
+          "id": "pc_market_10_quarter",
+          "title": "옷가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_market/pc_market_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_market/pc_market_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_market/pc_market_01_half.webp"
     },
     "pc_neighborhood": {
       "theme": "pc_neighborhood",
       "title": "우리 동네 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 16,
+      "cover": "/templates/pc_neighborhood/pc_neighborhood_01_half.webp",
+      "items": [
+        {
+          "id": "pc_neighborhood_01_half",
+          "title": "우리 집 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_01_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_02_half",
+          "title": "우체국 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_02_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_03_half",
+          "title": "병원 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_03_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_04_half",
+          "title": "소방서 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_04_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_05_half",
+          "title": "도서관 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_05_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_06_half",
+          "title": "은행 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_06_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_08_half",
+          "title": "경찰서 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_08_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_10_half",
+          "title": "동네 가게 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_10_half.webp"
+        },
+        {
+          "id": "pc_neighborhood_01_quarter",
+          "title": "우리 집 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_01_quarter.webp"
+        },
+        {
+          "id": "pc_neighborhood_02_quarter",
+          "title": "우체국 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_02_quarter.webp"
+        },
+        {
+          "id": "pc_neighborhood_03_quarter",
+          "title": "병원 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_03_quarter.webp"
+        },
+        {
+          "id": "pc_neighborhood_04_quarter",
+          "title": "소방서 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_04_quarter.webp"
+        },
+        {
+          "id": "pc_neighborhood_05_quarter",
+          "title": "도서관 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_05_quarter.webp"
+        },
+        {
+          "id": "pc_neighborhood_06_quarter",
+          "title": "은행 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_06_quarter.webp"
+        },
+        {
+          "id": "pc_neighborhood_08_quarter",
+          "title": "경찰서 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_08_quarter.webp"
+        },
+        {
+          "id": "pc_neighborhood_10_quarter",
+          "title": "동네 가게 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_neighborhood/pc_neighborhood_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_neighborhood/pc_neighborhood_01_half.webp"
     },
     "pc_park": {
       "theme": "pc_park",
       "title": "공원·놀이터 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_park/pc_park_01_half.webp",
+      "items": [
+        {
+          "id": "pc_park_01_half",
+          "title": "미끄럼틀 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_01_half.webp"
+        },
+        {
+          "id": "pc_park_02_half",
+          "title": "그네 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_02_half.webp"
+        },
+        {
+          "id": "pc_park_03_half",
+          "title": "시소 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_03_half.webp"
+        },
+        {
+          "id": "pc_park_04_half",
+          "title": "모래놀이터 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_04_half.webp"
+        },
+        {
+          "id": "pc_park_05_half",
+          "title": "돗자리와 바구니 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_05_half.webp"
+        },
+        {
+          "id": "pc_park_06_half",
+          "title": "연날리기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_06_half.webp"
+        },
+        {
+          "id": "pc_park_07_half",
+          "title": "오리 연못 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_07_half.webp"
+        },
+        {
+          "id": "pc_park_08_half",
+          "title": "꽃밭 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_08_half.webp"
+        },
+        {
+          "id": "pc_park_09_half",
+          "title": "나무와 새집 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_09_half.webp"
+        },
+        {
+          "id": "pc_park_10_half",
+          "title": "공원 분수 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_park/pc_park_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_10_half.webp"
+        },
+        {
+          "id": "pc_park_01_quarter",
+          "title": "미끄럼틀 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_01_quarter.webp"
+        },
+        {
+          "id": "pc_park_02_quarter",
+          "title": "그네 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_02_quarter.webp"
+        },
+        {
+          "id": "pc_park_03_quarter",
+          "title": "시소 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_03_quarter.webp"
+        },
+        {
+          "id": "pc_park_04_quarter",
+          "title": "모래놀이터 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_04_quarter.webp"
+        },
+        {
+          "id": "pc_park_05_quarter",
+          "title": "돗자리와 바구니 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_05_quarter.webp"
+        },
+        {
+          "id": "pc_park_06_quarter",
+          "title": "연날리기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_06_quarter.webp"
+        },
+        {
+          "id": "pc_park_07_quarter",
+          "title": "오리 연못 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_07_quarter.webp"
+        },
+        {
+          "id": "pc_park_08_quarter",
+          "title": "꽃밭 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_08_quarter.webp"
+        },
+        {
+          "id": "pc_park_09_quarter",
+          "title": "나무와 새집 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_09_quarter.webp"
+        },
+        {
+          "id": "pc_park_10_quarter",
+          "title": "공원 분수 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_park/pc_park_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_park/pc_park_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_park/pc_park_01_half.webp"
     },
     "pc_school": {
       "theme": "pc_school",
       "title": "학교 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_school/pc_school_01_half.webp",
+      "items": [
+        {
+          "id": "pc_school_01_half",
+          "title": "학교 건물 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_01_half.webp"
+        },
+        {
+          "id": "pc_school_02_half",
+          "title": "교실 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_02_half.webp"
+        },
+        {
+          "id": "pc_school_03_half",
+          "title": "학교 버스 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_03_half.webp"
+        },
+        {
+          "id": "pc_school_04_half",
+          "title": "책가방과 책 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_04_half.webp"
+        },
+        {
+          "id": "pc_school_05_half",
+          "title": "필통과 연필 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_05_half.webp"
+        },
+        {
+          "id": "pc_school_06_half",
+          "title": "선생님 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_06_half.webp"
+        },
+        {
+          "id": "pc_school_07_half",
+          "title": "손 든 아이 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_07_half.webp"
+        },
+        {
+          "id": "pc_school_08_half",
+          "title": "미끄럼틀과 그네 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_08_half.webp"
+        },
+        {
+          "id": "pc_school_09_half",
+          "title": "시계와 종 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_09_half.webp"
+        },
+        {
+          "id": "pc_school_10_half",
+          "title": "지구본과 책 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_school/pc_school_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_10_half.webp"
+        },
+        {
+          "id": "pc_school_01_quarter",
+          "title": "학교 건물 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_01_quarter.webp"
+        },
+        {
+          "id": "pc_school_02_quarter",
+          "title": "교실 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_02_quarter.webp"
+        },
+        {
+          "id": "pc_school_03_quarter",
+          "title": "학교 버스 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_03_quarter.webp"
+        },
+        {
+          "id": "pc_school_04_quarter",
+          "title": "책가방과 책 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_04_quarter.webp"
+        },
+        {
+          "id": "pc_school_05_quarter",
+          "title": "필통과 연필 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_05_quarter.webp"
+        },
+        {
+          "id": "pc_school_06_quarter",
+          "title": "선생님 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_06_quarter.webp"
+        },
+        {
+          "id": "pc_school_07_quarter",
+          "title": "손 든 아이 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_07_quarter.webp"
+        },
+        {
+          "id": "pc_school_08_quarter",
+          "title": "미끄럼틀과 그네 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_08_quarter.webp"
+        },
+        {
+          "id": "pc_school_09_quarter",
+          "title": "시계와 종 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_09_quarter.webp"
+        },
+        {
+          "id": "pc_school_10_quarter",
+          "title": "지구본과 책 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_school/pc_school_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_school/pc_school_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_school/pc_school_01_half.webp"
     },
     "pc_transport": {
       "theme": "pc_transport",
       "title": "교통수단 · 부분색칠",
       "category": "step_coloring",
-      "count": 0,
-      "cover": null,
-      "items": [],
-      "coverThumb": null
+      "count": 20,
+      "cover": "/templates/pc_transport/pc_transport_01_half.webp",
+      "items": [
+        {
+          "id": "pc_transport_01_half",
+          "title": "자동차 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_01_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_01_half.webp"
+        },
+        {
+          "id": "pc_transport_02_half",
+          "title": "버스 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_02_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_02_half.webp"
+        },
+        {
+          "id": "pc_transport_03_half",
+          "title": "기차 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_03_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_03_half.webp"
+        },
+        {
+          "id": "pc_transport_04_half",
+          "title": "비행기 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_04_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_04_half.webp"
+        },
+        {
+          "id": "pc_transport_05_half",
+          "title": "배 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_05_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_05_half.webp"
+        },
+        {
+          "id": "pc_transport_06_half",
+          "title": "자전거 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_06_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_06_half.webp"
+        },
+        {
+          "id": "pc_transport_07_half",
+          "title": "소방차 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_07_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_07_half.webp"
+        },
+        {
+          "id": "pc_transport_08_half",
+          "title": "경찰차 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_08_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_08_half.webp"
+        },
+        {
+          "id": "pc_transport_09_half",
+          "title": "구급차 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_09_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_09_half.webp"
+        },
+        {
+          "id": "pc_transport_10_half",
+          "title": "헬리콥터 반쪽 완성하기",
+          "grade": "low",
+          "image": "/templates/pc_transport/pc_transport_10_half.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_10_half.webp"
+        },
+        {
+          "id": "pc_transport_01_quarter",
+          "title": "자동차 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_01_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_01_quarter.webp"
+        },
+        {
+          "id": "pc_transport_02_quarter",
+          "title": "버스 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_02_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_02_quarter.webp"
+        },
+        {
+          "id": "pc_transport_03_quarter",
+          "title": "기차 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_03_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_03_quarter.webp"
+        },
+        {
+          "id": "pc_transport_04_quarter",
+          "title": "비행기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_04_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_04_quarter.webp"
+        },
+        {
+          "id": "pc_transport_05_quarter",
+          "title": "배 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_05_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_05_quarter.webp"
+        },
+        {
+          "id": "pc_transport_06_quarter",
+          "title": "자전거 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_06_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_06_quarter.webp"
+        },
+        {
+          "id": "pc_transport_07_quarter",
+          "title": "소방차 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_07_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_07_quarter.webp"
+        },
+        {
+          "id": "pc_transport_08_quarter",
+          "title": "경찰차 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_08_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_08_quarter.webp"
+        },
+        {
+          "id": "pc_transport_09_quarter",
+          "title": "구급차 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_09_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_09_quarter.webp"
+        },
+        {
+          "id": "pc_transport_10_quarter",
+          "title": "헬리콥터 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/pc_transport/pc_transport_10_quarter.webp",
+          "thumb": "/templates/_thumbs/pc_transport/pc_transport_10_quarter.webp"
+        }
+      ],
+      "coverThumb": "/templates/_thumbs/pc_transport/pc_transport_01_half.webp"
     },
     "masters_trace": {
       "theme": "masters_trace",
       "title": "명화 따라 그리기",
       "category": "masters",
-      "count": 122,
+      "count": 156,
       "cover": "/templates/masters/masters_trace_starry_night.webp",
       "items": [
         {
@@ -9037,6 +10232,244 @@
           "grade": "high",
           "image": "/templates/masters/masters_trace_pajeokdo.webp",
           "thumb": "/templates/_thumbs/masters_trace/masters_trace_pajeokdo.webp"
+        },
+        {
+          "id": "masters_trace_mu_two_sisters",
+          "title": "테라스의 두 자매 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_two_sisters.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_two_sisters.webp"
+        },
+        {
+          "id": "masters_trace_mu_acrobats",
+          "title": "페르난도 서커스의 곡예사들 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_acrobats.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_acrobats.webp"
+        },
+        {
+          "id": "masters_trace_mu_opera_ballet",
+          "title": "파리 오페라 극장의 발레 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_opera_ballet.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_opera_ballet.webp"
+        },
+        {
+          "id": "masters_trace_mu_marseille",
+          "title": "레스타크에서 본 마르세유 만 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_marseille.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_marseille.webp"
+        },
+        {
+          "id": "masters_trace_mu_place_havre",
+          "title": "파리 아브르 광장 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_place_havre.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_place_havre.webp"
+        },
+        {
+          "id": "masters_trace_mu_sisley_seine",
+          "title": "센강의 모래 더미 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_sisley_seine.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_sisley_seine.webp"
+        },
+        {
+          "id": "masters_trace_mu_balcony",
+          "title": "발코니에서 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_balcony.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_balcony.webp"
+        },
+        {
+          "id": "masters_trace_mu_longchamp",
+          "title": "롱샹의 경마 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_longchamp.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_longchamp.webp"
+        },
+        {
+          "id": "masters_trace_mu_rainy_paris",
+          "title": "파리의 거리, 비 오는 날 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_rainy_paris.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_rainy_paris.webp"
+        },
+        {
+          "id": "masters_trace_mu_signac_andelys",
+          "title": "레장들리의 강가 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_signac_andelys.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_signac_andelys.webp"
+        },
+        {
+          "id": "masters_trace_mu_cranes_pine",
+          "title": "눈 덮인 소나무 위의 학 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_cranes_pine.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_cranes_pine.webp"
+        },
+        {
+          "id": "masters_trace_mu_mitsuke_ferry",
+          "title": "덴류강을 건너는 나룻배 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_mitsuke_ferry.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_mitsuke_ferry.webp"
+        },
+        {
+          "id": "masters_trace_mu_shono_shower",
+          "title": "쇼노의 소나기 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_shono_shower.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_shono_shower.webp"
+        },
+        {
+          "id": "masters_trace_mu_red_parrot",
+          "title": "나뭇가지 위의 붉은 앵무새 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_red_parrot.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_red_parrot.webp"
+        },
+        {
+          "id": "masters_trace_mu_rooster_hen",
+          "title": "포도 넝쿨 아래 암탉과 수탉 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_rooster_hen.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_rooster_hen.webp"
+        },
+        {
+          "id": "masters_trace_mu_chrysanthemums",
+          "title": "시냇가의 국화 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_chrysanthemums.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_chrysanthemums.webp"
+        },
+        {
+          "id": "masters_trace_mu_shenzhou_clouds",
+          "title": "비 오기 전 강 위의 구름 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_shenzhou_clouds.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_shenzhou_clouds.webp"
+        },
+        {
+          "id": "masters_trace_mu_horse_groom",
+          "title": "말과 마부 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_horse_groom.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_horse_groom.webp"
+        },
+        {
+          "id": "masters_trace_mu_maple_viewing",
+          "title": "단풍 구경 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_maple_viewing.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_maple_viewing.webp"
+        },
+        {
+          "id": "masters_trace_mu_omori_seaweed",
+          "title": "오모리에서 김 따기 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_omori_seaweed.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_omori_seaweed.webp"
+        },
+        {
+          "id": "masters_trace_mu_tiger_family",
+          "title": "호랑이 가족(민화) 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_tiger_family.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_tiger_family.webp"
+        },
+        {
+          "id": "masters_trace_mu_lotus_birds",
+          "title": "연꽃과 곤충과 새 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_lotus_birds.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_lotus_birds.webp"
+        },
+        {
+          "id": "masters_trace_mu_guryong_falls",
+          "title": "구룡폭포 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_guryong_falls.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_guryong_falls.webp"
+        },
+        {
+          "id": "masters_trace_mu_tiger_leopard",
+          "title": "뛰노는 호랑이와 표범 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_tiger_leopard.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_tiger_leopard.webp"
+        },
+        {
+          "id": "masters_trace_mu_white_falcon",
+          "title": "흰 매 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_white_falcon.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_white_falcon.webp"
+        },
+        {
+          "id": "masters_trace_mu_ruisdael_falls",
+          "title": "숲속의 폭포 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_ruisdael_falls.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_ruisdael_falls.webp"
+        },
+        {
+          "id": "masters_trace_mu_bruegel_rabbit",
+          "title": "토끼 사냥 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_bruegel_rabbit.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_bruegel_rabbit.webp"
+        },
+        {
+          "id": "masters_trace_mu_canaletto_dolo",
+          "title": "돌로의 운하 갑문 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_canaletto_dolo.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_canaletto_dolo.webp"
+        },
+        {
+          "id": "masters_trace_mu_herring_fishers",
+          "title": "청어 잡는 어부들 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_herring_fishers.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_herring_fishers.webp"
+        },
+        {
+          "id": "masters_trace_mu_thaw",
+          "title": "눈 녹는 날 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_thaw.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_thaw.webp"
+        },
+        {
+          "id": "masters_trace_mu_boy_studio",
+          "title": "화가의 작업실에 있는 소년 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_boy_studio.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_boy_studio.webp"
+        },
+        {
+          "id": "masters_trace_mu_mother_child",
+          "title": "엄마와 아이 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_mother_child.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_mother_child.webp"
+        },
+        {
+          "id": "masters_trace_mu_rye_field",
+          "title": "링 마을의 호밀밭 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_rye_field.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_rye_field.webp"
+        },
+        {
+          "id": "masters_trace_mu_winter_kravsholm",
+          "title": "크라베스홀름의 겨울 따라 그리기",
+          "grade": "high",
+          "image": "/templates/masters/masters_trace_mu_winter_kravsholm.webp",
+          "thumb": "/templates/_thumbs/masters_trace/masters_trace_mu_winter_kravsholm.webp"
         }
       ],
       "coverThumb": "/templates/_thumbs/masters_trace/masters_trace_starry_night.webp"
@@ -9045,7 +10478,7 @@
       "theme": "masters_quarter",
       "title": "명화 1/4 완성하기",
       "category": "masters",
-      "count": 122,
+      "count": 156,
       "cover": "/templates/masters/masters_quarter_starry_night.webp",
       "items": [
         {
@@ -9901,6 +11334,244 @@
           "grade": "mid",
           "image": "/templates/masters/masters_quarter_pajeokdo.webp",
           "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_pajeokdo.webp"
+        },
+        {
+          "id": "masters_quarter_mu_two_sisters",
+          "title": "테라스의 두 자매 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_two_sisters.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_two_sisters.webp"
+        },
+        {
+          "id": "masters_quarter_mu_acrobats",
+          "title": "페르난도 서커스의 곡예사들 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_acrobats.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_acrobats.webp"
+        },
+        {
+          "id": "masters_quarter_mu_opera_ballet",
+          "title": "파리 오페라 극장의 발레 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_opera_ballet.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_opera_ballet.webp"
+        },
+        {
+          "id": "masters_quarter_mu_marseille",
+          "title": "레스타크에서 본 마르세유 만 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_marseille.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_marseille.webp"
+        },
+        {
+          "id": "masters_quarter_mu_place_havre",
+          "title": "파리 아브르 광장 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_place_havre.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_place_havre.webp"
+        },
+        {
+          "id": "masters_quarter_mu_sisley_seine",
+          "title": "센강의 모래 더미 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_sisley_seine.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_sisley_seine.webp"
+        },
+        {
+          "id": "masters_quarter_mu_balcony",
+          "title": "발코니에서 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_balcony.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_balcony.webp"
+        },
+        {
+          "id": "masters_quarter_mu_longchamp",
+          "title": "롱샹의 경마 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_longchamp.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_longchamp.webp"
+        },
+        {
+          "id": "masters_quarter_mu_rainy_paris",
+          "title": "파리의 거리, 비 오는 날 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_rainy_paris.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_rainy_paris.webp"
+        },
+        {
+          "id": "masters_quarter_mu_signac_andelys",
+          "title": "레장들리의 강가 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_signac_andelys.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_signac_andelys.webp"
+        },
+        {
+          "id": "masters_quarter_mu_cranes_pine",
+          "title": "눈 덮인 소나무 위의 학 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_cranes_pine.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_cranes_pine.webp"
+        },
+        {
+          "id": "masters_quarter_mu_mitsuke_ferry",
+          "title": "덴류강을 건너는 나룻배 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_mitsuke_ferry.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_mitsuke_ferry.webp"
+        },
+        {
+          "id": "masters_quarter_mu_shono_shower",
+          "title": "쇼노의 소나기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_shono_shower.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_shono_shower.webp"
+        },
+        {
+          "id": "masters_quarter_mu_red_parrot",
+          "title": "나뭇가지 위의 붉은 앵무새 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_red_parrot.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_red_parrot.webp"
+        },
+        {
+          "id": "masters_quarter_mu_rooster_hen",
+          "title": "포도 넝쿨 아래 암탉과 수탉 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_rooster_hen.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_rooster_hen.webp"
+        },
+        {
+          "id": "masters_quarter_mu_chrysanthemums",
+          "title": "시냇가의 국화 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_chrysanthemums.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_chrysanthemums.webp"
+        },
+        {
+          "id": "masters_quarter_mu_shenzhou_clouds",
+          "title": "비 오기 전 강 위의 구름 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_shenzhou_clouds.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_shenzhou_clouds.webp"
+        },
+        {
+          "id": "masters_quarter_mu_horse_groom",
+          "title": "말과 마부 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_horse_groom.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_horse_groom.webp"
+        },
+        {
+          "id": "masters_quarter_mu_maple_viewing",
+          "title": "단풍 구경 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_maple_viewing.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_maple_viewing.webp"
+        },
+        {
+          "id": "masters_quarter_mu_omori_seaweed",
+          "title": "오모리에서 김 따기 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_omori_seaweed.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_omori_seaweed.webp"
+        },
+        {
+          "id": "masters_quarter_mu_tiger_family",
+          "title": "호랑이 가족(민화) 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_tiger_family.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_tiger_family.webp"
+        },
+        {
+          "id": "masters_quarter_mu_lotus_birds",
+          "title": "연꽃과 곤충과 새 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_lotus_birds.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_lotus_birds.webp"
+        },
+        {
+          "id": "masters_quarter_mu_guryong_falls",
+          "title": "구룡폭포 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_guryong_falls.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_guryong_falls.webp"
+        },
+        {
+          "id": "masters_quarter_mu_tiger_leopard",
+          "title": "뛰노는 호랑이와 표범 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_tiger_leopard.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_tiger_leopard.webp"
+        },
+        {
+          "id": "masters_quarter_mu_white_falcon",
+          "title": "흰 매 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_white_falcon.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_white_falcon.webp"
+        },
+        {
+          "id": "masters_quarter_mu_ruisdael_falls",
+          "title": "숲속의 폭포 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_ruisdael_falls.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_ruisdael_falls.webp"
+        },
+        {
+          "id": "masters_quarter_mu_bruegel_rabbit",
+          "title": "토끼 사냥 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_bruegel_rabbit.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_bruegel_rabbit.webp"
+        },
+        {
+          "id": "masters_quarter_mu_canaletto_dolo",
+          "title": "돌로의 운하 갑문 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_canaletto_dolo.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_canaletto_dolo.webp"
+        },
+        {
+          "id": "masters_quarter_mu_herring_fishers",
+          "title": "청어 잡는 어부들 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_herring_fishers.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_herring_fishers.webp"
+        },
+        {
+          "id": "masters_quarter_mu_thaw",
+          "title": "눈 녹는 날 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_thaw.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_thaw.webp"
+        },
+        {
+          "id": "masters_quarter_mu_boy_studio",
+          "title": "화가의 작업실에 있는 소년 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_boy_studio.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_boy_studio.webp"
+        },
+        {
+          "id": "masters_quarter_mu_mother_child",
+          "title": "엄마와 아이 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_mother_child.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_mother_child.webp"
+        },
+        {
+          "id": "masters_quarter_mu_rye_field",
+          "title": "링 마을의 호밀밭 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_rye_field.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_rye_field.webp"
+        },
+        {
+          "id": "masters_quarter_mu_winter_kravsholm",
+          "title": "크라베스홀름의 겨울 1/4 완성하기",
+          "grade": "mid",
+          "image": "/templates/masters/masters_quarter_mu_winter_kravsholm.webp",
+          "thumb": "/templates/_thumbs/masters_quarter/masters_quarter_mu_winter_kravsholm.webp"
         }
       ],
       "coverThumb": "/templates/_thumbs/masters_quarter/masters_quarter_starry_night.webp"

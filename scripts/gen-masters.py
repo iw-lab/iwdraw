@@ -14,6 +14,7 @@
 """
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -190,6 +191,56 @@ PAINTINGS = [
     ("pajeokdo", "파적도(야묘도추·들고양이)", "김득신", 1822, ["Kim Deuksin - Pajeokdo.jpg", "Kim Deuk-sin Pajeokdo"]),
 ]
 
+# ── 2026-10-14 우리 미술관 게임(명화 탐험대 · 교육용브라우저/art-museum)에 걸린 작품 ──
+# 아이가 미술관에서 본 그림을 아트온에서 따라 그린다. 원본 = 그 게임이 미술관 오픈 액세스(CC0·PD)에서
+# 받아 둔 2560px 사본이고, 작가·사망년·출처·라이선스는 그 게임의 data/artworks.json 을 그대로 읽는다.
+# 처음 한 번 work 폴더(<slug>.img)로 복사해 두므로 그 저장소가 없는 맥에서도 재실행된다.
+# ⚠️ 육안 검수로 뺀 것(재추가 금지): 종교화 전부, 8폭 병풍처럼 칸이 쪼개진 것(난초와 바위·사계절 산수),
+#    너무 어두워 밑그림이 안 읽히는 것(인물이 있는 설경·젊은 부부가 있는 실내·하루 일을 평가하다·달밤의 뱃놀이).
+MUSEUM_DIR = Path.home() / "Documents" / "dev" / "교육용브라우저" / "art-museum"
+# (slug, 아트온 제목 — 길면 줄임, 미술관 게임 작품 id)
+MUSEUM = [
+    # 인상주의와 그 후
+    ("mu_two_sisters", "테라스의 두 자매", "aic:14655"),
+    ("mu_acrobats", "페르난도 서커스의 곡예사들", "aic:81558"),
+    ("mu_opera_ballet", "파리 오페라 극장의 발레", "aic:61603"),
+    ("mu_marseille", "레스타크에서 본 마르세유 만", "aic:16487"),
+    ("mu_place_havre", "파리 아브르 광장", "aic:81551"),
+    ("mu_sisley_seine", "센강의 모래 더미", "aic:16633"),
+    ("mu_balcony", "발코니에서", "aic:13916"),
+    ("mu_longchamp", "롱샹의 경마", "aic:81533"),
+    ("mu_rainy_paris", "파리의 거리, 비 오는 날", "aic:20684"),
+    ("mu_signac_andelys", "레장들리의 강가", "aic:122130"),
+    # 동아시아의 붓과 판화
+    ("mu_cranes_pine", "눈 덮인 소나무 위의 학", "aic:21720"),
+    ("mu_mitsuke_ferry", "덴류강을 건너는 나룻배", "aic:4368"),
+    ("mu_shono_shower", "쇼노의 소나기", "cma:1948.306"),
+    ("mu_red_parrot", "나뭇가지 위의 붉은 앵무새", "aic:197424"),
+    ("mu_rooster_hen", "포도 넝쿨 아래 암탉과 수탉", "met:40459"),
+    ("mu_chrysanthemums", "시냇가의 국화", "cma:1958.206.2"),
+    ("mu_shenzhou_clouds", "비 오기 전 강 위의 구름", "aic:13455"),
+    ("mu_horse_groom", "말과 마부", "met:40507"),
+    ("mu_maple_viewing", "단풍 구경", "aic:24927"),
+    ("mu_omori_seaweed", "오모리에서 김 따기", "aic:7691"),
+    # 한국의 미
+    ("mu_tiger_family", "호랑이 가족(민화)", "cma:1997.148"),
+    ("mu_lotus_birds", "연꽃과 곤충과 새", "cma:1985.18"),
+    ("mu_guryong_falls", "구룡폭포", "cma:1915.215"),
+    ("mu_tiger_leopard", "뛰노는 호랑이와 표범", "cma:1998.292"),
+    ("mu_white_falcon", "흰 매", "cma:2026.15"),
+    # 르네상스와 바로크
+    ("mu_ruisdael_falls", "숲속의 폭포", "cma:1967.63"),
+    ("mu_bruegel_rabbit", "토끼 사냥", "cma:2009.80"),
+    ("mu_canaletto_dolo", "돌로의 운하 갑문", "cma:1925.1239.6"),
+    # 북유럽의 빛
+    ("mu_herring_fishers", "청어 잡는 어부들", "smk:DEP976"),
+    ("mu_thaw", "눈 녹는 날", "smk:KMS7709"),
+    ("mu_boy_studio", "화가의 작업실에 있는 소년", "smk:KMS1767"),
+    ("mu_mother_child", "엄마와 아이", "smk:KMS9107"),
+    ("mu_rye_field", "링 마을의 호밀밭", "smk:KMS6449"),
+    ("mu_winter_kravsholm", "크라베스홀름의 겨울", "smk:KMS3929"),
+]
+
 
 def commons_search(query: str, limit: int = 4) -> list[str]:
     """커먼즈 파일 검색 — 정확한 파일명을 몰라도(개명·이형) 상위 후보를 얻는다."""
@@ -276,6 +327,32 @@ def save_webp(img: Image.Image, path: Path) -> None:
     img.save(path, "WEBP", quality=84, method=4)
 
 
+def compose(slug: str, src: Path) -> bool:
+    """원본 한 장 → 따라 그리기·1/4 완성하기 두 장. 한 장이 깨져도(손상 이미지·이형 포맷) 전체 run이 죽지 않게 격리한다."""
+    try:
+        canvas, rect = fit_on_canvas(Image.open(src))
+
+        # 따라 그리기: 전체를 적응형 농도로(대비 목표 기준 — 그림마다 알파가 다르다)
+        trace, a_t = faint_adaptive(canvas, TARGET_STD_TRACE)
+        save_webp(trace, OUT_DIR / f"masters_trace_{slug}.webp")
+
+        # 1/4 완성하기: 옅은 전체 + 좌상단 1/4 원본 + 십자 가이드(그림 rect 기준)
+        q, a_q = faint_adaptive(canvas, TARGET_STD_QUARTER)
+        x0, y0, x1, y1 = rect
+        cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+        q.paste(canvas.crop((x0, y0, cx, cy)), (x0, y0))
+        d = ImageDraw.Draw(q)
+        g = (GUIDE_GRAY,) * 3
+        d.line([(x0, cy), (x1, cy)], fill=g, width=3)
+        d.line([(cx, y0), (cx, y1)], fill=g, width=3)
+        save_webp(q, OUT_DIR / f"masters_quarter_{slug}.webp")
+    except Exception as e:  # noqa: BLE001 — 손상 이미지 격리, 다음 그림 계속
+        print(f"skip (처리 실패): {slug} — {e}", file=sys.stderr)
+        return False
+    print(f"ok: {slug} — trace α={a_t:.2f} quarter α={a_q:.2f}")
+    return True
+
+
 def main() -> None:
     work = Path(sys.argv[sys.argv.index("--work") + 1]) if "--work" in sys.argv else ROOT / ".masters-work"
     work.mkdir(parents=True, exist_ok=True)
@@ -287,30 +364,39 @@ def main() -> None:
         if not download(fnames, src):
             print(f"skip (다운로드 실패): {slug} — {fnames[0]}", file=sys.stderr)
             continue
-        # 대량 처리 중 한 장이 깨져도(손상 이미지·이형 포맷) 전체 run이 죽지 않게 격리한다.
-        try:
-            canvas, rect = fit_on_canvas(Image.open(src))
-
-            # 따라 그리기: 전체를 적응형 농도로(대비 목표 기준 — 그림마다 알파가 다르다)
-            trace, a_t = faint_adaptive(canvas, TARGET_STD_TRACE)
-            save_webp(trace, OUT_DIR / f"masters_trace_{slug}.webp")
-
-            # 1/4 완성하기: 옅은 전체 + 좌상단 1/4 원본 + 십자 가이드(그림 rect 기준)
-            q, a_q = faint_adaptive(canvas, TARGET_STD_QUARTER)
-            x0, y0, x1, y1 = rect
-            cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
-            q.paste(canvas.crop((x0, y0, cx, cy)), (x0, y0))
-            d = ImageDraw.Draw(q)
-            g = (GUIDE_GRAY,) * 3
-            d.line([(x0, cy), (x1, cy)], fill=g, width=3)
-            d.line([(cx, y0), (cx, y1)], fill=g, width=3)
-            save_webp(q, OUT_DIR / f"masters_quarter_{slug}.webp")
-        except Exception as e:  # noqa: BLE001 — 손상 이미지 격리, 다음 그림 계속
-            print(f"skip (처리 실패): {slug} — {e}", file=sys.stderr)
+        if not compose(slug, src):
             continue
+        ok_list.append((slug, title, artist, died, "https://commons.wikimedia.org/wiki/File:" + fnames[0].replace(" ", "_")))
 
-        ok_list.append((slug, title, artist, died, fnames[0]))
-        print(f"ok: {slug} ({title}) — trace α={a_t:.2f} quarter α={a_q:.2f}")
+    # 미술관 게임 작품 — 원본·작가·출처를 그 게임 데이터에서 읽는다(처음 한 번 work 로 복사)
+    artworks_json = MUSEUM_DIR / "data" / "artworks.json"
+    try:
+        artworks = {a["id"]: a for a in json.loads(artworks_json.read_text(encoding="utf-8"))} if artworks_json.exists() else {}
+    except (ValueError, KeyError, TypeError) as e:  # 깨진 데이터 — 미술관 작품만 work 캐시로 가고 목록 갱신은 계속(교차검증 지적)
+        print(f"⚠️ 미술관 게임 데이터를 못 읽음({e}) — work 캐시로만 진행", file=sys.stderr)
+        artworks = {}
+    museum_meta_path = work / "museum-meta.json"
+    museum_meta = json.loads(museum_meta_path.read_text(encoding="utf-8")) if museum_meta_path.exists() else {}
+    for slug, title, aid in MUSEUM:
+        src = work / f"{slug}.img"
+        a = artworks.get(aid)
+        if a:
+            if not src.exists():
+                shutil.copyfile(MUSEUM_DIR / a["img"]["zoom"], src)
+            artist = (a.get("artist") or {}).get("ko") or "작자 미상"
+            museum_meta[slug] = {
+                "artist": artist,
+                "died": a["license"].get("krCopyright", "").replace("작가 사망 ", ""),
+                "source": f'{a["museum"]["ko"]} {a["source"]["url"]} ({a["license"]["type"]})',
+            }
+        if not src.exists() or slug not in museum_meta:
+            print(f"skip (미술관 게임 원본 없음): {slug} — {aid}", file=sys.stderr)
+            continue
+        if not compose(slug, src):
+            continue
+        meta = museum_meta[slug]
+        ok_list.append((slug, title, meta["artist"], meta["died"], meta["source"]))
+    museum_meta_path.write_text(json.dumps(museum_meta, ensure_ascii=False, indent=1), encoding="utf-8")
 
     if not ok_list:
         sys.exit("생성된 명화가 없습니다")
@@ -319,12 +405,12 @@ def main() -> None:
     lines = [
         "# 명화 팩 출처 (전부 퍼블릭 도메인)\n",
         "모든 작품은 작가 사후 70년이 지나 한국 저작권법상 보호기간이 만료되었습니다.",
-        "원본 이미지는 위키미디어 공용의 PD 스캔(평면 회화의 충실한 복제)입니다.\n",
+        "원본 이미지는 위키미디어 공용의 PD 스캔(평면 회화의 충실한 복제)이고, `mu_` 작품은 우리 미술관 게임(명화 탐험대)이",
+        "미술관 오픈 액세스(CC0·PD)에서 받은 사본입니다.\n",
         "| 파일 | 작품 | 작가(사망년) | 원본 |",
         "|---|---|---|---|",
     ]
-    for slug, title, artist, died, fname in ok_list:
-        url = "https://commons.wikimedia.org/wiki/File:" + fname.replace(" ", "_")
+    for slug, title, artist, died, url in ok_list:
         lines.append(f"| masters_*_{slug}.webp | {title} | {artist}(†{died}) | {url} |")
     (OUT_DIR / "SOURCES.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -358,6 +444,8 @@ def main() -> None:
     }
     MANIFEST.write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"\n완료: {len(ok_list)}점 × 2종, manifest 갱신")
+    # 위에서 masters 항목을 새로 만들면 thumb 필드가 빠진다 → 썸네일을 다시 채운다(빠지면 격자가 원본 1.5MB 급을 받는다)
+    subprocess.run(["node", str(ROOT / "scripts" / "gen-template-thumbs.mjs")], cwd=ROOT, check=True)
 
 
 if __name__ == "__main__":

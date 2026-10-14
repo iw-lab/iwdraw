@@ -1,0 +1,650 @@
+{
+ "_comment": "도안 큐레이션 정본 — 2026-10-14 전수 조사(1,100장 + 부분색칠 110세트 눈 검수). scripts/curate-templates.mjs 가 manifest.json 에 멱등 적용하고, import-iwart-templates.mjs 가 끝에서 부른다(재이관해도 유지).",
+ "retitle": {
+  "safari_low_01": "아기 사자",
+  "safari_low_02": "기린",
+  "safari_low_03": "얼룩말",
+  "safari_low_04": "아기 코끼리",
+  "safari_low_05": "하마",
+  "safari_low_06": "코뿔소",
+  "safari_low_07": "미어캣",
+  "safari_low_08": "혹멧돼지",
+  "safari_low_09": "치타",
+  "safari_low_10": "아카시아 나무",
+  "safari_low_11": "원숭이",
+  "safari_low_12": "타조",
+  "safari_low_13": "가젤",
+  "safari_low_14": "악어",
+  "safari_low_15": "사파리 지프",
+  "safari_low_16": "물웅덩이",
+  "safari_low_17": "플라밍고",
+  "safari_mid_01": "사자 가족",
+  "safari_mid_04": "미어캣 가족",
+  "safari_mid_06": "치타와 가젤",
+  "safari_mid_07": "강가의 하마와 악어",
+  "safari_mid_08": "플라밍고 무리",
+  "safari_mid_09": "나무 위 원숭이들",
+  "safari_mid_10": "코뿔소와 새",
+  "safari_mid_11": "얼룩말 무리",
+  "safari_mid_12": "타조와 새끼들",
+  "safari_mid_13": "물 마시는 기린",
+  "safari_mid_14": "바위 위 사자",
+  "pirates_high_01": "보물섬으로 항해",
+  "pirates_high_02": "보물섬 탐험",
+  "pirates_high_03": "돛 올리는 해적들",
+  "pirates_high_04": "바닷속 보물선",
+  "pirates_high_05": "해적선 정박",
+  "pirates_high_06": "항로 계획",
+  "pirates_high_07": "보물 동굴",
+  "pirates_high_08": "보물 발견 잔치",
+  "pirates_low_01": "해적 선장",
+  "pirates_low_02": "앵무새",
+  "pirates_low_04": "해적선",
+  "pirates_low_05": "보물지도",
+  "pirates_low_06": "문어",
+  "pirates_low_07": "조타 키",
+  "pirates_low_08": "게",
+  "pirates_low_09": "부표",
+  "pirates_low_10": "야자수 섬",
+  "pirates_low_11": "유리병 편지",
+  "pirates_low_12": "닻",
+  "pirates_low_13": "해적 깃발",
+  "pirates_low_14": "사과 통",
+  "pirates_low_15": "망원경",
+  "pirates_low_17": "작은 보트",
+  "pirates_mid_01": "보물 찾기 계획",
+  "pirates_mid_02": "섬 옆 항해",
+  "pirates_mid_04": "돛대 오르기",
+  "pirates_mid_05": "해변으로 노 젓기",
+  "pirates_mid_06": "돌고래와 인사",
+  "pirates_mid_07": "보물 발견",
+  "pirates_mid_08": "파도 헤치기",
+  "pirates_mid_09": "지도 배달",
+  "pirates_mid_10": "배 안 요리",
+  "pirates_mid_12": "섬 관찰",
+  "pirates_mid_13": "보물 지키는 게",
+  "pirates_mid_14": "깃발 꽂기",
+  "pirates_mid_15": "해적선 갑판",
+  "circus_high_01": "서커스 대공연",
+  "circus_high_02": "공중그네 대곡예",
+  "circus_high_03": "서커스 퍼레이드",
+  "circus_high_05": "단장과 여러 공연",
+  "circus_high_06": "인간 피라미드",
+  "circus_high_07": "서커스 무대 뒤",
+  "circus_high_08": "탑 사이 줄타기",
+  "circus_low_02": "서커스 코끼리",
+  "circus_low_03": "공 받는 물개",
+  "circus_low_04": "외발자전거 원숭이",
+  "circus_low_05": "서커스 천막",
+  "circus_low_06": "의자 위 사자",
+  "circus_low_07": "저글링 곰",
+  "circus_low_08": "서커스 말",
+  "circus_low_09": "깃발 장식",
+  "circus_low_10": "마술 모자",
+  "circus_low_11": "훌라후프 강아지",
+  "circus_low_12": "서커스 공",
+  "circus_low_13": "단장",
+  "circus_low_14": "북 더미",
+  "circus_low_15": "그네 탄 앵무새",
+  "circus_low_16": "아이스크림 수레",
+  "circus_low_17": "물구나무 곡예사",
+  "circus_mid_01": "자전거 탄 광대",
+  "circus_mid_02": "코끼리와 원숭이 공연",
+  "circus_mid_03": "공중그네 곡예",
+  "circus_mid_04": "사자 쇼",
+  "circus_mid_05": "풍선 만드는 광대들",
+  "circus_mid_07": "물개와 강아지 묘기",
+  "circus_mid_08": "동물 악단",
+  "circus_mid_09": "토끼 마술",
+  "circus_mid_10": "역도 차력사",
+  "circus_mid_11": "대포 곡예 준비",
+  "circus_mid_12": "광대 자동차",
+  "circus_mid_13": "공 위 저글러",
+  "circus_mid_14": "서커스 입구",
+  "animals_low_05": "물 뿜는 코끼리",
+  "tradition_high_02": "민속촌 장날",
+  "vehicles_mid_04": "바다 위 돛단배",
+  "princess_fantasy_high_02": "무지개 성과 아기 용",
+  "holidays_low_01": "한복 입고 세배하는 아이",
+  "holidays_mid_06": "할아버지 할머니께 세배"
+ },
+ "remove": {
+  "safari_mid_02": "safari_mid_04 와 같은 그림(픽셀 동일)",
+  "safari_mid_03": "safari_mid_06 과 같은 그림(픽셀 동일)",
+  "pirates_low_16": "pirates_low_17 과 같은 그림(픽셀 동일)",
+  "pirates_mid_03": "pirates_mid_05 와 같은 그림(픽셀 동일)",
+  "animals_low_06": "animals_low_07 사자와 거의 같은 그림",
+  "dinosaurs_low_01": "안킬로사우루스인데 «아기 티라노» — dinosaurs_low_06 과 중복",
+  "sea_high_07": "모래성 그림에 심해 제목 — sea_high_08 과 중복",
+  "sea_low_16": "복어 — sea_low_08 과 중복",
+  "farm_low_13": "빈 양동이 그림에 «허수아비» 제목",
+  "farm_mid_07": "풍차와 연못 — farm_high_03 과 중복",
+  "seasons_low_01": "모래성 그림에 «봄 벚꽃» 제목",
+  "seasons_mid_08": "우산 — seasons_mid_01·low_09 와 중복",
+  "holidays_low_09": "불꽃 그림에 «어린이날 풍선» — holidays_low_11 불꽃놀이와 중복",
+  "holidays_low_14": "«떡 한 개» — 무늬 없는 원통이라 칠할 거리가 없음",
+  "sports_low_13": "탁구 그림에 «배드민턴» — sports_low_15 탁구와 중복",
+  "sports_mid_06": "결승선 그림에 «테니스 서브» — sports_mid_07 과 중복",
+  "sports_mid_11": "태권도 그림에 «배구 선수» — sports_mid_12 와 중복",
+  "camping_low_04": "물병 그림에 «손전등» — camping_low_05 물통과 중복",
+  "camping_mid_05": "다리 그림에 «마시멜로 굽는 아이» — camping_mid_06 과 중복",
+  "food_low_07": "쿠키 그림에 «사과» — food_low_09 쿠키와 중복",
+  "food_mid_05": "팬케이크 그림에 «밥과 반찬» — food_mid_06 과 중복",
+  "tradition_low_15": "하회탈 두 번째(tradition_low_01)",
+  "tradition_low_12": "팽이 — tradition_low_03 팽이치기와 중복",
+  "tradition_low_07": "북 그림에 «장구» — tradition_low_17 북과 중복",
+  "tradition_high_03": "서양식 성에 «궁궐 마당» — 우리 전통과 맞지 않음",
+  "tradition_mid_09": "서양식 결혼에 «전통 혼례» — 우리 전통과 맞지 않음",
+  "tradition_mid_12": "서양 드레스 춤에 «부채춤» — 우리 전통과 맞지 않음",
+  "tradition_high_04": "한국 탈이 아닌 외국풍 가면에 «탈춤 축제»",
+  "jobs_mid_07": "과학자 두 번째",
+  "jobs_mid_05": "공사장 인부 그림에 «요리하는 셰프»",
+  "vehicles_mid_06": "열기구 — vehicles_mid_03 과 중복",
+  "vehicles_high_08": "로켓 — vehicles_high_02 와 중복",
+  "space_low_11": "로켓 두 번째",
+  "space_high_06": "로켓 그림에 «별자리 관측»",
+  "space_mid_09": "작은 행성 몇 개뿐 — 칠할 거리가 거의 없음",
+  "school_high_01": "«운동회 한마당» 제목·장면 중복",
+  "music_low_02": "바이올린 그림에 «드럼» — music_low_05 와 중복",
+  "music_low_06": "플루트 그림에 «탬버린» — music_low_09 와 중복",
+  "music_low_10": "축구장 그림에 «실로폰» — 음악 주제와 무관",
+  "music_mid_04": "드럼 그림에 «바이올린 연주» — music_mid_02 와 중복",
+  "music_mid_12": "기타·앰프 그림에 «악보대» — music_mid_13 과 중복",
+  "flowers_mid_05": "사과나무 중복",
+  "flowers_mid_03": "선인장 — flowers_low_10 과 중복",
+  "princess_fantasy_low_14": "유리구두 그림에 «요정 버섯집» — princess_fantasy_low_15 와 중복",
+  "princess_fantasy_mid_10": "성 그림에 «장미정원의 공주» — 성 그림 중복",
+  "robots_mid_14": "로봇 팔 그림에 «로봇 밴드»",
+  "toys_low_08": "요요 그림에 «고무오리» — toys_low_09 와 중복",
+  "toys_low_15": "연 두 번째(toys_low_04)"
+ },
+ "repair": {
+  "fruits_veggies_mid_13": "iwart 원본 webp 가 0바이트 — 같은 폴더 png 를 다시 변환"
+ },
+ "partial": {
+  "_comment": "iwart site/assets/partial/<주제>/<세트>/ 의 half_*·quarter* 변형. 세트마다 반쪽(저학년)·1/4(중학년) 2장, 방향은 세트 번호로 돌린다.",
+  "exclude": {
+   "neighborhood_07": "교회 — 공립학교 수업 자료로 종교 시설은 뺀다",
+   "neighborhood_09": "버스 정류장 — city_03 과 같은 주제",
+   "amusement_10": "놀이터 — 공원·놀이터(park) 주제와 겹침"
+  },
+  "sets": {
+   "pc_school": [
+    {
+     "set": "school_01",
+     "ko": "학교 건물"
+    },
+    {
+     "set": "school_02",
+     "ko": "교실"
+    },
+    {
+     "set": "school_03",
+     "ko": "학교 버스"
+    },
+    {
+     "set": "school_04",
+     "ko": "책가방과 책"
+    },
+    {
+     "set": "school_05",
+     "ko": "필통과 연필"
+    },
+    {
+     "set": "school_06",
+     "ko": "선생님"
+    },
+    {
+     "set": "school_07",
+     "ko": "손 든 아이"
+    },
+    {
+     "set": "school_08",
+     "ko": "미끄럼틀과 그네"
+    },
+    {
+     "set": "school_09",
+     "ko": "시계와 종"
+    },
+    {
+     "set": "school_10",
+     "ko": "지구본과 책"
+    }
+   ],
+   "pc_city": [
+    {
+     "set": "city_01",
+     "ko": "도시 빌딩"
+    },
+    {
+     "set": "city_02",
+     "ko": "신호등과 횡단보도"
+    },
+    {
+     "set": "city_03",
+     "ko": "버스 정류장"
+    },
+    {
+     "set": "city_04",
+     "ko": "택시"
+    },
+    {
+     "set": "city_05",
+     "ko": "아파트"
+    },
+    {
+     "set": "city_06",
+     "ko": "공원 벤치"
+    },
+    {
+     "set": "city_07",
+     "ko": "가게"
+    },
+    {
+     "set": "city_08",
+     "ko": "가로등과 우체통"
+    },
+    {
+     "set": "city_09",
+     "ko": "강 위 다리"
+    },
+    {
+     "set": "city_10",
+     "ko": "광장 분수"
+    }
+   ],
+   "pc_park": [
+    {
+     "set": "park_01",
+     "ko": "미끄럼틀"
+    },
+    {
+     "set": "park_02",
+     "ko": "그네"
+    },
+    {
+     "set": "park_03",
+     "ko": "시소"
+    },
+    {
+     "set": "park_04",
+     "ko": "모래놀이터"
+    },
+    {
+     "set": "park_05",
+     "ko": "돗자리와 바구니"
+    },
+    {
+     "set": "park_06",
+     "ko": "연날리기"
+    },
+    {
+     "set": "park_07",
+     "ko": "오리 연못"
+    },
+    {
+     "set": "park_08",
+     "ko": "꽃밭"
+    },
+    {
+     "set": "park_09",
+     "ko": "나무와 새집"
+    },
+    {
+     "set": "park_10",
+     "ko": "공원 분수"
+    }
+   ],
+   "pc_market": [
+    {
+     "set": "market_01",
+     "ko": "과일 가게"
+    },
+    {
+     "set": "market_02",
+     "ko": "빵집"
+    },
+    {
+     "set": "market_03",
+     "ko": "채소 가게"
+    },
+    {
+     "set": "market_04",
+     "ko": "꽃집"
+    },
+    {
+     "set": "market_05",
+     "ko": "아이스크림 수레"
+    },
+    {
+     "set": "market_06",
+     "ko": "장난감 가게"
+    },
+    {
+     "set": "market_07",
+     "ko": "장바구니"
+    },
+    {
+     "set": "market_08",
+     "ko": "생선 가게"
+    },
+    {
+     "set": "market_09",
+     "ko": "계산대"
+    },
+    {
+     "set": "market_10",
+     "ko": "옷가게"
+    }
+   ],
+   "pc_transport": [
+    {
+     "set": "transport_01",
+     "ko": "자동차"
+    },
+    {
+     "set": "transport_02",
+     "ko": "버스"
+    },
+    {
+     "set": "transport_03",
+     "ko": "기차"
+    },
+    {
+     "set": "transport_04",
+     "ko": "비행기"
+    },
+    {
+     "set": "transport_05",
+     "ko": "배"
+    },
+    {
+     "set": "transport_06",
+     "ko": "자전거"
+    },
+    {
+     "set": "transport_07",
+     "ko": "소방차"
+    },
+    {
+     "set": "transport_08",
+     "ko": "경찰차"
+    },
+    {
+     "set": "transport_09",
+     "ko": "구급차"
+    },
+    {
+     "set": "transport_10",
+     "ko": "헬리콥터"
+    }
+   ],
+   "pc_neighborhood": [
+    {
+     "set": "neighborhood_01",
+     "ko": "우리 집"
+    },
+    {
+     "set": "neighborhood_02",
+     "ko": "우체국"
+    },
+    {
+     "set": "neighborhood_03",
+     "ko": "병원"
+    },
+    {
+     "set": "neighborhood_04",
+     "ko": "소방서"
+    },
+    {
+     "set": "neighborhood_05",
+     "ko": "도서관"
+    },
+    {
+     "set": "neighborhood_06",
+     "ko": "은행"
+    },
+    {
+     "set": "neighborhood_08",
+     "ko": "경찰서"
+    },
+    {
+     "set": "neighborhood_10",
+     "ko": "동네 가게"
+    }
+   ],
+   "pc_zoo": [
+    {
+     "set": "zoo_01",
+     "ko": "사자 우리"
+    },
+    {
+     "set": "zoo_02",
+     "ko": "코끼리"
+    },
+    {
+     "set": "zoo_03",
+     "ko": "기린"
+    },
+    {
+     "set": "zoo_04",
+     "ko": "원숭이"
+    },
+    {
+     "set": "zoo_05",
+     "ko": "펭귄"
+    },
+    {
+     "set": "zoo_06",
+     "ko": "수족관 물고기"
+    },
+    {
+     "set": "zoo_07",
+     "ko": "돌고래"
+    },
+    {
+     "set": "zoo_08",
+     "ko": "바다거북"
+    },
+    {
+     "set": "zoo_09",
+     "ko": "동물원 입구"
+    },
+    {
+     "set": "zoo_10",
+     "ko": "사육사"
+    }
+   ],
+   "pc_farm": [
+    {
+     "set": "farm_01",
+     "ko": "헛간"
+    },
+    {
+     "set": "farm_02",
+     "ko": "트랙터"
+    },
+    {
+     "set": "farm_03",
+     "ko": "젖소"
+    },
+    {
+     "set": "farm_04",
+     "ko": "닭과 병아리"
+    },
+    {
+     "set": "farm_05",
+     "ko": "돼지"
+    },
+    {
+     "set": "farm_06",
+     "ko": "양"
+    },
+    {
+     "set": "farm_07",
+     "ko": "과수원"
+    },
+    {
+     "set": "farm_08",
+     "ko": "채소밭"
+    },
+    {
+     "set": "farm_09",
+     "ko": "허수아비"
+    },
+    {
+     "set": "farm_10",
+     "ko": "농부"
+    }
+   ],
+   "pc_amusement": [
+    {
+     "set": "amusement_01",
+     "ko": "회전목마"
+    },
+    {
+     "set": "amusement_02",
+     "ko": "관람차"
+    },
+    {
+     "set": "amusement_03",
+     "ko": "롤러코스터"
+    },
+    {
+     "set": "amusement_04",
+     "ko": "범퍼카"
+    },
+    {
+     "set": "amusement_05",
+     "ko": "솜사탕 가게"
+    },
+    {
+     "set": "amusement_06",
+     "ko": "축제 무대"
+    },
+    {
+     "set": "amusement_07",
+     "ko": "불꽃놀이"
+    },
+    {
+     "set": "amusement_08",
+     "ko": "게임 부스"
+    },
+    {
+     "set": "amusement_09",
+     "ko": "풍선 장수"
+    }
+   ],
+   "pc_home": [
+    {
+     "set": "home_01",
+     "ko": "거실"
+    },
+    {
+     "set": "home_02",
+     "ko": "부엌"
+    },
+    {
+     "set": "home_03",
+     "ko": "침실"
+    },
+    {
+     "set": "home_04",
+     "ko": "욕실"
+    },
+    {
+     "set": "home_05",
+     "ko": "가족 식사"
+    },
+    {
+     "set": "home_06",
+     "ko": "정원"
+    },
+    {
+     "set": "home_07",
+     "ko": "노는 아이들"
+    },
+    {
+     "set": "home_08",
+     "ko": "강아지와 고양이"
+    },
+    {
+     "set": "home_09",
+     "ko": "책 읽는 가족"
+    },
+    {
+     "set": "home_10",
+     "ko": "생일 파티"
+    }
+   ],
+   "pc_friendship": [
+    {
+     "set": "friendship_01",
+     "ko": "화해하는 친구"
+    },
+    {
+     "set": "friendship_02",
+     "ko": "일으켜 주기"
+    },
+    {
+     "set": "friendship_03",
+     "ko": "점심 나눠 먹기"
+    },
+    {
+     "set": "friendship_04",
+     "ko": "다 같이 놀기"
+    },
+    {
+     "set": "friendship_05",
+     "ko": "손 내밀기"
+    },
+    {
+     "set": "friendship_06",
+     "ko": "꼭 안아 주기"
+    },
+    {
+     "set": "friendship_07",
+     "ko": "이야기 들어주기"
+    },
+    {
+     "set": "friendship_08",
+     "ko": "위로해 주기"
+    },
+    {
+     "set": "friendship_09",
+     "ko": "선생님과 상담"
+    },
+    {
+     "set": "friendship_10",
+     "ko": "함께 걷기"
+    }
+   ]
+  }
+ },
+ "add": {
+  "_comment": "2026-10-14 메타 AI로 다시 그린 우리 전통 도안(빠진 서양풍 그림 자리). 파일은 public 에 있고, 큐레이션이 목록에 다시 붙인다. 탈춤은 두 번 다 사진·사람 얼굴로 나와 넣지 않았다.",
+  "tradition": [
+   {
+    "id": "tradition_mid_16",
+    "title": "부채춤",
+    "grade": "mid",
+    "engine": "meta",
+    "prompt": "Korean traditional fan dance (buchaechum): one smiling Korean girl dancing, wearing a Korean hanbok with a short jeogori jacket tied with an otgoreum ribbon and a very full long chima skirt, her hair in a neat low bun with a binyeo hairpin, holding two large open Korean folding fans decorated with big peony flowers, one fan raised above her head. Simple stage floor. Black and white coloring page for elementary school children. Bold clean black outlines on pure white, no shading, no gray tones, no color fill, no hatching, large simple areas that are easy to color. Vertical portrait 2:3 page with a thin rounded-rectangle black border around the whole picture. Absolutely no text, no letters, no signatures."
+   },
+   {
+    "id": "tradition_high_09",
+    "title": "전통 혼례",
+    "grade": "high",
+    "engine": "meta",
+    "prompt": "Korean traditional wedding ceremony (jeontong honrye) in a Korean hanok courtyard: the groom wears a Korean official robe (dallyeong) with a round collar and a black winged hat (samo); the bride wears a Korean hwarot ceremonial robe with very long sleeves, a small jokduri crown, and round dots on her cheeks; they face each other across a low ceremonial table holding a pair of carved wooden mandarin ducks, bowls of chestnuts and jujubes, and pine and bamboo branches in vases. Korean style only, not Chinese, not Western. Black and white coloring page for elementary school children. Bold clean black outlines on pure white, no shading, no gray tones, no color fill, no hatching, large simple areas that are easy to color. Vertical portrait 2:3 page with a thin rounded-rectangle black border around the whole picture. Absolutely no text, no letters, no signatures."
+   },
+   {
+    "id": "tradition_high_10",
+    "title": "궁궐 마당",
+    "grade": "high",
+    "engine": "meta",
+    "prompt": "Cartoon line drawing of a Korean royal palace for kids: a two-story Korean palace hall with gently curved tiled roofs and small figures on the roof ridges, on a stone terrace with stone stairs, a big stone-paved courtyard with a row of small stone markers on each side, mountains behind, two children in hanbok in the courtyard. Line-art coloring book illustration, NOT a photograph. Black and white coloring page for elementary school children. Bold clean black outlines on pure white, no shading, no gray tones, no color at all, no hatching, large simple areas that are easy to color. Vertical portrait 2:3 page with a thin rounded-rectangle black border around the whole picture. Absolutely no text, no letters, no signatures."
+   }
+  ]
+ }
+}

@@ -4,16 +4,19 @@
  * webp를 public/templates/<theme>/ 로 복사하고, 카테고리 매핑으로 manifest.json 생성.
  * 로그인 없이 게스트가 색칠할 수 있도록 정적 자산으로 제공(Storage 불필요).
  *
+ * 끝에서 curate-templates.mjs 를 부른다 — 중복·오류 도안 정리, 부분색칠(pc_*) 세트, 썸네일이 재이관 뒤에도 유지된다.
+ *
  * 사용: node scripts/import-iwart-templates.mjs [--limit N] [--webp-only]
  */
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dir, "..");
 const MAP = JSON.parse(readFileSync(join(__dir, "iwart-category-map.json"), "utf8"));
-const SRC = MAP.source; // /Users/.../iwart/site
+const SRC = process.env.IWART_SITE || MAP.source; // /Users/.../iwart/site (다른 맥이면 IWART_SITE 로 덮는다)
 const THEMES_DIR = join(SRC, "content", "themes");
 const OUT_DIR = join(ROOT, "public", "templates");
 
@@ -104,3 +107,6 @@ writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 const totalItems = Object.values(manifest.themes).reduce((a, t) => a + t.count, 0);
 console.log(`✅ 템플릿 이관 완료: ${copied}장 복사, ${missing} 누락, ${totalItems} 매니페스트 등록`);
 console.log(`   카테고리 ${manifest.categories.length}개, 테마 ${Object.keys(manifest.themes).length}개`);
+
+// 2026-10-14 전수 조사 정리(template-curation.json) + 부분색칠 세트 + 썸네일 — 이걸 빼면 재이관이 정리를 되돌린다
+execFileSync(process.execPath, [join(__dir, "curate-templates.mjs"), "--iwart", SRC], { stdio: "inherit" });

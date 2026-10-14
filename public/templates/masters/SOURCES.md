@@ -1,7 +1,8 @@
 # 명화 팩 출처 (전부 퍼블릭 도메인)
 
 모든 작품은 작가 사후 70년이 지나 한국 저작권법상 보호기간이 만료되었습니다.
-원본 이미지는 위키미디어 공용의 PD 스캔(평면 회화의 충실한 복제)입니다.
+원본 이미지는 위키미디어 공용의 PD 스캔(평면 회화의 충실한 복제)이고, `mu_` 작품은 우리 미술관 게임(명화 탐험대)이
+미술관 오픈 액세스(CC0·PD)에서 받은 사본입니다.
 
 | 파일 | 작품 | 작가(사망년) | 원본 |
 |---|---|---|---|
@@ -127,3 +128,37 @@
 | masters_*_kim_threshing.webp | 타작 | 김홍도(†1806) | https://commons.wikimedia.org/wiki/File:Danwon_Tajak.jpg |
 | masters_*_chochungdo.webp | 초충도(풀과 벌레) | 신사임당(†1551) | https://commons.wikimedia.org/wiki/File:Chochungdo_06.jpg |
 | masters_*_pajeokdo.webp | 파적도(야묘도추·들고양이) | 김득신(†1822) | https://commons.wikimedia.org/wiki/File:Kim_Deuksin_-_Pajeokdo.jpg |
+| masters_*_mu_two_sisters.webp | 테라스의 두 자매 | 오귀스트 르누아르(†1919) | 시카고 미술관 https://www.artic.edu/artworks/14655 (CC0) |
+| masters_*_mu_acrobats.webp | 페르난도 서커스의 곡예사들 | 오귀스트 르누아르(†1919) | 시카고 미술관 https://www.artic.edu/artworks/81558 (CC0) |
+| masters_*_mu_opera_ballet.webp | 파리 오페라 극장의 발레 | 에드가 드가(†1917) | 시카고 미술관 https://www.artic.edu/artworks/61603 (CC0) |
+| masters_*_mu_marseille.webp | 레스타크에서 본 마르세유 만 | 폴 세잔(†1906) | 시카고 미술관 https://www.artic.edu/artworks/16487 (CC0) |
+| masters_*_mu_place_havre.webp | 파리 아브르 광장 | 카미유 피사로(†1903) | 시카고 미술관 https://www.artic.edu/artworks/81551 (CC0) |
+| masters_*_mu_sisley_seine.webp | 센강의 모래 더미 | 알프레드 시슬레(†1899) | 시카고 미술관 https://www.artic.edu/artworks/16633 (CC0) |
+| masters_*_mu_balcony.webp | 발코니에서 | 베르트 모리조(†1895) | 시카고 미술관 https://www.artic.edu/artworks/13916 (CC0) |
+| masters_*_mu_longchamp.webp | 롱샹의 경마 | 에두아르 마네(†1883) | 시카고 미술관 https://www.artic.edu/artworks/81533 (CC0) |
+| masters_*_mu_rainy_paris.webp | 파리의 거리, 비 오는 날 | 귀스타브 카유보트(†1894) | 시카고 미술관 https://www.artic.edu/artworks/20684 (CC0) |
+| masters_*_mu_signac_andelys.webp | 레장들리의 강가 | 폴 시냐크(†1935) | 시카고 미술관 https://www.artic.edu/artworks/122130 (CC0) |
+| masters_*_mu_cranes_pine.webp | 눈 덮인 소나무 위의 학 | 가쓰시카 호쿠사이(†1849) | 시카고 미술관 https://www.artic.edu/artworks/21720 (CC0) |
+| masters_*_mu_mitsuke_ferry.webp | 덴류강을 건너는 나룻배 | 우타가와 히로시게(†1858) | 시카고 미술관 https://www.artic.edu/artworks/4368 (CC0) |
+| masters_*_mu_shono_shower.webp | 쇼노의 소나기 | 우타가와 히로시게(†1858) | 클리블랜드 미술관 https://clevelandart.org/art/1948.306 (CC0) |
+| masters_*_mu_red_parrot.webp | 나뭇가지 위의 붉은 앵무새 | 이토 자쿠추(†1800) | 시카고 미술관 https://www.artic.edu/artworks/197424 (CC0) |
+| masters_*_mu_rooster_hen.webp | 포도 넝쿨 아래 암탉과 수탉 | 이토 자쿠추(†1800) | 메트로폴리탄 미술관 https://www.metmuseum.org/art/collection/search/40459 (CC0) |
+| masters_*_mu_chrysanthemums.webp | 시냇가의 국화 | 오가타 고린(†1716) | 클리블랜드 미술관 https://clevelandart.org/art/1958.206.2 (CC0) |
+| masters_*_mu_shenzhou_clouds.webp | 비 오기 전 강 위의 구름 | 심주(†1509) | 시카고 미술관 https://www.artic.edu/artworks/13455 (CC0) |
+| masters_*_mu_horse_groom.webp | 말과 마부 | 조맹부(†1322) | 메트로폴리탄 미술관 https://www.metmuseum.org/art/collection/search/40507 (CC0) |
+| masters_*_mu_maple_viewing.webp | 단풍 구경 | 우타가와 구니사다(†1864) | 시카고 미술관 https://www.artic.edu/artworks/24927 (CC0) |
+| masters_*_mu_omori_seaweed.webp | 오모리에서 김 따기 | 우타가와 구니요시(†1861) | 시카고 미술관 https://www.artic.edu/artworks/7691 (CC0) |
+| masters_*_mu_tiger_family.webp | 호랑이 가족(민화) | 작자 미상(†미상 · 제작 하한 1899) | 클리블랜드 미술관 https://clevelandart.org/art/1997.148 (CC0) |
+| masters_*_mu_lotus_birds.webp | 연꽃과 곤충과 새 | 작자 미상(†미상 · 제작 하한 1899) | 클리블랜드 미술관 https://clevelandart.org/art/1985.18 (CC0) |
+| masters_*_mu_guryong_falls.webp | 구룡폭포 | 작자 미상(†미상 · 제작 하한 1899) | 클리블랜드 미술관 https://clevelandart.org/art/1915.215 (CC0) |
+| masters_*_mu_tiger_leopard.webp | 뛰노는 호랑이와 표범 | 작자 미상(†미상 · 제작 하한 1799) | 클리블랜드 미술관 https://clevelandart.org/art/1998.292 (CC0) |
+| masters_*_mu_white_falcon.webp | 흰 매 | 작자 미상(†미상 · 제작 하한 1599) | 클리블랜드 미술관 https://clevelandart.org/art/2026.15 (CC0) |
+| masters_*_mu_ruisdael_falls.webp | 숲속의 폭포 | 야코프 판 라위스달(†1682) | 클리블랜드 미술관 https://clevelandart.org/art/1967.63 (CC0) |
+| masters_*_mu_bruegel_rabbit.webp | 토끼 사냥 | 대 피터르 브뤼헐(†1569) | 클리블랜드 미술관 https://clevelandart.org/art/2009.80 (CC0) |
+| masters_*_mu_canaletto_dolo.webp | 돌로의 운하 갑문 | 카날레토(†1768) | 클리블랜드 미술관 https://clevelandart.org/art/1925.1239.6 (CC0) |
+| masters_*_mu_herring_fishers.webp | 청어 잡는 어부들 | 페데르 세베린 크뢰위에르(†1909) | 덴마크 국립미술관(SMK) https://open.smk.dk/artwork/image/DEP976 (PD) |
+| masters_*_mu_thaw.webp | 눈 녹는 날 | 라우리츠 아네르센 링(†1933) | 덴마크 국립미술관(SMK) https://open.smk.dk/artwork/image/KMS7709 (PD) |
+| masters_*_mu_boy_studio.webp | 화가의 작업실에 있는 소년 | 크리스텐 쾨브케(†1848) | 덴마크 국립미술관(SMK) https://open.smk.dk/artwork/image/KMS1767 (PD) |
+| masters_*_mu_mother_child.webp | 엄마와 아이 | 아나 앙케르(†1935) | 덴마크 국립미술관(SMK) https://open.smk.dk/artwork/image/KMS9107 (PD) |
+| masters_*_mu_rye_field.webp | 링 마을의 호밀밭 | 라우리츠 아네르센 링(†1933) | 덴마크 국립미술관(SMK) https://open.smk.dk/artwork/image/KMS6449 (PD) |
+| masters_*_mu_winter_kravsholm.webp | 크라베스홀름의 겨울 | 크리스텐 달스고르(†1907) | 덴마크 국립미술관(SMK) https://open.smk.dk/artwork/image/KMS3929 (PD) |
