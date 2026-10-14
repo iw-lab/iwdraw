@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, Card } from "@/components/ui";
@@ -16,6 +16,8 @@ import {
 import { ClassGallery } from "./class-gallery";
 import { AssignmentModal } from "./assignment-modal";
 
+const GALLERY_PARAM = "gallery";
+
 /* 교사 대시보드: 학급 목록·생성·코드/QR·갤러리·도안 배포 */
 export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
   const router = useRouter();
@@ -24,15 +26,52 @@ export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [big, setBig] = useState<ClassRow | null>(null);
-  const [galleryOf, setGalleryOf] = useState<ClassRow | null>(null);
+  // 학급 갤러리를 연 상태는 주소(?gallery=<학급 id>)에 둔다 — 새로고침해도 갤러리에 남고, 뒤로 가기로 대시보드에 온다
+  // (2026-10-14 사용자 «선생님 계정으로 갤러리에서 새로고침하면 자꾸 나가진다» — 화면 state 에만 있어서 날아갔다)
+  const [galleryId, setGalleryId] = useState<string | null>(null);
+  const galleryOf = galleryId ? (classes.find((c) => c.id === galleryId) ?? null) : null;
   const [assignOf, setAssignOf] = useState<ClassRow | null>(null);
   const [origin, setOrigin] = useState("");
   const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => {
     setOrigin(window.location.origin);
+    const syncFromUrl = () => {
+      const id = new URLSearchParams(window.location.search).get(GALLERY_PARAM);
+      if (!id) pushedRef.current = false; // 브라우저 뒤로 가기로 닫혔다
+      setGalleryId(id);
+    };
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
     void refresh();
+    return () => window.removeEventListener("popstate", syncFromUrl);
   }, []);
+
+  // 주소의 학급이 목록에 없으면(삭제됨·다른 계정) 주소를 비운다
+  useEffect(() => {
+    if (!loading && galleryId && !galleryOf) {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+      setGalleryId(null);
+    }
+  }, [loading, galleryId, galleryOf]);
+
+  // 이 화면에서 연 갤러리는 기록을 한 칸 쌓았다 — 닫을 땐 그 칸을 되돌린다(안 그러면 대시보드가 기록에 두 번 남아
+  // 브라우저 뒤로 가기를 한 번 더 눌러야 나간다). 새로고침으로 들어온 갤러리는 쌓은 칸이 없으니 주소만 바꾼다.
+  const pushedRef = useRef(false);
+  const openGallery = (c: ClassRow) => {
+    window.history.pushState(window.history.state, "", `${window.location.pathname}?${GALLERY_PARAM}=${encodeURIComponent(c.id)}`);
+    pushedRef.current = true;
+    setGalleryId(c.id);
+  };
+  const closeGallery = () => {
+    if (pushedRef.current) {
+      pushedRef.current = false;
+      window.history.back(); // popstate → syncFromUrl 가 닫는다
+      return;
+    }
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+    setGalleryId(null);
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -52,7 +91,10 @@ export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
   };
 
   if (galleryOf) {
-    return <ClassGallery klass={galleryOf} onBack={() => setGalleryOf(null)} />;
+    return <ClassGallery klass={galleryOf} onBack={closeGallery} />;
+  }
+  if (galleryId && loading) {
+    return <p className="py-20 text-center text-ink-soft">학급 갤러리를 불러오는 중…</p>;
   }
 
   return (
@@ -128,7 +170,7 @@ export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
                 <Button size="md" tone="sky" onClick={() => setBig(c)}>
                   📺 큰 화면으로 보여주기
                 </Button>
-                <Button size="md" tone="ghost" onClick={() => setGalleryOf(c)}>
+                <Button size="md" tone="ghost" onClick={() => openGallery(c)}>
                   🖼️ 갤러리
                 </Button>
                 <Button size="md" tone="ghost" onClick={() => setAssignOf(c)}>
