@@ -10,10 +10,7 @@ test("backend=gl 이면 WebGL2 셰이더가 컴파일돼 GL 로 그린다", asyn
   await page.goto("/draw?mode=oil&backend=gl");
   await page.getByLabel("그림 캔버스").waitFor();
   await page.waitForTimeout(800);
-  const name = await page.evaluate(
-    () =>
-      (window as unknown as { __artonEngine?: { cm?: { backend?: { constructor: { name: string } } } } }).__artonEngine
-        ?.cm?.backend?.constructor?.name,
-  );
-  expect(name).toBe("WebGL2Backend");
+  // ⚠️ 클래스 이름(constructor.name)으로 보면 프로덕션 빌드는 이름을 줄여(«tc») 배포본 검사에서 늘 빨갛다 — 엔진이 내는 값으로 본다
+  const gl = await page.evaluate(() => (window as unknown as { __artonEngine?: { usingWebGL2?: boolean } }).__artonEngine?.usingWebGL2);
+  expect(gl).toBe(true);
 });
