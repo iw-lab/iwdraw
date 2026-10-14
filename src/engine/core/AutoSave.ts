@@ -92,8 +92,10 @@ export class AutoSave {
         tx.onerror = () => reject(tx.error);
       });
       db.close();
+      this.lastOk = true;
     } catch {
       /* 저장 실패(쿼터 초과 등) — 스냅샷을 되살려 다음 flush에서 재시도 */
+      this.lastOk = false;
       if (!this.pending) this.pending = snap;
     } finally {
       this.saving = false;
@@ -102,6 +104,30 @@ export class AutoSave {
         await this.flush(); // 저장 중에 쌓인 최신 상태를 이어서 저장
       }
     }
+  }
+
+  private lastOk = false;
+
+  /**
+   * 지금 상태를 저장하고 «정말 써질 때까지» 기다린다 — 안전 새로고침 직전용.
+   * flush() 는 저장 중이면 예약만 걸고 바로 돌아오므로, 새로고침이 그 사이에 끼면 최근 획이 날아간다.
+   * false = 시간 안에 못 썼다(쿼터·IDB 오류) → 호출부는 새로고침하지 않는다.
+   */
+  async saveAndWait(snapshot: () => SavedState | Promise<SavedState>, timeoutMs = 8000): Promise<boolean> {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.pending = snapshot;
+    this.pendingSince = 0;
+    this.lastOk = false;
+    const until = Date.now() + timeoutMs;
+    while (Date.now() < until) {
+      if (!this.saving && !this.pending && !this.queued) return this.lastOk;
+      if (!this.saving) await this.flush();
+      else await new Promise((r) => setTimeout(r, 50));
+    }
+    return false;
   }
 
   async restore(): Promise<SavedState | null> {

@@ -21,6 +21,14 @@ import { ArtonLogo } from "@/components/arton-logo";
 import { Icon } from "./icons";
 import { hasBackend } from "@/lib/backend";
 import { takeEntryHint, takeSaveHint } from "@/lib/class-hint";
+import {
+  SOFT_REFRESH_KEY,
+  shouldSoftRefresh,
+  softRefreshInterval,
+  takeMarker,
+  writeMarker,
+  type SoftRefreshMarker,
+} from "@/lib/soft-refresh";
 
 /* 성능 눈금은 ?perf=1 일 때만 내려받는다 — 평상시엔 번들 평가 비용도 0(교차검증 지적) */
 const PerfHud = dynamic(() => import("./PerfHud").then((m) => m.PerfHud), { ssr: false });
@@ -505,6 +513,139 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
     };
   }, [moreOpen]);
 
+  /* ── 안전 새로고침(웨일북 장시간 렉 안전장치 · 근거 = lib/soft-refresh.ts) ──
+   * 탭을 연 지 15분 + 아이가 손을 뗀 틈에 저장 완료를 확인하고 새로 불러온 뒤, 그림·붓·색·굵기를 되살린다. */
+  const [softRefreshing, setSoftRefreshing] = useState(false);
+  const softRestoreRef = useRef<SoftRefreshMarker | null>(null);
+  useEffect(() => {
+    softRestoreRef.current = takeMarker(window.location.href);
+  }, []);
+  // 새로고침 직후: 저장본이 확인되면([이어 그리기] 배너가 뜰 자리) 묻지 않고 그대로 되살린다
+  useEffect(() => {
+    const soft = softRestoreRef.current;
+    if (!restoreAt || !soft) return;
+    softRestoreRef.current = null;
+    draftIdRef.current = soft.draftId; // 같은 작품 — 갤러리에 보내면 그 행을 덮어쓴다
+    // ⚠️ dismissRestore() 금지 — 배너를 접으면서 저장본을 지운다(purge). 복원보다 먼저 지워져 빈 캔버스가 됐다(시험 실측)
+    useEditor.setState({ restoreAvailable: null });
+    const eng = engineRef.current;
+    const back = () => useEditor.setState({ restoreAvailable: restoreAt }); // 복원 실패 — 배너를 되살려 아이가 다시 고르게
+    if (!eng) return back();
+    void eng.restore().then((ok) => {
+      if (!ok) return back();
+      const st = useEditor.getState();
+      st.setBrush(soft.ui.brush);
+      st.setColor(soft.ui.color);
+      st.setSize(soft.ui.size);
+      st.setOpacity(soft.ui.opacity);
+      st.setWater(soft.ui.water);
+      st.setStabilize(soft.ui.stabilize);
+      st.setSymmetry(soft.ui.symmetry);
+    }, back);
+  }, [restoreAt]);
+  useEffect(() => {
+    const interval = softRefreshInterval(window.location.search);
+    let lastInput = performance.now();
+    const downIds = new Set<number>(); // 두 손가락 — 한 손가락만 떼도 «안 누름»이 되지 않게 포인터마다
+    let running = false;
+    let cancelled = false; // 저장 중 다른 화면으로 갔으면 표식·새로고침을 하지 않는다
+    let retryAt = 0;
+    const onDown = (e: PointerEvent) => {
+      downIds.add(e.pointerId);
+      lastInput = performance.now();
+    };
+    const onUp = (e: PointerEvent) => {
+      downIds.delete(e.pointerId);
+      lastInput = performance.now();
+    };
+    const onMove = () => {
+      lastInput = performance.now();
+    };
+    // 창 밖에서 손을 떼 pointerup 을 못 받으면 «누름»이 영영 남아 새로고침이 멈춘다 — 창을 떠나면 비운다
+    const onBlur = () => downIds.clear();
+    const onKey = (e: KeyboardEvent) => {
+      if (running) {
+        // 저장 스냅샷을 뜬 뒤의 되돌리기·단축키는 새로고침에 실리지 않는다 — 덮개가 떠 있는 동안 막는다
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      lastInput = performance.now();
+    };
+    window.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("pointerup", onUp, true);
+    window.addEventListener("pointercancel", onUp, true);
+    window.addEventListener("pointermove", onMove, { capture: true, passive: true });
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("blur", onBlur);
+    const timer = setInterval(async () => {
+      const eng = engineRef.current;
+      const now = performance.now(); // 탭을 연 뒤 경과(SPA 이동으로는 안 줄어든다 = 쌓인 시간)
+      if (running || !eng || now < retryAt) return;
+      const st = useEditor.getState();
+      // [이어 그리기] 배너가 떠 있으면 금지 — 지금 저장하면 아이가 고르기 전에 이전 그림의 저장본을 덮어쓴다
+      const modal =
+        st.stampPaletteOpen || st.textPaletteOpen || !!st.pending || st.restoreAvailable !== null ||
+        !!document.querySelector('[role="dialog"], [aria-modal="true"], dialog[open]');
+      if (
+        !shouldSoftRefresh({
+          sinceLoadMs: now,
+          idleMs: now - lastInput,
+          pointerDown: downIds.size > 0,
+          visible: document.visibilityState === "visible",
+          busy: eng.busy || modal,
+          intervalMs: interval,
+        })
+      )
+        return;
+      running = true;
+      setSoftRefreshing(true); // 덮개가 입력을 막는다 — 저장 중에 새 획이 끼지 않게
+      const href = window.location.href;
+      let reloading = false;
+      try {
+        const saved = await eng.saveNow();
+        // 저장하는 사이 다른 화면으로 갔으면(뒤로 가기 등) 그 화면을 새로고침하지 않는다
+        if (cancelled || window.location.href !== href) return;
+        const marked =
+          saved &&
+          writeMarker({
+            at: Date.now(),
+            href,
+            draftId: draftIdRef.current,
+            ui: { brush: st.brush, color: st.color, size: st.size, opacity: st.opacity, water: st.water, stabilize: st.stabilize, symmetry: st.symmetry },
+          });
+        if (marked) {
+          reloading = true;
+          window.location.reload();
+        }
+      } catch {
+        /* 아래 finally 가 덮개를 걷는다 — 예외로 덮개가 남으면 아이가 아무것도 못 한다 */
+      } finally {
+        if (!reloading) {
+          // 저장 실패·취소 — 새로고침하면 그림을 잃는다. 표식을 지우고 2분 뒤에 다시 본다
+          try {
+            sessionStorage.removeItem(SOFT_REFRESH_KEY);
+          } catch {
+            /* noop */
+          }
+          if (!cancelled) setSoftRefreshing(false);
+          running = false;
+          retryAt = performance.now() + 120_000;
+        }
+      }
+    }, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("pointerup", onUp, true);
+      window.removeEventListener("pointercancel", onUp, true);
+      window.removeEventListener("pointermove", onMove, true);
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
   // shrink-0: 헤더가 좁아지면 flex가 버튼을 눌러 라벨이 접힌다(웨일북에서 버튼이 세로로 길쭉)
   const iconBtn =
     "pressable touch-target flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-control bg-transparent px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-surface-2";
@@ -865,6 +1006,13 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
           순간 청크는 이미 받는다. 스토어 상태로 감싸 "열 때 받도록" 한다. */}
       {stampPaletteOpen && <StampPalette />}
       {textPaletteOpen && <TextPalette />}
+      {softRefreshing && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-ink/10" role="status" aria-live="polite">
+          <p className="rounded-panel bg-paper px-5 py-3 font-display text-lg text-ink shadow-lift">
+            그림을 저장하고 새로 불러오는 중이에요…
+          </p>
+        </div>
+      )}
     </div>
   );
 }
