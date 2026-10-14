@@ -42,6 +42,8 @@ export type IconName =
   | "layers"
   | "movie"
   | "rotate"
+  | "fullscreen"
+  | "fullscreenExit"
   | "junior"
   | "eye"
   | "eyeOff"
@@ -345,6 +347,16 @@ const ICONS: Record<IconName, ReactNode> = {
     <g {...O}>
       <rect x="3.5" y="7" width="25" height="18" rx="4" fill={INK} />
       <path d="M13.5 12.2v7.6c0 .8.9 1.3 1.6.9l6.2-3.8c.7-.4.7-1.4 0-1.8l-6.2-3.8c-.7-.4-1.6.1-1.6.9z" fill="#FFC84A" stroke="none" />
+    </g>
+  ),
+  fullscreen: (
+    <g fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 12V6h6M20 6h6v6M26 20v6h-6M12 26H6v-6" />
+    </g>
+  ),
+  fullscreenExit: (
+    <g fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 6v6H6M26 12h-6V6M20 26v-6h6M6 20h6v6" />
     </g>
   ),
   rotate: (

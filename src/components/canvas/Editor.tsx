@@ -493,6 +493,33 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
   };
 
   const [moreOpen, setMoreOpen] = useState(false);
+  // 전체화면 — 폰 브라우저 주소창·아래 막대가 그림판을 1/3 가까이 먹는다(2026-10-14 사용자 폰 제보).
+  // 아이폰 사파리처럼 전체화면 API 가 없는 곳에선 단추를 숨긴다(눌러도 아무 일 없는 죽은 단추 금지).
+  const [fsAvail, setFsAvail] = useState(false);
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const d = document as Document & { webkitFullscreenEnabled?: boolean; webkitFullscreenElement?: Element | null };
+    setFsAvail(!!(d.fullscreenEnabled || d.webkitFullscreenEnabled));
+    const sync = () => setIsFs(!!(d.fullscreenElement || d.webkitFullscreenElement));
+    sync();
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync);
+    };
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    const d = document as Document & { webkitExitFullscreen?: () => void; webkitFullscreenElement?: Element | null };
+    const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+    if (d.fullscreenElement || d.webkitFullscreenElement) {
+      (d.exitFullscreen ? d.exitFullscreen() : Promise.resolve(d.webkitExitFullscreen?.())).catch(() => {});
+    } else if (el.requestFullscreen) {
+      el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+    } else {
+      el.webkitRequestFullscreen?.();
+    }
+  }, []);
   useEffect(() => {
     if (!moreOpen) return;
     const closeOutside = (event: PointerEvent) => {
@@ -716,6 +743,18 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
           <ModeTabs hasLineart={!!lineartSrc} />
         </div>
 
+        {fsAvail && (
+          <button
+            onClick={toggleFullscreen}
+            className="editor-fs pressable touch-target grid place-items-center rounded-control bg-transparent px-2 hover:bg-surface-2"
+            aria-label={isFs ? "전체화면 끝내기" : "전체화면"}
+            aria-pressed={isFs}
+            title={isFs ? "전체화면 끝내기" : "전체화면으로 크게 그리기"}
+            data-testid="fullscreen-toggle"
+          >
+            <Icon name={isFs ? "fullscreenExit" : "fullscreen"} className="h-5 w-5" />
+          </button>
+        )}
         <div className="editor-more" data-open={moreOpen}>
           <button
             type="button"
