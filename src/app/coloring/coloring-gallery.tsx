@@ -279,6 +279,18 @@ export function ColoringGallery() {
             </div>
           </>
         )}
+
+        <div className="mt-8 flex justify-center">
+          <a
+            href="https://ssamzip.com"
+            target="_blank"
+            rel="noopener"
+            data-gb="site-link"
+            className="touch-target inline-flex min-h-11 items-center justify-center rounded-full bg-paper px-4 text-xs font-semibold text-ink-faint shadow-soft"
+          >
+            선행쌤 · 선생님이 만든 다른 수업 놀이 보기
+          </a>
+        </div>
       </div>
 
     </main>
