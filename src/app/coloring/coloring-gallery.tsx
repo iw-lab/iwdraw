@@ -136,6 +136,23 @@ export function ColoringGallery() {
           끌어다 놓거나 붙여넣기(Ctrl+V)하면 도안으로 만들어 그릴 수도 있어요.
         </p>
 
+        <a
+          href="https://ssamzip.com"
+          target="_blank"
+          rel="noopener"
+          data-gb="site-link"
+          className="gb-site mt-4"
+        >
+          <span className="gb-site-ic">
+            <svg className="gb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg>
+          </span>
+          <span className="gb-site-tx"><b>선행쌤</b><small>선생님이 만든 수업 놀이 더 보기</small></span>
+          <span className="gb-site-go">
+            가 보기
+            <svg className="gb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+          </span>
+        </a>
+
         {/* 카테고리 필터 */}
         <div className="mt-5 flex flex-wrap gap-2">
           <FilterChip active={cat === "all"} onClick={() => setCat("all")}>
@@ -280,17 +297,6 @@ export function ColoringGallery() {
           </>
         )}
 
-        <div className="mt-8 flex justify-center">
-          <a
-            href="https://ssamzip.com"
-            target="_blank"
-            rel="noopener"
-            data-gb="site-link"
-            className="touch-target inline-flex min-h-11 items-center justify-center rounded-full bg-paper px-4 text-xs font-semibold text-ink-faint shadow-soft"
-          >
-            선행쌤 · 선생님이 만든 다른 수업 놀이 보기
-          </a>
-        </div>
       </div>
 
     </main>
