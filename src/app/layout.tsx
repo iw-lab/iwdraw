@@ -194,6 +194,8 @@ try{l.addEventListener("load",f,{once:true});if(l.sheet)f()}catch(e){l.media="al
       <body className={`${jua.variable} antialiased`}>
         <BootWatchdogClear />
         {children}
+        {/* 오늘·누적 이용자 수 — 선행쌤 공용 카운터(ssam-count). 개인정보 0: 기기 무작위 id 해시만 */}
+        <script src="/ssam-count.js" data-app="arton" data-place="host" defer />
       </body>
     </html>
   );

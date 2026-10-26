@@ -136,6 +136,8 @@ export function ColoringGallery() {
           끌어다 놓거나 붙여넣기(Ctrl+V)하면 도안으로 만들어 그릴 수도 있어요.
         </p>
 
+        {/* 오늘·누적 이용자 수(선행쌤 공용 카운터 ssam-count · public/ssam-count.js 가 채운다) */}
+        <div data-ssam-count className="min-h-[22px] mt-4" />
         <a
           href="https://ssamzip.com"
           target="_blank"
