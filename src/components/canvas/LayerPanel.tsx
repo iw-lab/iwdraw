@@ -197,33 +197,77 @@ export function LayerPanel() {
   );
 }
 
-/* 도안 선 진하기 — 자동 선따기·색칠 도안의 선을 연하게/진하게(도안 레이어 불투명도).
+/* 도안 선 진하기·굵기 — 자동 선따기·색칠 도안의 선을 연하게/진하게, 가늘게(원래)/굵게.
  * 도안 레이어는 잠금이라 레이어 목록엔 슬라이더가 없다 — 그래서 패널 맨 위에 따로 둔다(2026-10-27 사용자
- * «선따기 선의 선명도를 사용자가 조절»). 채우기(통) 경계는 도안 픽셀 자체로 잡아 진하기와 무관하다. */
+ * «선따기 선의 선명도를 사용자가 조절» · «선 굵기도 · 더 진하게»).
+ * 진하기 15~100% = 도안 레이어 불투명도, 100~200% = 선 진하기 감마 1~3(회색 테두리·연한 선이 검정 쪽으로).
+ * 굵기 0~3 = 원래·조금 굵게·굵게·아주 굵게. 원본 도안은 그대로라 채우기(통) 경계와 무관하다. */
+const WEIGHT_LABEL = ["원래", "조금 굵게", "굵게", "아주 굵게"];
 export function LineStrength() {
   const lineart = useEditor((s) => s.layers.find((l) => l.isLineart));
   const setOpacity = useEditor((s) => s.setLayerOpacity);
+  const setLineStyle = useEditor((s) => s.setLineStyle);
+  const [draft, setDraft] = useState<{ weight: number; dark: number } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   if (!lineart) return null;
-  const v = Math.round(lineart.opacity * 100);
+  const weight = draft?.weight ?? lineart.lineWeight ?? 0;
+  const dark = draft?.dark ?? lineart.lineDark ?? 1;
+  const strength = lineart.opacity < 1 ? Math.round(lineart.opacity * 100) : Math.round(100 + ((dark - 1) / 2) * 100);
+  // 굵기·진하기 사본 만들기는 큰 도안에서 수십~수백 ms — 끄는 동안은 숫자만, 손을 멈추면 한 번 다시 그린다
+  const style = (w: number, d: number) => {
+    setDraft({ weight: w, dark: d });
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setLineStyle(w, d);
+      setDraft(null);
+    }, 120);
+  };
   return (
     <div className="rounded-card border border-line bg-paper p-3" data-testid="line-strength">
       <div className="flex items-center justify-between text-sm font-semibold text-ink">
         <span>도안 선 진하기</span>
-        <span className="tabular-nums text-ink-soft">{v}%</span>
+        <span className="tabular-nums text-ink-soft">{strength}%</span>
       </div>
       <div className="mt-2 flex items-center gap-2 text-xs text-ink-faint">
         <span>연하게</span>
         <input
           type="range"
           min={15}
-          max={100}
+          max={200}
           step={5}
-          value={v}
-          onChange={(e) => setOpacity(lineart.id, +e.target.value / 100)}
+          value={strength}
+          onChange={(e) => {
+            const v = +e.target.value;
+            if (v <= 100) {
+              setOpacity(lineart.id, v / 100);
+              if (dark > 1) style(weight, 1);
+            } else {
+              if (lineart.opacity < 1) setOpacity(lineart.id, 1);
+              style(weight, 1 + ((v - 100) / 100) * 2);
+            }
+          }}
           aria-label="도안 선 진하기"
           className="h-3 flex-1 cursor-pointer appearance-none rounded-full bg-cream-deep accent-sky"
         />
         <span>진하게</span>
+      </div>
+      <div className="mt-3 flex items-center justify-between text-sm font-semibold text-ink">
+        <span>도안 선 굵기</span>
+        <span className="text-ink-soft">{WEIGHT_LABEL[weight]}</span>
+      </div>
+      <div className="mt-2 flex items-center gap-2 text-xs text-ink-faint">
+        <span>원래</span>
+        <input
+          type="range"
+          min={0}
+          max={3}
+          step={1}
+          value={weight}
+          onChange={(e) => style(+e.target.value, dark)}
+          aria-label="도안 선 굵기"
+          className="h-3 flex-1 cursor-pointer appearance-none rounded-full bg-cream-deep accent-sky"
+        />
+        <span>굵게</span>
       </div>
     </div>
   );

@@ -20,6 +20,8 @@ export interface SavedState {
     blend: string;
     isLineart?: boolean;
     isBase?: boolean;
+    lineWeight?: number;
+    lineDark?: number;
     png: Blob;
   }[];
   /** 무비 모드용 스트로크 로그 JSON */

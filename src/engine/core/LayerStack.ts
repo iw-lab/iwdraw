@@ -11,6 +11,8 @@ export const MAX_LAYERS = 8;
 export interface Layer extends LayerInfo {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
+  /** 화면·내보내기용 사본(도안 선 굵기·진하기) — 있으면 canvas 대신 합성한다 */
+  view?: HTMLCanvasElement | null;
 }
 
 export class LayerStack {
@@ -48,7 +50,7 @@ export class LayerStack {
   }
 
   get info(): LayerInfo[] {
-    return this.layers.map(({ id, name, visible, opacity, blend, isLineart, isBase }) => ({
+    return this.layers.map(({ id, name, visible, opacity, blend, isLineart, isBase, lineWeight, lineDark }) => ({
       id,
       name,
       visible,
@@ -56,6 +58,7 @@ export class LayerStack {
       blend,
       isLineart,
       isBase,
+      ...(isLineart ? { lineWeight: lineWeight ?? 0, lineDark: lineDark ?? 1 } : {}),
     }));
   }
 
@@ -209,7 +212,7 @@ export class LayerStack {
       target.globalAlpha = l.opacity;
       target.globalCompositeOperation = blendToComposite(l.blend);
       if (liveStroke && l.id === this.activeId) liveStroke(target, l);
-      else target.drawImage(l.canvas, 0, 0);
+      else target.drawImage(l.view ?? l.canvas, 0, 0);
       target.restore();
     }
   }

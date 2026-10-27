@@ -17,6 +17,7 @@ import {
 } from "./types";
 import { CanvasManager } from "./core/CanvasManager";
 import { LayerStack } from "./core/LayerStack";
+import { styleLineart, LINE_WEIGHT_MAX, LINE_DARK_MAX } from "./core/lineStyle";
 import { History } from "./core/History";
 import { StrokeRecorder } from "./core/StrokeRecorder";
 import { AutoSave, type SavedState } from "./core/AutoSave";
@@ -1740,6 +1741,33 @@ export class ArtEngine {
     this.emitLayers(); // 스토어 미러 갱신 — 컨트롤드 슬라이더가 따라오도록
     this.requestComposite();
   }
+  /** 도안 선 굵기(0~3)·진하기(감마 1~3) — 원본 도안은 그대로, 화면·내보내기 사본만 다시 만든다 */
+  setLineStyle(weight: number, dark: number): void {
+    const la = this.layers.lineart;
+    if (!la) return;
+    la.lineWeight = Math.max(0, Math.min(LINE_WEIGHT_MAX, Math.round(weight)));
+    la.lineDark = Math.max(1, Math.min(LINE_DARK_MAX, dark));
+    this.restyleLineart();
+    this.emitLayers();
+    this.requestComposite();
+    this.scheduleAutoSave();
+  }
+  private restyleLineart(): void {
+    const la = this.layers.lineart;
+    if (!la) return;
+    const wgt = la.lineWeight ?? 0, dk = la.lineDark ?? 1;
+    if (wgt === 0 && dk <= 1.001) {
+      la.view = null;
+      return;
+    }
+    if (!la.view || la.view.width !== this.width || la.view.height !== this.height) {
+      la.view = document.createElement("canvas");
+      la.view.width = this.width;
+      la.view.height = this.height;
+    }
+    const out = styleLineart(la.ctx.getImageData(0, 0, this.width, this.height), wgt, dk);
+    la.view.getContext("2d")!.putImageData(out, 0, 0);
+  }
   setLayerBlend(id: string, b: LayerInfo["blend"]): void {
     this.layers.setBlend(id, b);
     this.emitLayers();
@@ -1757,6 +1785,7 @@ export class ArtEngine {
     const dw = img.width * scale;
     const dh = img.height * scale;
     la.ctx.drawImage(img, (this.width - dw) / 2, (this.height - dh) / 2, dw, dh);
+    this.restyleLineart(); // 새 도안에도 고른 굵기·진하기 그대로
     this.emitLayers();
     this.requestComposite();
   }
@@ -2141,6 +2170,7 @@ export class ArtEngine {
         blend: l.blend,
         isLineart: l.isLineart,
         isBase: l.isBase,
+        ...(l.isLineart ? { lineWeight: l.lineWeight ?? 0, lineDark: l.lineDark ?? 1 } : {}),
         png: pngs[i],
       })),
       recorder: this.recorder.serialize(),
@@ -2196,6 +2226,11 @@ export class ArtEngine {
       this.layers.setVisible(layer.id, saved.visible);
       this.layers.setOpacity(layer.id, saved.opacity);
       this.layers.setBlend(layer.id, saved.blend as LayerInfo["blend"]);
+      if (layer.isLineart) {
+        layer.lineWeight = saved.lineWeight ?? 0;
+        layer.lineDark = saved.lineDark ?? 1;
+        this.restyleLineart();
+      }
     }
     // 복원 = 상태 통째 교체 — 복원 전 세션의 undo 커맨드가 남으면 undo 시 옛 타일이
     // 복원된 그림 위에 블릿돼 픽셀이 오염되고, 무비 언두 커서와도 어긋난다

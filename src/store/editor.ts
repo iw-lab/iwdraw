@@ -107,6 +107,8 @@ export interface EditorState {
   setActiveLayer: (id: string) => void;
   setLayerVisible: (id: string, v: boolean) => void;
   setLayerOpacity: (id: string, o: number) => void;
+  /** 도안 선 굵기(0~3)·진하기(감마 1~3) */
+  setLineStyle: (weight: number, dark: number) => void;
   setLayerBlend: (id: string, b: BlendMode) => void;
   dismissRestore: () => void;
   resetView: () => void;
@@ -373,6 +375,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   setActiveLayer: (id) => get().engine?.setActiveLayer(id),
   setLayerVisible: (id, v) => get().engine?.setLayerVisible(id, v),
   setLayerOpacity: (id, o) => get().engine?.setLayerOpacity(id, o),
+  setLineStyle: (weight, dark) => get().engine?.setLineStyle(weight, dark),
   setLayerBlend: (id, b) => get().engine?.setLayerBlend(id, b),
   dismissRestore: () => {
     void get().engine?.discardRestore();
