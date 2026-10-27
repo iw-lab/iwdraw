@@ -107,7 +107,7 @@ export interface EditorState {
   setActiveLayer: (id: string) => void;
   setLayerVisible: (id: string, v: boolean) => void;
   setLayerOpacity: (id: string, o: number) => void;
-  /** 도안 선 굵기(0~3)·진하기(감마 1~3) */
+  /** 도안 선 굵기(0~3)·진하기(감마 1~8) */
   setLineStyle: (weight: number, dark: number) => void;
   setLayerBlend: (id: string, b: BlendMode) => void;
   dismissRestore: () => void;

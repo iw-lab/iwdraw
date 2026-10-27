@@ -1741,7 +1741,7 @@ export class ArtEngine {
     this.emitLayers(); // 스토어 미러 갱신 — 컨트롤드 슬라이더가 따라오도록
     this.requestComposite();
   }
-  /** 도안 선 굵기(0~3)·진하기(감마 1~3) — 원본 도안은 그대로, 화면·내보내기 사본만 다시 만든다 */
+  /** 도안 선 굵기(0~3)·진하기(감마 1~8) — 원본 도안은 그대로, 화면·내보내기 사본만 다시 만든다 */
   setLineStyle(weight: number, dark: number): void {
     const la = this.layers.lineart;
     if (!la) return;

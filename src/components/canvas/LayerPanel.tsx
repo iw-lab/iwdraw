@@ -200,7 +200,7 @@ export function LayerPanel() {
 /* 도안 선 진하기·굵기 — 자동 선따기·색칠 도안의 선을 연하게/진하게, 가늘게(원래)/굵게.
  * 도안 레이어는 잠금이라 레이어 목록엔 슬라이더가 없다 — 그래서 패널 맨 위에 따로 둔다(2026-10-27 사용자
  * «선따기 선의 선명도를 사용자가 조절» · «선 굵기도 · 더 진하게»).
- * 진하기 15~100% = 도안 레이어 불투명도, 100~200% = 선 진하기 감마 1~3(회색 테두리·연한 선이 검정 쪽으로).
+ * 진하기 15~100% = 도안 레이어 불투명도, 100~300% = 선 진하기 감마 1~8(회색 테두리·연한 선이 검정 쪽으로 — 200%·감마 3 으론 «더 진하게» 부족 2026-10-27).
  * 굵기 0~3 = 원래·조금 굵게·굵게·아주 굵게. 원본 도안은 그대로라 채우기(통) 경계와 무관하다. */
 const WEIGHT_LABEL = ["원래", "조금 굵게", "굵게", "아주 굵게"];
 export function LineStrength() {
@@ -212,7 +212,7 @@ export function LineStrength() {
   if (!lineart) return null;
   const weight = draft?.weight ?? lineart.lineWeight ?? 0;
   const dark = draft?.dark ?? lineart.lineDark ?? 1;
-  const strength = lineart.opacity < 1 ? Math.round(lineart.opacity * 100) : Math.round(100 + ((dark - 1) / 2) * 100);
+  const strength = lineart.opacity < 1 ? Math.round(lineart.opacity * 100) : Math.round(100 + ((dark - 1) / 7) * 200);
   // 굵기·진하기 사본 만들기는 큰 도안에서 수십~수백 ms — 끄는 동안은 숫자만, 손을 멈추면 한 번 다시 그린다
   const style = (w: number, d: number) => {
     setDraft({ weight: w, dark: d });
@@ -233,7 +233,7 @@ export function LineStrength() {
         <input
           type="range"
           min={15}
-          max={200}
+          max={300}
           step={5}
           value={strength}
           onChange={(e) => {
@@ -243,7 +243,7 @@ export function LineStrength() {
               if (dark > 1) style(weight, 1);
             } else {
               if (lineart.opacity < 1) setOpacity(lineart.id, 1);
-              style(weight, 1 + ((v - 100) / 100) * 2);
+              style(weight, 1 + ((v - 100) / 200) * 7);
             }
           }}
           aria-label="도안 선 진하기"

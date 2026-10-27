@@ -3,11 +3,11 @@
  * 도안 레이어 원본은 그대로 두고(채우기 경계·저장 원본) 화면·내보내기용 사본만 만든다.
  *  - 굵기 weight 0~3: 잉크(어두움×알파)가 가장 진한 이웃 픽셀을 옮겨 오는 팽창을 weight 번
  *    (십자·네모 번갈아 = 팔각형 붓끝 — 네모만 쓰면 대각선만 굵어진다). 한 번에 양옆 1px 씩.
- *  - 진하기 dark 1~3: 밝기·알파에 감마 — 흰 바탕은 그대로, 회색 안티앨리어싱과 연한 선이 검정 쪽으로.
+ *  - 진하기 dark 1~8: 밝기·알파에 감마 — 흰 바탕은 그대로, 회색 안티앨리어싱과 연한 선이 검정 쪽으로.
  * 흰 바탕 도안(템플릿)·투명 바탕 도안 둘 다 같은 식으로 된다.
  */
 export const LINE_WEIGHT_MAX = 3;
-export const LINE_DARK_MAX = 3;
+export const LINE_DARK_MAX = 8; // 300% — 연한 회색 선(밝기 70%)도 거의 검정까지(2026-10-27 «더 진하게»)
 
 export function styleLineart(src: ImageData, weight: number, dark: number): ImageData {
   const { width: w, height: h } = src;

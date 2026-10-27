@@ -45,7 +45,7 @@ const inkCount = (page: import("@playwright/test").Page) =>
     return n;
   });
 
-test("도안 선 굵기·200% 진하기로 선이 굵고 진해지고, 다시 들어와도 남는다", async ({ page }) => {
+test("도안 선 굵기·200·300% 진하기로 선이 굵고 진해지고, 다시 들어와도 남는다", async ({ page }) => {
   const url = `/draw?template=${encodeURIComponent("/templates/animals/animals_high_01.webp")}&mode=coloring&backend=gl`;
   await page.goto(url);
   await page.getByLabel("그림 캔버스").waitFor();
@@ -62,6 +62,10 @@ test("도안 선 굵기·200% 진하기로 선이 굵고 진해지고, 다시 �
   await page.waitForTimeout(900);
   const dark = await inkCount(page);
   expect(dark).toBeGreaterThan(thick * 1.03);
+  await page.getByLabel("도안 선 진하기").fill("300");
+  await page.waitForTimeout(900);
+  expect(await inkCount(page)).toBeGreaterThan(dark * 1.01);
+  await expect(page.getByText("300%")).toBeVisible();
   await expect(page.getByText("아주 굵게")).toBeVisible();
   // 자동 저장(디바운스 5초) 뒤 새로고침하면 굵기·진하기 그대로 되살아난다
   await page.waitForTimeout(7000);

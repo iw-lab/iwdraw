@@ -50,4 +50,12 @@ describe("styleLineart", async () => {
     expect(out.data[8]).toBeLessThan(255 - 128 - 40);
     expect(out.data[12]).toBeLessThan(255 - 200);
   });
+
+  it("최대 진하기(300% = 감마 8) = 연한 회색 선(밝기 69%)도 거의 검정", async () => {
+    const { LINE_DARK_MAX } = await import("@/engine/core/lineStyle");
+    expect(LINE_DARK_MAX).toBeGreaterThanOrEqual(8);
+    const out = styleLineart(img(2, 1, (x) => [0, 80][x]), 0, LINE_DARK_MAX);
+    expect(out.data[0]).toBe(255);
+    expect(out.data[4]).toBeLessThan(25);
+  });
 });

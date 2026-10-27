@@ -109,7 +109,7 @@ export interface LayerInfo {
   isLineart: boolean;
   /** 그대로 이어 그리기 원본 레이어 — 잠금(그리기·지우기 불가), 항상 최하단 */
   isBase: boolean;
-  /** 도안 레이어만 — 선 굵기(0~3)·진하기 감마(1~3). 원본은 그대로, 화면·내보내기 사본에만 */
+  /** 도안 레이어만 — 선 굵기(0~3)·진하기 감마(1~8). 원본은 그대로, 화면·내보내기 사본에만 */
   lineWeight?: number;
   lineDark?: number;
 }
