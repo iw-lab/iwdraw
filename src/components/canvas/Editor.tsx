@@ -12,7 +12,7 @@ import { ModeTabs } from "./ModeTabs";
 import { BrushBar } from "./BrushBar";
 import { ColorPalette } from "./ColorPalette";
 import { BrushControls } from "./BrushControls";
-import { LayerPanel } from "./LayerPanel";
+import { LayerPanel, LineStrength } from "./LayerPanel";
 import { ActionRail } from "./ActionRail";
 import { useKeyboard } from "./useKeyboard";
 import { SuggestBar } from "./SuggestBar";
@@ -990,6 +990,7 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
             // 우측 패널은 모든 화면에서 1열 — 2열(xl)은 시선이 갈라져 불편(2026-07-10
             // 사용자 실측). 폰은 세로 스크롤로 굵기 카드가 화면 밖에 밀리지 않게 한다.
             <div className="editor-panels phone-panel-stack flex min-w-0 gap-3 overflow-x-auto overflow-y-auto compact:w-[228px] compact:shrink-0 compact:flex-col compact:overflow-x-hidden rail:w-[264px] rail:shrink-0 rail:flex-col rail:overflow-x-hidden">
+              <LineStrength />
               <ColorPalette />
               <BrushControls />
               <ActionRail />

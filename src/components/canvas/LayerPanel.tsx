@@ -196,3 +196,35 @@ export function LayerPanel() {
     </CollapsibleSection>
   );
 }
+
+/* 도안 선 진하기 — 자동 선따기·색칠 도안의 선을 연하게/진하게(도안 레이어 불투명도).
+ * 도안 레이어는 잠금이라 레이어 목록엔 슬라이더가 없다 — 그래서 패널 맨 위에 따로 둔다(2026-10-27 사용자
+ * «선따기 선의 선명도를 사용자가 조절»). 채우기(통) 경계는 도안 픽셀 자체로 잡아 진하기와 무관하다. */
+export function LineStrength() {
+  const lineart = useEditor((s) => s.layers.find((l) => l.isLineart));
+  const setOpacity = useEditor((s) => s.setLayerOpacity);
+  if (!lineart) return null;
+  const v = Math.round(lineart.opacity * 100);
+  return (
+    <div className="rounded-card border border-line bg-paper p-3" data-testid="line-strength">
+      <div className="flex items-center justify-between text-sm font-semibold text-ink">
+        <span>도안 선 진하기</span>
+        <span className="tabular-nums text-ink-soft">{v}%</span>
+      </div>
+      <div className="mt-2 flex items-center gap-2 text-xs text-ink-faint">
+        <span>연하게</span>
+        <input
+          type="range"
+          min={15}
+          max={100}
+          step={5}
+          value={v}
+          onChange={(e) => setOpacity(lineart.id, +e.target.value / 100)}
+          aria-label="도안 선 진하기"
+          className="h-3 flex-1 cursor-pointer appearance-none rounded-full bg-cream-deep accent-sky"
+        />
+        <span>진하게</span>
+      </div>
+    </div>
+  );
+}
