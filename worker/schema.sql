@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS artworks (
   -- 선행쌤 작품 전시관에 건 때(교사가 고른 작품만 · NULL = 전시 안 함). 밖에는 썸네일·좋아요 수만 나간다.
   -- ⚠️ 이미 배포된 DB = worker/migrations/2026-11-03-showcase*.sql(cf:deploy 가 적용)
   showcase_at    INTEGER,
+  -- 전시관 전용 그림(그림 속 이름을 지운 사본 R2 키 · NULL = 썸네일 그대로) · worker/migrations/2026-11-05-showcase-path.sql
+  showcase_path  TEXT,
   created_at     INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
 CREATE INDEX IF NOT EXISTS artworks_class_idx ON artworks(class_id);
@@ -93,6 +95,10 @@ CREATE TABLE IF NOT EXISTS artwork_likes (
   created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
   PRIMARY KEY (artwork_id, voter_key)
 );
+
+-- ── 선행쌤 전시관 공개 하트 하루 상한(IP 해시만 · worker/migrations/2026-11-05-showcase-likes.sql) ──
+CREATE TABLE IF NOT EXISTS showcase_like_caps (day INTEGER NOT NULL, iph TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, iph));
+CREATE INDEX IF NOT EXISTS artworks_showcase_rank_idx ON artworks(like_count DESC, showcase_at DESC) WHERE showcase_at IS NOT NULL;
 
 -- ── 협동 방(unique code + host + 만료) ──
 CREATE TABLE IF NOT EXISTS collab_rooms (

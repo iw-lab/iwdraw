@@ -71,6 +71,20 @@ ok(!after.works.some((w) => w.id === a1), '내리면 목록에서 바로 빠진�
 ok((await fetch(`${BASE}/api/showcase/${a1}`)).status === 404, '내리면 그림도 404');
 
 ok((await T(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true}' })).ok, '다시 걸기');
+// 🔒 2026-11-03 공개 하트(선행쌤 화면) — 선행쌤 출처만 · 같은 기기 하나 · 취소 · 하트 순 목록 · 응답에 이름 0
+{ const SS = 'http://localhost:4177'; const did = 'ab'.repeat(16), did2 = 'cd'.repeat(16);
+  const like = (id, d, on, origin = SS) => fetch(`${BASE}/api/showcase/${id}/like`, { method: 'POST', headers: { ...json, origin }, body: JSON.stringify({ did: d, on }) });
+  ok((await like(a1, did, true, 'https://evil.example')).status === 403, '남의 출처 하트 거절');
+  ok((await like(a2, did, true)).status === 404, '안 건 작품엔 하트 못 줌');
+  const r1 = await (await like(a1, did, true)).json(); const r2 = await (await like(a1, did, true)).json();
+  ok(r1.likes === 1 && r2.likes === 1, `같은 기기 두 번 = 1 (${r1.likes}/${r2.likes})`);
+  const r3 = await (await like(a1, did2, true)).json(); ok(r3.likes === 2, `다른 기기 = 2 (${r3.likes})`);
+  const r4 = await (await like(a1, did, false)).json(); ok(r4.likes === 1, `취소 = 1 (${r4.likes})`);
+  ok(!JSON.stringify(r4).includes(MARK) && Object.keys(r4).sort().join() === 'liked,likes,ok', '하트 응답에 이름·학급 0');
+  const pre = await fetch(`${BASE}/api/showcase/${a1}/like`, { method: 'OPTIONS', headers: { origin: SS, 'access-control-request-method': 'POST' } });
+  ok(pre.status === 204 && pre.headers.get('access-control-allow-origin') === SS, '미리 묻기(CORS) 통과');
+  ok((await like(a1, 'zz', true)).status === 400, '이상한 기기 번호 거절'); }
+
 await fetch(`${BASE}/api/showcase/${a1}`);   // 그림 캐시를 채워 둔다
 ok((await T(`/api/artworks/${a1}`, { method: 'DELETE' })).ok, '전시 중인 작품 삭제');
 ok(!(await (await fetch(BASE + '/api/showcase')).json()).works.some((w) => w.id === a1), '지운 작품은 목록에서 바로 빠진다');

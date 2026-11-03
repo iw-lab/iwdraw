@@ -586,7 +586,7 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
 // 사용자 «좋은 작품들 전시하고 아트온 바로 갈 수도 있게 · 이름은 반드시 지우고».
 // 교사가 고른 작품만(showcase_at) 밖에 보인다 — 제출만으로는 절대 안 나간다(학급 갤러리와 다른 문).
 // 밖으로 나가는 것 = 썸네일 그림 한 장 + 전시한 때 + 좋아요 수. 별명·제목·학급·학교·학생 id·저장 경로 0.
-const SHOWCASE_MAX = 24;
+const SHOWCASE_MAX = 50; // 하트 순 50위까지(2026-11-03 «너무 많아지면 50위까지만»)
 const SHOWCASE_TTL = 60; // 초 — 내리기가 다른 지역까지 닿는 최대 시간
 /** 전시관 캐시 비우기(이 지역) — 걸기는 목록만, 내리기·삭제는 그림까지 */
 async function dropShowcaseCache(reqUrl: string, id?: string | null) {
@@ -624,7 +624,7 @@ app.get("/api/showcase", async (c) => {
   if (hit) return hit;
   const { results } = await c.env.DB.prepare(
     `SELECT id, showcase_at, like_count FROM artworks
-     WHERE showcase_at IS NOT NULL ORDER BY showcase_at DESC LIMIT ?`,
+     WHERE showcase_at IS NOT NULL ORDER BY like_count DESC, showcase_at DESC LIMIT ?`,
   )
     .bind(SHOWCASE_MAX)
     .all<{ id: string; showcase_at: number; like_count: number }>();
@@ -637,6 +637,49 @@ app.get("/api/showcase", async (c) => {
   return res;
 });
 
+// ── 공개 하트(선행쌤 화면에서 바로) — 로그인 없음 · 기기 무작위 번호(did)를 서버 비밀로 해시한 열쇠만 남긴다(사람을 되짚을 수 없다)
+//    같은 기기는 한 작품에 하트 하나(다시 누르면 취소) · IP 해시 하루 SHOWCASE_LIKE_CAP 번 · 선행쌤 출처만
+const SHOWCASE_LIKE_CAP = 60;
+const SHOWCASE_ORIGINS = /^https:\/\/((www\.)?ssamzip\.com|sunhaengssam\.web\.app|madchumbub\.web\.app)$|^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+async function hex16(s: string) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+const likeCors = (origin: string) => ({ "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "content-type", "Access-Control-Max-Age": "86400", Vary: "Origin" });
+app.options("/api/showcase/:id/like", (c) => {
+  const o = c.req.header("origin") || "";
+  if (!SHOWCASE_ORIGINS.test(o)) return c.body(null, 403);
+  return c.body(null, 204, likeCors(o));
+});
+app.post("/api/showcase/:id/like", async (c) => {
+  const o = c.req.header("origin") || "";
+  if (!SHOWCASE_ORIGINS.test(o)) return c.json({ error: "origin" }, 403);
+  const H = likeCors(o);
+  const id = c.req.param("id");
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return c.json({ error: "bad_id" }, 400, H);
+  let body: { did?: unknown; on?: unknown };
+  try { body = await c.req.json(); } catch { return c.json({ error: "bad_request" }, 400, H); }
+  if (typeof body.did !== "string" || !/^[0-9a-f]{32}$/.test(body.did) || typeof body.on !== "boolean") return c.json({ error: "bad_request" }, 400, H);
+  const art = await c.env.DB.prepare("SELECT 1 FROM artworks WHERE id = ? AND showcase_at IS NOT NULL").bind(id).first();
+  if (!art) return c.json({ error: "not_found" }, 404, H);
+  const day = Math.floor((Date.now() + 9 * 3600e3) / 86400000);
+  const iph = await hex16(`${day}|${c.env.SESSION_SECRET}|${c.req.header("cf-connecting-ip") || "0"}`);
+  const cap = await c.env.DB.prepare("SELECT n FROM showcase_like_caps WHERE day = ? AND iph = ?").bind(day, iph).first<{ n: number }>();
+  if ((cap?.n ?? 0) >= SHOWCASE_LIKE_CAP) return c.json({ error: "cap" }, 429, H);
+  const voter = `p:${await hex16(`${c.env.SESSION_SECRET}|did|${body.did}`)}`;
+  const change = body.on
+    ? c.env.DB.prepare("INSERT OR IGNORE INTO artwork_likes (artwork_id, voter_key) VALUES (?, ?)").bind(id, voter)
+    : c.env.DB.prepare("DELETE FROM artwork_likes WHERE artwork_id = ? AND voter_key = ?").bind(id, voter);
+  await c.env.DB.batch([
+    change,
+    c.env.DB.prepare("UPDATE artworks SET like_count = (SELECT COUNT(*) FROM artwork_likes WHERE artwork_id = ?) WHERE id = ?").bind(id, id),
+    c.env.DB.prepare("INSERT INTO showcase_like_caps (day, iph, n) VALUES (?, ?, 1) ON CONFLICT(day, iph) DO UPDATE SET n = n + 1").bind(day, iph),
+    c.env.DB.prepare("DELETE FROM showcase_like_caps WHERE day < ?").bind(day - 1),
+  ]);
+  const row = await c.env.DB.prepare("SELECT like_count FROM artworks WHERE id = ?").bind(id).first<{ like_count: number }>();
+  return c.json({ ok: true, liked: body.on, likes: row?.like_count ?? 0 }, 200, H);
+});
+
 app.get("/api/showcase/:id", async (c) => {
   const id = c.req.param("id");
   if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return c.json({ error: "bad_id" }, 400);
@@ -644,11 +687,11 @@ app.get("/api/showcase/:id", async (c) => {
   const key = new Request(new URL(`/api/showcase/${id}`, c.req.url).toString());
   const hit = await cache.match(key);
   if (hit) return hit;
-  const row = await c.env.DB.prepare("SELECT thumb_path FROM artworks WHERE id = ? AND showcase_at IS NOT NULL")
+  const row = await c.env.DB.prepare("SELECT COALESCE(showcase_path, thumb_path) AS p FROM artworks WHERE id = ? AND showcase_at IS NOT NULL")   /* 이름 지운 사본이 있으면 그것만 */
     .bind(id)
-    .first<{ thumb_path: string }>();
+    .first<{ p: string }>();
   if (!row) return c.json({ error: "not_found" }, 404);
-  const obj = await c.env.BUCKET.get(row.thumb_path);
+  const obj = await c.env.BUCKET.get(row.p);
   if (!obj) return c.json({ error: "not_found" }, 404);
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
