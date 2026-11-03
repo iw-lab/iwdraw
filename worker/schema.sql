@@ -69,12 +69,16 @@ CREATE TABLE IF NOT EXISTS artworks (
   -- 학생이 붙인 그림 제목(선택). 서버가 제어문자 제거 + 30자로 자른다. NULL/빈문자 = 제목 없음.
   -- ⚠️ 이미 배포된 DB엔 `ALTER TABLE artworks ADD COLUMN title TEXT` 1회 필요(cf:deploy는 미실행).
   title          TEXT,
+  -- 선행쌤 작품 전시관에 건 때(교사가 고른 작품만 · NULL = 전시 안 함). 밖에는 썸네일·좋아요 수만 나간다.
+  -- ⚠️ 이미 배포된 DB = worker/migrations/2026-11-03-showcase*.sql(cf:deploy 가 적용)
+  showcase_at    INTEGER,
   created_at     INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
 CREATE INDEX IF NOT EXISTS artworks_class_idx ON artworks(class_id);
 CREATE INDEX IF NOT EXISTS artworks_approved_idx ON artworks(class_id, is_approved);
 -- 만료 정리 cron(WHERE created_at < ?)·삭제 임박 집계 스캔용
 CREATE INDEX IF NOT EXISTS artworks_created_idx ON artworks(created_at);
+CREATE INDEX IF NOT EXISTS artworks_showcase_idx ON artworks(showcase_at) WHERE showcase_at IS NOT NULL;
 -- dedup upsert 조회용 + 동시 요청(더블탭·재시도)에도 행이 둘로 갈라지지 않도록 UNIQUE.
 -- SQLite는 NULL을 서로 다른 값으로 보므로 draft_id가 NULL인 구버전·단발 제출은 제한 없이 쌓인다.
 -- ⚠️ 이미 배포된 DB엔 아래 1회 필요:

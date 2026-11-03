@@ -10,6 +10,7 @@ import {
   deleteArtwork,
   listArtworks,
   listStudents,
+  setShowcase,
   signedUrl,
   type ArtworkRow,
   type ClassRow,
@@ -54,6 +55,20 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
     }
   };
   const [delError, setDelError] = useState(false);
+  // 선행쌤 작품 전시관(2026-11-03) — 교사가 고른 작품만, 그림만(별명·제목 없이) 밖에 보인다
+  const [showing, setShowing] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
+  const toggleShowcase = async (a: ArtworkRow) => {
+    const on = !a.showcase_at;
+    setShowing(a.id);
+    const ok = await setShowcase(a.id, on);
+    setShowing(null);
+    if (ok) setItems((prev) => prev.map((x) => (x.id === a.id ? { ...x, showcase_at: on ? Date.now() : null } : x)));
+    else {
+      setShowError(true);
+      setTimeout(() => setShowError(false), 3500);
+    }
+  };
   const [dlError, setDlError] = useState(false);
   // 학생 별명 명단 — 아이가 별명을 까먹으면 여기서 찾아 알려준다(접이식)
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -149,6 +164,16 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
           작품을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
       )}
+
+      {showError && (
+        <p className="mb-3 rounded-card bg-danger-soft px-4 py-2 text-sm font-semibold text-danger" role="status">
+          전시관에 걸지(내리지) 못했어요. 잠시 후 다시 시도해 주세요.
+        </p>
+      )}
+      <p className="mb-4 rounded-card bg-paper px-4 py-3 text-sm text-ink-soft shadow-soft" data-showcase-note>
+        🏛️ <b className="text-ink">선행쌤 전시관</b> — 고른 작품만 <b>그림만</b> 선행쌤(ssamzip.com) 첫 화면 «친구들의 작품»에
+        보여요. 별명·제목·학교·반은 나가지 않아요. 그림 안에 이름이 써 있지 않은지 보고 걸어 주세요. 언제든 내릴 수 있어요.
+      </p>
 
       {/* 학생 별명 명단 — 별명을 까먹은 아이에게 알려주는 용도(접이식) */}
       {students.length > 0 && (
@@ -290,6 +315,19 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
                   <span className="truncate text-sm font-semibold text-ink">{a.nickname ?? "학생"}</span>
                   <span className="text-xs text-ink-faint">❤ {a.like_count}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => toggleShowcase(a)}
+                  disabled={showing === a.id}
+                  aria-pressed={!!a.showcase_at}
+                  data-showcase={a.showcase_at ? "on" : "off"}
+                  title="선행쌤(ssamzip.com) 작품 전시관에 그림만 보여요 — 별명·제목은 안 나가요"
+                  className={`pressable mt-2 w-full rounded-lg py-1.5 text-sm font-semibold disabled:opacity-60 ${
+                    a.showcase_at ? "bg-sun text-ink" : "bg-cream text-ink-soft hover:bg-sun/60 hover:text-ink"
+                  }`}
+                >
+                  {showing === a.id ? "바꾸는 중…" : a.showcase_at ? "🏛️ 전시 중 · 내리기" : "🏛️ 선행쌤 전시관에 걸기"}
+                </button>
                 <button
                   onClick={() => askDelete(a)}
                   disabled={deleting === a.id}

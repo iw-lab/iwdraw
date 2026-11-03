@@ -28,6 +28,8 @@ export interface ArtworkRow {
   /** 학생이 붙인 제목(없으면 null) — 서버가 항상 내려주므로 옵셔널이 아니다(학생 API와 동일) */
   title: string | null;
   expires_at?: number; // 이 시각 이후 자동 삭제(보관 180일). 30일 이내면 갤러리에 배지
+  /** 선행쌤 작품 전시관에 건 때(없으면 전시 안 함) — 밖에는 그림만, 별명·제목은 안 나간다 */
+  showcase_at?: number | null;
 }
 
 /** 회원 탈퇴 — 비밀번호 재확인 후 계정·개인정보·작품을 영구 파기. 성공 시 세션도 무효화됨. */
@@ -136,6 +138,21 @@ export async function deleteArtwork(id: string): Promise<boolean> {
   if (!hasBackend()) return false;
   try {
     const res = await apiFetch(`/artworks/${id}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** 선행쌤 작품 전시관에 걸기/내리기 — 성공하면 true */
+export async function setShowcase(id: string, on: boolean): Promise<boolean> {
+  if (!hasBackend()) return false;
+  try {
+    const res = await apiFetch(`/artworks/${id}/showcase`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ on }),
+    });
     return res.ok;
   } catch {
     return false;

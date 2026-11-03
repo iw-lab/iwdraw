@@ -492,7 +492,7 @@ app.get("/api/classes/:id/artworks", requireTeacher, async (c) => {
   /* title 컬럼이 없는(마이그레이션 미적용) DB에서도 교사 갤러리는 열려야 한다 — 제목만 빠진다 */
   const listArtworks = (withTitle: boolean) =>
     c.env.DB.prepare(
-      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.is_approved, a.like_count, a.created_at,
+      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.is_approved, a.like_count, a.created_at, a.showcase_at,
               ${withTitle ? "a.title," : "NULL AS title,"} s.nickname
      FROM artworks a JOIN students s ON s.id = a.student_id
      WHERE a.class_id = ? ORDER BY a.created_at DESC`,
@@ -578,7 +578,86 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
     c.env.DB.prepare("DELETE FROM artwork_likes WHERE artwork_id = ?").bind(id),
     c.env.DB.prepare("DELETE FROM artworks WHERE id = ?").bind(id),
   ]);
+  await dropShowcaseCache(c.req.url, id); // 전시 중이던 작품이면 전시관에서도 바로 빠지게
   return c.json({ ok: true });
+});
+
+// ══════════════════════ 선행쌤 작품 전시관(2026-11-03) ══════════════════════
+// 사용자 «좋은 작품들 전시하고 아트온 바로 갈 수도 있게 · 이름은 반드시 지우고».
+// 교사가 고른 작품만(showcase_at) 밖에 보인다 — 제출만으로는 절대 안 나간다(학급 갤러리와 다른 문).
+// 밖으로 나가는 것 = 썸네일 그림 한 장 + 전시한 때 + 좋아요 수. 별명·제목·학급·학교·학생 id·저장 경로 0.
+const SHOWCASE_MAX = 24;
+const SHOWCASE_TTL = 60; // 초 — 내리기가 다른 지역까지 닿는 최대 시간
+/** 전시관 캐시 비우기(이 지역) — 걸기는 목록만, 내리기·삭제는 그림까지 */
+async function dropShowcaseCache(reqUrl: string, id?: string | null) {
+  const base = new URL(reqUrl);
+  const keys = id ? ["/api/showcase", `/api/showcase/${id}`] : ["/api/showcase"];
+  await Promise.all(keys.map((p) => caches.default.delete(new Request(new URL(p, base).toString())))).catch(() => {});
+}
+app.patch("/api/artworks/:id/showcase", requireTeacher, async (c) => {
+  const teacherId = c.get("teacherId");
+  const id = c.req.param("id");
+  let body: { on?: boolean };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "bad_request" }, 400);
+  }
+  if (typeof body.on !== "boolean") return c.json({ error: "bad_request" }, 400);
+  const res = await c.env.DB.prepare(
+    `UPDATE artworks SET showcase_at = ?
+     WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?)`,
+  )
+    .bind(body.on ? Date.now() : null, id, teacherId)
+    .run();
+  if (!res.meta.changes) return c.json({ error: "not_found" }, 404);
+  // 걸거나 내리면 이 지역 캐시를 바로 비운다 — 다른 지역은 SHOWCASE_TTL 안에 저절로
+  await dropShowcaseCache(c.req.url, body.on ? null : id);
+  return c.json({ ok: true, showcase: body.on });
+});
+
+const SHOWCASE_CORS = { "Access-Control-Allow-Origin": "*", "Cross-Origin-Resource-Policy": "cross-origin" };
+app.get("/api/showcase", async (c) => {
+  const cache = caches.default;
+  const key = new Request(new URL("/api/showcase", c.req.url).toString());
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, showcase_at, like_count FROM artworks
+     WHERE showcase_at IS NOT NULL ORDER BY showcase_at DESC LIMIT ?`,
+  )
+    .bind(SHOWCASE_MAX)
+    .all<{ id: string; showcase_at: number; like_count: number }>();
+  const works = (results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count }));
+  // 1분 묶음 — 캐시는 지역(colo)마다 따로라 내린 작품이 다른 지역에선 최대 1분 남는다(목록·그림 같은 길이)
+  const res = new Response(JSON.stringify({ works }), {
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${SHOWCASE_TTL}`, ...SHOWCASE_CORS },
+  });
+  c.executionCtx.waitUntil(cache.put(key, res.clone()));
+  return res;
+});
+
+app.get("/api/showcase/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return c.json({ error: "bad_id" }, 400);
+  const cache = caches.default;
+  const key = new Request(new URL(`/api/showcase/${id}`, c.req.url).toString());
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const row = await c.env.DB.prepare("SELECT thumb_path FROM artworks WHERE id = ? AND showcase_at IS NOT NULL")
+    .bind(id)
+    .first<{ thumb_path: string }>();
+  if (!row) return c.json({ error: "not_found" }, 404);
+  const obj = await c.env.BUCKET.get(row.thumb_path);
+  if (!obj) return c.json({ error: "not_found" }, 404);
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  for (const k of ["Content-Disposition", "Content-Language"]) headers.delete(k); // 올릴 때 붙은 파일 이름 등은 내보내지 않는다
+  headers.set("Cache-Control", `public, max-age=${SHOWCASE_TTL}`);
+  for (const [k, v] of Object.entries(SHOWCASE_CORS)) headers.set(k, v);
+  const res = new Response(obj.body, { headers });
+  c.executionCtx.waitUntil(cache.put(key, res.clone()));
+  return res;
 });
 
 // 작품 이미지 스트리밍(Supabase signed URL 대체). 교사가 해당 학급 소유 시에만.
