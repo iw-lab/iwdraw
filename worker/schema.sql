@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS artworks (
   showcase_path  TEXT,
   -- 선행쌤 화면 신고로 내려간 때(NULL = 신고 없음) · worker/migrations/2026-11-05-showcase-report.sql
   showcase_report INTEGER,
+  -- 전시관 그림 옆 시·도(SIDO 17곳 중 · NULL = 밝히지 않음) · worker/migrations/2026-11-06-showcase-sido.sql
+  showcase_sido  TEXT,
   created_at     INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
 CREATE INDEX IF NOT EXISTS artworks_class_idx ON artworks(class_id);

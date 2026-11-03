@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { coverRects, type Rect } from "@/lib/cover-rects";
 
+/** 그림 옆에 붙는 시·도(학교·반은 절대 안 나간다) — 한 번 고르면 이 기기에서 기억 */
+export const SIDO = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
+const SIDO_KEY = "arton.showcaseSido";
+
 /* 선행쌤 전시관에 걸기 전 확인(2026-11-03 그림 속 실명 «김서하»가 전시관에 그대로 나갔다).
  * 그림을 크게 보여 주고 — 이름·학교·반이 보이면 손가락으로 네모를 그려 가린다 — «없어요(가렸어요)»를 눌러야 걸린다.
  * 가린 그림은 전시관 전용 사본으로만 올라간다(학생 원본·학급 썸네일은 그대로). */
@@ -13,7 +17,7 @@ export function ShowcaseDialog({
 }: {
   src: string;
   onCancel: () => void;
-  onConfirm: (cover: Blob | null) => Promise<void>;
+  onConfirm: (cover: Blob | null, sido: string) => Promise<void>;
 }) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -21,6 +25,7 @@ export function ShowcaseDialog({
   const [drag, setDrag] = useState<Rect | null>(null);
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sido, setSido] = useState(() => { try { const v = localStorage.getItem(SIDO_KEY) || ""; return SIDO.includes(v) ? v : ""; } catch { return ""; } });
   const start = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -54,7 +59,8 @@ export function ShowcaseDialog({
     setBusy(true);
     let blob: Blob | null = null;
     if (rects.length && imgRef.current) blob = await coverRects(imgRef.current, rects);
-    await onConfirm(blob);
+    try { localStorage.setItem(SIDO_KEY, sido); } catch {}
+    await onConfirm(blob, sido);
     setBusy(false);
   };
 
@@ -87,6 +93,14 @@ export function ShowcaseDialog({
             하나 되돌리기
           </button>
         </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-ink">
+          <span className="shrink-0 font-semibold">그림 옆 지역</span>
+          <select value={sido} onChange={(e) => setSido(e.target.value)} data-showcase-sido className="min-h-10 flex-1 rounded-lg border border-line bg-white px-2">
+            <option value="">밝히지 않기</option>
+            {SIDO.map((x) => <option key={x} value={x}>{x}</option>)}
+          </select>
+        </label>
+        <p className="mt-1 text-xs text-ink-faint">시·도만 보여요(예: 전북). 학교·반·이름은 나가지 않아요.</p>
         <label className="mt-3 flex items-start gap-2 rounded-lg bg-cream px-3 py-2 text-sm text-ink">
           <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-0.5 h-5 w-5" data-showcase-check />
           <span>그림 안에 이름·학교·반·얼굴 사진이 <b>없어요</b>(있던 곳은 가렸어요).</span>

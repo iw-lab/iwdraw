@@ -55,7 +55,7 @@ const raw = await list.text();
 const body = JSON.parse(raw);
 ok(list.headers.get('access-control-allow-origin') === '*', '공개 목록 CORS *');
 ok(body.works.some((w) => w.id === a1) && !body.works.some((w) => w.id === a2), '건 작품만 나온다');
-ok(body.works.every((w) => Object.keys(w).sort().join() === 'at,fresh,id,likes,wk'), `나가는 칸 = id·at·likes·wk·fresh 뿐 (${Object.keys(body.works[0] || {}).join(',')})`);
+ok(body.works.every((w) => Object.keys(w).sort().join() === 'at,fresh,id,likes,r,wk'), `나가는 칸 = id·at·likes·wk·fresh·시도 뿐 (${Object.keys(body.works[0] || {}).join(',')})`);
 ok(!raw.includes(MARK) && !raw.includes(cls.id) && !raw.includes(join.studentId), '목록에 별명·제목·학급·학생 id 0');
 const img = await fetch(`${BASE}/api/showcase/${a1}`);
 const bytes = new Uint8Array(await img.arrayBuffer());
@@ -100,7 +100,9 @@ ok((await fetch(`${BASE}/api/showcase/${a1}`)).status === 404, '지운 작품 �
   ok((await T(`/api/artworks/${a3}/showcase-image`, { method: 'PUT', body: cover })).status === 404, '남의 교사는 전시용 사본 못 올림');
   ok((await T2(`/api/artworks/${a3}/showcase-image`, { method: 'PUT', body: new TextEncoder().encode('not image') })).status === 415, '그림 아닌 것 거절');
   ok((await T2(`/api/artworks/${a3}/showcase-image`, { method: 'PUT', body: cover })).ok, '이름 가린 사본 올리기');
-  ok((await T2(`/api/artworks/${a3}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true,"checked":true}' })).ok, '사본으로 걸기');
+  ok((await T2(`/api/artworks/${a3}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true,"checked":true,"sido":"김제중앙초"}' })).status === 400, '시·도 칸에 학교 이름 = 거절');
+  ok((await T2(`/api/artworks/${a3}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true,"checked":true,"sido":"전북"}' })).ok, '사본으로 걸기(시·도 전북)');
+  { const L = await (await fetch(BASE + '/api/showcase')).json(); ok(L.works.find((w) => w.id === a3)?.r === '전북', '목록에 시·도 «전북»'); }
   const served = new Uint8Array(await (await fetch(`${BASE}/api/showcase/${a3}`)).arrayBuffer());
   ok(served.length === cover.length && served.every((b, i) => b === cover[i]), '전시관엔 가린 사본이 나간다(원본 아님)');
   const rep = await (await fetch(`${BASE}/api/showcase/${a3}/report`, { method: 'POST', headers: { origin: 'http://localhost:4177' } })).json();

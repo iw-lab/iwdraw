@@ -28,6 +28,10 @@ try {
     return { cls: cls.id, art: up.id };
   });
   ok(!setup.err && setup.art, `준비(교사·학급·작품) ${setup.err || ''}`);
+  // 안내문(2026-11-03 «선생님 계정에서 안내문 잘 해줘 · 학교 이름은 빼고 도만») — 대시보드에 펼쳐져 있고 «시·도만»·«학교 안 나감»을 말한다
+  await p.goto(`${BASE}/teacher/`, { waitUntil: 'networkidle2' });
+  const guide = await p.waitForSelector('[data-showcase-guide]', { timeout: 15000 }).then((e) => e.evaluate((d) => ({ open: d.open, t: d.textContent }))).catch(() => null);
+  ok(guide && guide.open && /시·도/.test(guide.t) && /학교·반은/.test(guide.t) && /3칸마다/.test(guide.t) && /숨겨 주세요/.test(guide.t), '대시보드 안내문: 펼침 · 시·도만 · 학교 안 나감 · 새 그림 3칸마다 · 신고');
   await p.goto(`${BASE}/teacher/?gallery=${setup.cls}`, { waitUntil: 'networkidle2' });
   await p.waitForSelector('[data-showcase="off"]', { timeout: 20000 });
   await p.click('[data-showcase="off"]');
@@ -39,13 +43,17 @@ try {
   const at = (fx, fy) => [box.x + box.w * fx, box.y + box.h * fy];
   await p.mouse.move(...at(205 / 400, 222 / 300)); await p.mouse.down(); await p.mouse.move(...at(330 / 400, 260 / 300), { steps: 6 }); await p.mouse.move(...at(399 / 400, 288 / 300), { steps: 6 }); await p.mouse.up();
   ok(/가린 곳 1개/.test(await p.$eval('[data-showcase-dialog]', (e) => e.textContent)), '네모 하나 그림');
+  await p.select('[data-showcase-sido]', '전북');
   await p.click('[data-showcase-check]');
   await p.click('[data-showcase-confirm]');
   ok(!!(await p.waitForSelector('[data-showcase="on"]', { timeout: 15000 }).catch(() => null)), '가린 그림으로 걸림');
   const res = await p.evaluate(async (id) => {
     const dark = async (url) => { const r = await fetch(url); if (!r.ok) return { st: r.status }; const bm = await createImageBitmap(await r.blob()); const cv = new OffscreenCanvas(bm.width, bm.height); const g = cv.getContext('2d'); g.drawImage(bm, 0, 0); const d = g.getImageData(0, 0, bm.width, bm.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 200) n++; return { st: r.status, n }; };
-    return { pub: await dark(`/api/showcase/${id}`) };
+    const list = await (await fetch('/api/showcase')).json();
+    return { pub: await dark(`/api/showcase/${id}`), r: list.works.find((w) => w.id === id)?.r };
   }, setup.art);
+  ok(res.r === '전북', `전시 목록에 시·도 «전북»만 (${res.r})`);
+  ok(!!(await p.$('[data-showcase-guide]')), '학급 갤러리에도 안내문');
   ok(res.pub.st === 200 && res.pub.n === 0, `공개 그림에 글씨 획 0 (어두운 픽셀 ${res.pub.n})`);
 } finally {
   await b.close();

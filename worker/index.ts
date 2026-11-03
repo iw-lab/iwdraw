@@ -589,7 +589,9 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
 // 밖으로 나가는 것 = 썸네일 그림 한 장 + 전시한 때 + 좋아요 수. 별명·제목·학급·학교·학생 id·저장 경로 0.
 const SHOWCASE_MAX = 50; // 하트 순 50위까지(2026-11-03 «너무 많아지면 50위까지만»)
 const SHOWCASE_TTL = 60;
-const SHOWCASE_DAYS = 60; // 두 달 지난 작품은 목록에서 빠진다 // 초 — 내리기가 다른 지역까지 닿는 최대 시간
+const SHOWCASE_DAYS = 60; // 두 달 지난 작품은 목록에서 빠진다
+/** 전시관 그림 옆 시·도 — 이 17곳만(줄임말) */
+const SIDO = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"]; // 초 — 내리기가 다른 지역까지 닿는 최대 시간
 /** 전시관 캐시 비우기(이 지역) — 걸기는 목록만, 내리기·삭제는 그림까지 */
 async function dropShowcaseCache(reqUrl: string, id?: string | null) {
   const base = new URL(reqUrl);
@@ -608,11 +610,15 @@ app.patch("/api/artworks/:id/showcase", requireTeacher, async (c) => {
   if (typeof body.on !== "boolean") return c.json({ error: "bad_request" }, 400);
   // 걸 때는 «그림 안에 이름·학교·얼굴 사진이 없다(있으면 가렸다)» 확인이 있어야 한다(2026-11-03 그림 속 실명)
   if (body.on && (body as { checked?: unknown }).checked !== true) return c.json({ error: "need_check" }, 400);
+  // 시·도(선택) — 정해진 17곳 말고는 받지 않는다 · 학교·반은 받는 칸 자체가 없다
+  const sidoIn = (body as { sido?: unknown }).sido;
+  if (sidoIn != null && sidoIn !== "" && !(typeof sidoIn === "string" && SIDO.includes(sidoIn))) return c.json({ error: "bad_sido" }, 400);
+  const sido = typeof sidoIn === "string" && sidoIn ? sidoIn : null;
   const res = await c.env.DB.prepare(
-    `UPDATE artworks SET showcase_report = NULL, showcase_at = ?
+    `UPDATE artworks SET showcase_report = NULL, showcase_sido = CASE WHEN ? THEN ? ELSE showcase_sido END, showcase_at = ?
      WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?)`,
   )
-    .bind(body.on ? Date.now() : null, id, teacherId)
+    .bind(body.on ? 1 : 0, sido, body.on ? Date.now() : null, id, teacherId)   /* 걸 때만 시·도를 새로 적는다(내릴 땐 그대로) */
     .run();
   if (!res.meta.changes) return c.json({ error: "not_found" }, 404);
   // 걸거나 내리면 이 지역 캐시를 바로 비운다 — 다른 지역은 SHOWCASE_TTL 안에 저절로
@@ -630,13 +636,14 @@ app.get("/api/showcase", async (c) => {
   //   · 두 달 지난 작품은 목록에서 빠진다(표가 커져도 읽는 행 = 최근 두 달 건 것만 · 부분 색인 artworks_showcase_idx)
   const now = Date.now();
   const { results } = await c.env.DB.prepare(
-    `SELECT a.id, a.showcase_at, a.like_count,
+    `SELECT a.id, a.showcase_at, a.like_count, a.showcase_sido,
             (SELECT COUNT(*) FROM artwork_likes l WHERE l.artwork_id = a.id AND l.created_at > ?) AS wk
      FROM artworks a WHERE a.showcase_at > ? ORDER BY a.showcase_at DESC LIMIT 400`,
   )
     .bind(now - 7 * 86400e3, now - SHOWCASE_DAYS * 86400e3)
-    .all<{ id: string; showcase_at: number; like_count: number; wk: number }>();
-  const works = rankShowcase((results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count, wk: r.wk })), now, SHOWCASE_MAX);
+    .all<{ id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null }>();
+  const sidoOf = new Map((results ?? []).map((r) => [r.id, r.showcase_sido && SIDO.includes(r.showcase_sido) ? r.showcase_sido : ""]));
+  const works = rankShowcase((results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count, wk: r.wk })), now, SHOWCASE_MAX).map((w) => ({ ...w, r: sidoOf.get(w.id) ?? "" }));
   // 1분 묶음 — 캐시는 지역(colo)마다 따로라 내린 작품이 다른 지역에선 최대 1분 남는다(목록·그림 같은 길이)
   const res = new Response(JSON.stringify({ works }), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${SHOWCASE_TTL}`, ...SHOWCASE_CORS },

@@ -147,14 +147,14 @@ export async function deleteArtwork(id: string): Promise<boolean> {
 }
 
 /** 선행쌤 작품 전시관에 걸기/내리기 — 성공하면 true */
-export async function setShowcase(id: string, on: boolean, checked = false): Promise<boolean> {
+export async function setShowcase(id: string, on: boolean, checked = false, sido = ""): Promise<boolean> {
   if (!hasBackend()) return false;
   try {
     // 걸 때는 «그림 안에 이름·학교·얼굴 사진이 없다(있으면 가렸다)» 확인이 있어야 서버가 받는다
     const res = await apiFetch(`/artworks/${id}/showcase`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ on, checked }),
+      body: JSON.stringify({ on, checked, sido }),
     });
     return res.ok;
   } catch {

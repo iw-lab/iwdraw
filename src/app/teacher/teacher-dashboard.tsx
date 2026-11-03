@@ -14,6 +14,7 @@ import {
   type ClassRow,
 } from "@/lib/teacher-api";
 import { ClassGallery } from "./class-gallery";
+import { ShowcaseGuide } from "./showcase-guide";
 import { AssignmentModal } from "./assignment-modal";
 
 const GALLERY_PARAM = "gallery";
@@ -122,6 +123,8 @@ export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
         </div>
       </Card>
 
+      {/* 선행쌤 «학생 작품» 전시관 안내(2026-11-03) */}
+      <ShowcaseGuide />
       {/* 삭제 임박 안내: 작품은 만든 지 180일 후 자동 삭제, 30일 전부터 알림 */}
       {(() => {
         const total = classes.reduce((s, c) => s + (c.expiring_soon ?? 0), 0);
