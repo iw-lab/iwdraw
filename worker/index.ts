@@ -877,7 +877,7 @@ app.get("/api/student/gallery", requireStudent, async (c) => {
             (a.student_id = ?) AS mine
      FROM artworks a JOIN students s ON s.id = a.student_id
      WHERE a.class_id = ? AND (a.is_approved = 1 OR a.student_id = ?)
-     ORDER BY a.created_at DESC LIMIT 200`,
+     ORDER BY a.created_at DESC LIMIT 200 /* gb-cost-ok 한 반 갤러리 · artworks_approved_idx 색인 찾기 = 돌려준 행만 */`,
     )
       .bind(studentId, studentId, classId, studentId)
       .all<{ liked: number; mine: number; is_approved: number; [k: string]: unknown }>();
