@@ -185,7 +185,7 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
         </p>
       )}
       <p className="mb-4 rounded-card bg-paper px-4 py-3 text-sm text-ink-soft shadow-soft" data-showcase-note>
-        🏛️ <b className="text-ink">선행쌤 전시관</b> — 고른 작품만 <b>그림만</b> 선행쌤(ssamzip.com) 첫 화면 «친구들의 작품»에
+        🏛️ <b className="text-ink">선행쌤 전시관</b> — 고른 작품만 <b>그림만</b> 선행쌤(ssamzip.com) 첫 화면 «학생 작품»에
         보여요. 별명·제목·학교·반은 나가지 않아요. 걸 때 그림을 크게 보여 드려요 — 이름·학교가 보이면 네모로 가린 뒤 걸어 주세요(가린 그림만 나가요). 보는 사람이 «숨겨 주세요»를 누르면 바로 내려가요.
       </p>
 
