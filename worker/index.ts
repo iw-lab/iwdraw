@@ -1,5 +1,6 @@
 // ArtON Cloudflare Worker — 정적 자산(out/) 서빙 + /api/* 백엔드.
 // Supabase(Postgres+Auth+Storage+Realtime+Edge Functions) 전면 대체.
+import { SIDO, guessSido } from "./lib/sido-guess";
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
 import type { Env } from "./types";
@@ -590,14 +591,21 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
 const SHOWCASE_MAX = 50; // 하트 순 50위까지(2026-11-03 «너무 많아지면 50위까지만»)
 const SHOWCASE_TTL = 60;
 const SHOWCASE_DAYS = 60; // 두 달 지난 작품은 목록에서 빠진다
-/** 전시관 그림 옆 시·도 — 이 17곳만(줄임말) */
-const SIDO = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"]; // 초 — 내리기가 다른 지역까지 닿는 최대 시간
 /** 전시관 캐시 비우기(이 지역) — 걸기는 목록만, 내리기·삭제는 그림까지 */
 async function dropShowcaseCache(reqUrl: string, id?: string | null) {
   const base = new URL(reqUrl);
   const keys = id ? ["/api/showcase", `/api/showcase/${id}`] : ["/api/showcase"];
   await Promise.all(keys.map((p) => caches.default.delete(new Request(new URL(p, base).toString())))).catch(() => {});
 }
+// 걸기 창이 미리 고를 시·도(2026-11-03 «다른 학교는 시·도를 모르나? 자동으로?») — 전에 고른 값 → 접속 위치. 아무것도 저장하지 않는다.
+app.get("/api/teacher/showcase-sido", requireTeacher, async (c) => {
+  const last = await c.env.DB.prepare(
+    `SELECT a.showcase_sido AS s FROM artworks a JOIN classes k ON k.id = a.class_id
+     WHERE k.teacher_id = ? AND a.showcase_sido IS NOT NULL ORDER BY a.showcase_at DESC LIMIT 1`,
+  ).bind(c.get("teacherId")).first<{ s: string }>();
+  const cf = (c.req.raw as unknown as { cf?: { country?: string; regionCode?: string; region?: string } }).cf;
+  return c.json(guessSido(last?.s, cf), 200, { "Cache-Control": "private, no-store" });
+});
 app.patch("/api/artworks/:id/showcase", requireTeacher, async (c) => {
   const teacherId = c.get("teacherId");
   const id = c.req.param("id");

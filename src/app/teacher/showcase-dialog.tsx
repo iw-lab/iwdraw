@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { coverRects, type Rect } from "@/lib/cover-rects";
+import { guessShowcaseSido } from "@/lib/teacher-api";
 
 /** 그림 옆에 붙는 시·도(학교·반은 절대 안 나간다) — 한 번 고르면 이 기기에서 기억 */
 export const SIDO = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
@@ -26,7 +27,17 @@ export function ShowcaseDialog({
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sido, setSido] = useState(() => { try { const v = localStorage.getItem(SIDO_KEY) || ""; return SIDO.includes(v) ? v : ""; } catch { return ""; } });
+  const [guessed, setGuessed] = useState(false);
   const start = useRef<{ x: number; y: number } | null>(null);
+
+  // 이 기기에서 고른 적이 없으면 — 전에 다른 기기에서 고른 값, 그것도 없으면 접속 위치로 미리 고른다(선생님이 확인·바꿈)
+  useEffect(() => {
+    if (sido) return;
+    let live = true;
+    guessShowcaseSido().then((g) => { if (live && g.sido && SIDO.includes(g.sido)) { setSido((v) => v || g.sido); setGuessed(g.from === "net"); } });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 창을 열 때 한 번
+  }, []);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
@@ -95,12 +106,15 @@ export function ShowcaseDialog({
         </div>
         <label className="mt-3 flex items-center gap-2 text-sm text-ink">
           <span className="shrink-0 font-semibold">그림 옆 지역</span>
-          <select value={sido} onChange={(e) => setSido(e.target.value)} data-showcase-sido className="min-h-10 flex-1 rounded-lg border border-line bg-white px-2">
+          <select value={sido} onChange={(e) => { setSido(e.target.value); setGuessed(false); }} data-showcase-sido className="min-h-10 flex-1 rounded-lg border border-line bg-white px-2">
             <option value="">밝히지 않기</option>
             {SIDO.map((x) => <option key={x} value={x}>{x}</option>)}
           </select>
         </label>
-        <p className="mt-1 text-xs text-ink-faint">시·도만 보여요(예: 전북). 학교·반·이름은 나가지 않아요.</p>
+        <p className="mt-1 text-xs text-ink-faint">
+          {guessed ? <b className="text-ink" data-sido-guessed>접속한 곳으로 미리 골랐어요 — 학교가 있는 시·도가 맞는지 확인해 주세요. </b> : null}
+          시·도만 보여요(예: 전북). 학교·반·이름은 나가지 않아요.
+        </p>
         <label className="mt-3 flex items-start gap-2 rounded-lg bg-cream px-3 py-2 text-sm text-ink">
           <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-0.5 h-5 w-5" data-showcase-check />
           <span>그림 안에 이름·학교·반·얼굴 사진이 <b>없어요</b>(있던 곳은 가렸어요).</span>

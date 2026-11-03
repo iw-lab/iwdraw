@@ -241,3 +241,14 @@ export async function signedUrl(path: string): Promise<string | null> {
   if (!hasBackend()) return null;
   return `/api/artwork/file?path=${encodeURIComponent(path)}`;
 }
+
+/** 걸기 창이 미리 고를 시·도 — 전에 고른 값(last) 또는 접속 위치(net) · 모르면 "" */
+export async function guessShowcaseSido(): Promise<{ sido: string; from: "last" | "net" | "" }> {
+  try {
+    const r = await fetch("/api/teacher/showcase-sido", { credentials: "include" });
+    if (!r.ok) return { sido: "", from: "" };
+    return await r.json();
+  } catch {
+    return { sido: "", from: "" };
+  }
+}

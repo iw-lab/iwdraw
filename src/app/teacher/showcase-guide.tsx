@@ -42,7 +42,7 @@ export function ShowcaseGuide({ compact = false }: { compact?: boolean }) {
           <ol className="mt-1 list-decimal space-y-1 pl-5 text-ink-soft">
             <li>학급 <b className="text-ink">🖼️ 갤러리</b> → 작품 아래 <b className="text-ink">«🏛️ 선행쌤 전시관에 걸기»</b></li>
             <li>그림이 크게 떠요. <b className="text-ink">이름·학교·반·얼굴 사진</b>이 보이면 그 자리를 손가락(마우스)으로 <b className="text-ink">네모 그려 가려요</b> — 가린 그림만 나가고 원본은 그대로예요.</li>
-            <li>그림 옆 지역(시·도)을 고르고, «없어요(가렸어요)»를 체크한 뒤 걸어요.</li>
+            <li>그림 옆 지역(시·도)은 <b className="text-ink">미리 골라 드려요</b>(전에 고른 곳, 처음이면 접속한 곳) — 맞는지만 보고 «없어요(가렸어요)»를 체크한 뒤 걸어요.</li>
           </ol>
         </section>
         <section>

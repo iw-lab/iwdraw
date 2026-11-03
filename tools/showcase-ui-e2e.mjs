@@ -54,6 +54,9 @@ try {
   }, setup.art);
   ok(res.r === '전북', `전시 목록에 시·도 «전북»만 (${res.r})`);
   ok(!!(await p.$('[data-showcase-guide]')), '학급 갤러리에도 안내문');
+  // 다른 기기(이 기기 기억 없음)에서도 전에 고른 «전북»이 미리 골라진다(2026-11-03 «다른 학교는 시·도를 모르나? 자동으로?»)
+  const g = await p.evaluate(async () => (await fetch('/api/teacher/showcase-sido')).json());
+  ok(g.sido === '전북' && g.from === 'last', `미리 고를 시·도 = 전에 고른 값 (${JSON.stringify(g)})`);
   ok(res.pub.st === 200 && res.pub.n === 0, `공개 그림에 글씨 획 0 (어두운 픽셀 ${res.pub.n})`);
 } finally {
   await b.close();
