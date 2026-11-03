@@ -30,6 +30,8 @@ export interface ArtworkRow {
   expires_at?: number; // 이 시각 이후 자동 삭제(보관 180일). 30일 이내면 갤러리에 배지
   /** 선행쌤 작품 전시관에 건 때(없으면 전시 안 함) — 밖에는 그림만, 별명·제목은 안 나간다 */
   showcase_at?: number | null;
+  /** 선행쌤 화면 «숨겨 주세요» 신고로 내려간 때(없으면 null) */
+  showcase_report?: number | null;
 }
 
 /** 회원 탈퇴 — 비밀번호 재확인 후 계정·개인정보·작품을 영구 파기. 성공 시 세션도 무효화됨. */
@@ -145,14 +147,26 @@ export async function deleteArtwork(id: string): Promise<boolean> {
 }
 
 /** 선행쌤 작품 전시관에 걸기/내리기 — 성공하면 true */
-export async function setShowcase(id: string, on: boolean): Promise<boolean> {
+export async function setShowcase(id: string, on: boolean, checked = false): Promise<boolean> {
   if (!hasBackend()) return false;
   try {
+    // 걸 때는 «그림 안에 이름·학교·얼굴 사진이 없다(있으면 가렸다)» 확인이 있어야 서버가 받는다
     const res = await apiFetch(`/artworks/${id}/showcase`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ on }),
+      body: JSON.stringify({ on, checked }),
     });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** 전시관에만 보일 «이름 가린 사본» 올리기(학생 원본·학급 썸네일은 그대로) — 성공하면 true */
+export async function uploadShowcaseImage(id: string, img: Blob): Promise<boolean> {
+  if (!hasBackend()) return false;
+  try {
+    const res = await apiFetch(`/artworks/${id}/showcase-image`, { method: "PUT", headers: { "Content-Type": img.type || "image/webp" }, body: img });
     return res.ok;
   } catch {
     return false;

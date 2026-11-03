@@ -44,17 +44,18 @@ ok(!before.works.some((w) => w.id === a1 || w.id === a2), '제출만으로는 �
 ok((await fetch(`${BASE}/api/showcase/${a1}`)).status === 404, '안 건 작품 그림은 404');
 
 const O = await teacher('b');
-ok((await O(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true}' })).status === 404, '남의 교사는 못 건다');
+ok((await T(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true}' })).status === 400, '«이름 없음» 확인 없이 걸기 = 거절');
+ok((await O(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true,"checked":true}' })).status === 404, '남의 교사는 못 건다');
 ok((await fetch(`${BASE}/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true}' })).status === 401, '로그인 없이는 못 건다');
 ok((await T(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":"yes"}' })).status === 400, '모양 틀린 요청은 400');
-ok((await T(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true}' })).ok, '내 학급 작품 걸기');
+ok((await T(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true,"checked":true}' })).ok, '내 학급 작품 걸기');
 
 const list = await fetch(BASE + '/api/showcase');
 const raw = await list.text();
 const body = JSON.parse(raw);
 ok(list.headers.get('access-control-allow-origin') === '*', '공개 목록 CORS *');
 ok(body.works.some((w) => w.id === a1) && !body.works.some((w) => w.id === a2), '건 작품만 나온다');
-ok(body.works.every((w) => Object.keys(w).sort().join() === 'at,id,likes'), `나가는 칸 = id·at·likes 뿐 (${Object.keys(body.works[0] || {}).join(',')})`);
+ok(body.works.every((w) => Object.keys(w).sort().join() === 'at,fresh,id,likes,wk'), `나가는 칸 = id·at·likes·wk·fresh 뿐 (${Object.keys(body.works[0] || {}).join(',')})`);
 ok(!raw.includes(MARK) && !raw.includes(cls.id) && !raw.includes(join.studentId), '목록에 별명·제목·학급·학생 id 0');
 const img = await fetch(`${BASE}/api/showcase/${a1}`);
 const bytes = new Uint8Array(await img.arrayBuffer());
@@ -70,7 +71,7 @@ const after = await (await fetch(BASE + '/api/showcase')).json();
 ok(!after.works.some((w) => w.id === a1), '내리면 목록에서 바로 빠진다(이 지역 캐시 비움)');
 ok((await fetch(`${BASE}/api/showcase/${a1}`)).status === 404, '내리면 그림도 404');
 
-ok((await T(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true}' })).ok, '다시 걸기');
+ok((await T(`/api/artworks/${a1}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true,"checked":true}' })).ok, '다시 걸기');
 // 🔒 2026-11-03 공개 하트(선행쌤 화면) — 선행쌤 출처만 · 같은 기기 하나 · 취소 · 하트 순 목록 · 응답에 이름 0
 { const SS = 'http://localhost:4177'; const did = 'ab'.repeat(16), did2 = 'cd'.repeat(16);
   const like = (id, d, on, origin = SS) => fetch(`${BASE}/api/showcase/${id}/like`, { method: 'POST', headers: { ...json, origin }, body: JSON.stringify({ did: d, on }) });
@@ -89,6 +90,25 @@ await fetch(`${BASE}/api/showcase/${a1}`);   // 그림 캐시를 채워 둔다
 ok((await T(`/api/artworks/${a1}`, { method: 'DELETE' })).ok, '전시 중인 작품 삭제');
 ok(!(await (await fetch(BASE + '/api/showcase')).json()).works.some((w) => w.id === a1), '지운 작품은 목록에서 바로 빠진다');
 ok((await fetch(`${BASE}/api/showcase/${a1}`)).status === 404, '지운 작품 그림도 바로 404');
+
+// 🔒 2026-11-03 이름 가린 전시용 사본 · «숨겨 주세요» 신고
+{ const T2 = await teacher('c'); const c2 = await (await T2('/api/classes', { method: 'POST', headers: json, body: JSON.stringify({ name: '셋째반' }) })).json();
+  const j2 = await (await fetch(BASE + '/api/join', { method: 'POST', headers: { ...json, origin: BASE }, body: JSON.stringify({ code: c2.code, nickname: '별' }) })).json();
+  const f = new FormData(); f.set('mode', 'sketch'); f.set('image', png(), 'a.png'); f.set('thumb', png(), 't.png'); f.set('draft_id', 'dz');
+  const a3 = (await (await fetch(BASE + '/api/artwork', { method: 'POST', headers: { authorization: `Bearer ${j2.token}`, origin: BASE }, body: f })).json()).id;
+  const cover = new Uint8Array(await png().arrayBuffer()); cover[cover.length - 13] ^= 1;   /* 원본과 다른 바이트 */
+  ok((await T(`/api/artworks/${a3}/showcase-image`, { method: 'PUT', body: cover })).status === 404, '남의 교사는 전시용 사본 못 올림');
+  ok((await T2(`/api/artworks/${a3}/showcase-image`, { method: 'PUT', body: new TextEncoder().encode('not image') })).status === 415, '그림 아닌 것 거절');
+  ok((await T2(`/api/artworks/${a3}/showcase-image`, { method: 'PUT', body: cover })).ok, '이름 가린 사본 올리기');
+  ok((await T2(`/api/artworks/${a3}/showcase`, { method: 'PATCH', headers: json, body: '{"on":true,"checked":true}' })).ok, '사본으로 걸기');
+  const served = new Uint8Array(await (await fetch(`${BASE}/api/showcase/${a3}`)).arrayBuffer());
+  ok(served.length === cover.length && served.every((b, i) => b === cover[i]), '전시관엔 가린 사본이 나간다(원본 아님)');
+  const rep = await (await fetch(`${BASE}/api/showcase/${a3}/report`, { method: 'POST', headers: { origin: 'http://localhost:4177' } })).json();
+  ok(rep.hidden === true, '«숨겨 주세요» 한 번 = 바로 내려감');
+  ok(!(await (await fetch(BASE + '/api/showcase')).json()).works.some((w) => w.id === a3), '신고한 작품은 목록에서 빠진다');
+  ok((await fetch(`${BASE}/api/showcase/${a3}`)).status === 404, '신고한 작품 그림도 404');
+  const tl3 = await (await T2(`/api/classes/${c2.id}/artworks`)).json(); ok(tl3.find((x) => x.id === a3)?.showcase_report > 0, '교사 목록에 «신고로 내려짐»');
+  ok((await fetch(`${BASE}/api/showcase/${a3}/report`, { method: 'POST', headers: { origin: 'https://evil.example' } })).status === 403, '남의 출처 신고 거절'); }
 
 console.log(bad ? `❌ 전시관 시험 ${bad}칸 실패` : '✅ 전시관 시험 전부 통과');
 process.exit(bad ? 1 : 0);

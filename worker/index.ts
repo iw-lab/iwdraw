@@ -15,6 +15,7 @@ import {
   SESSION_COOKIE,
 } from "./lib/util";
 import { sanitizeTitle } from "./lib/title";
+import { rankShowcase } from "./lib/showcase-rank";
 
 export { CollabRoom } from "./collab";
 
@@ -492,7 +493,7 @@ app.get("/api/classes/:id/artworks", requireTeacher, async (c) => {
   /* title 컬럼이 없는(마이그레이션 미적용) DB에서도 교사 갤러리는 열려야 한다 — 제목만 빠진다 */
   const listArtworks = (withTitle: boolean) =>
     c.env.DB.prepare(
-      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.is_approved, a.like_count, a.created_at, a.showcase_at,
+      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.is_approved, a.like_count, a.created_at, a.showcase_at, a.showcase_report,
               ${withTitle ? "a.title," : "NULL AS title,"} s.nickname
      FROM artworks a JOIN students s ON s.id = a.student_id
      WHERE a.class_id = ? ORDER BY a.created_at DESC`,
@@ -587,7 +588,8 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
 // 교사가 고른 작품만(showcase_at) 밖에 보인다 — 제출만으로는 절대 안 나간다(학급 갤러리와 다른 문).
 // 밖으로 나가는 것 = 썸네일 그림 한 장 + 전시한 때 + 좋아요 수. 별명·제목·학급·학교·학생 id·저장 경로 0.
 const SHOWCASE_MAX = 50; // 하트 순 50위까지(2026-11-03 «너무 많아지면 50위까지만»)
-const SHOWCASE_TTL = 60; // 초 — 내리기가 다른 지역까지 닿는 최대 시간
+const SHOWCASE_TTL = 60;
+const SHOWCASE_DAYS = 60; // 두 달 지난 작품은 목록에서 빠진다 // 초 — 내리기가 다른 지역까지 닿는 최대 시간
 /** 전시관 캐시 비우기(이 지역) — 걸기는 목록만, 내리기·삭제는 그림까지 */
 async function dropShowcaseCache(reqUrl: string, id?: string | null) {
   const base = new URL(reqUrl);
@@ -604,8 +606,10 @@ app.patch("/api/artworks/:id/showcase", requireTeacher, async (c) => {
     return c.json({ error: "bad_request" }, 400);
   }
   if (typeof body.on !== "boolean") return c.json({ error: "bad_request" }, 400);
+  // 걸 때는 «그림 안에 이름·학교·얼굴 사진이 없다(있으면 가렸다)» 확인이 있어야 한다(2026-11-03 그림 속 실명)
+  if (body.on && (body as { checked?: unknown }).checked !== true) return c.json({ error: "need_check" }, 400);
   const res = await c.env.DB.prepare(
-    `UPDATE artworks SET showcase_at = ?
+    `UPDATE artworks SET showcase_report = NULL, showcase_at = ?
      WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?)`,
   )
     .bind(body.on ? Date.now() : null, id, teacherId)
@@ -622,19 +626,64 @@ app.get("/api/showcase", async (c) => {
   const key = new Request(new URL("/api/showcase", c.req.url).toString());
   const hit = await cache.match(key);
   if (hit) return hit;
+  // 순위 = 이번 주(7일) 하트 순 · 걸린 지 3일 안 된 작품은 3칸마다 자리를 보장(첫 하트가 없어 영원히 뒤로 밀리지 않게)
+  //   · 두 달 지난 작품은 목록에서 빠진다(표가 커져도 읽는 행 = 최근 두 달 건 것만 · 부분 색인 artworks_showcase_idx)
+  const now = Date.now();
   const { results } = await c.env.DB.prepare(
-    `SELECT id, showcase_at, like_count FROM artworks
-     WHERE showcase_at IS NOT NULL ORDER BY like_count DESC, showcase_at DESC LIMIT ?`,
+    `SELECT a.id, a.showcase_at, a.like_count,
+            (SELECT COUNT(*) FROM artwork_likes l WHERE l.artwork_id = a.id AND l.created_at > ?) AS wk
+     FROM artworks a WHERE a.showcase_at > ? ORDER BY a.showcase_at DESC LIMIT 400`,
   )
-    .bind(SHOWCASE_MAX)
-    .all<{ id: string; showcase_at: number; like_count: number }>();
-  const works = (results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count }));
+    .bind(now - 7 * 86400e3, now - SHOWCASE_DAYS * 86400e3)
+    .all<{ id: string; showcase_at: number; like_count: number; wk: number }>();
+  const works = rankShowcase((results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count, wk: r.wk })), now, SHOWCASE_MAX);
   // 1분 묶음 — 캐시는 지역(colo)마다 따로라 내린 작품이 다른 지역에선 최대 1분 남는다(목록·그림 같은 길이)
   const res = new Response(JSON.stringify({ works }), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${SHOWCASE_TTL}`, ...SHOWCASE_CORS },
   });
   c.executionCtx.waitUntil(cache.put(key, res.clone()));
   return res;
+});
+
+// ── «이름이 보여요 · 숨겨 주세요»(선행쌤 화면) — 누구든 한 번 누르면 바로 내려간다(아이 안전이 먼저) · 교사 화면에 «신고로 내려짐» · IP 해시 하루 10번
+app.options("/api/showcase/:id/report", (c) => {
+  const o = c.req.header("origin") || "";
+  if (!SHOWCASE_ORIGINS.test(o)) return c.body(null, 403);
+  return c.body(null, 204, likeCors(o));
+});
+app.post("/api/showcase/:id/report", async (c) => {
+  const o = c.req.header("origin") || "";
+  if (!SHOWCASE_ORIGINS.test(o)) return c.json({ error: "origin" }, 403);
+  const H = likeCors(o);
+  const id = c.req.param("id");
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return c.json({ error: "bad_id" }, 400, H);
+  const day = Math.floor((Date.now() + 9 * 3600e3) / 86400000);
+  const iph = `r:${await hex16(`${day}|${c.env.SESSION_SECRET}|${c.req.header("cf-connecting-ip") || "0"}`)}`;
+  const cap = await c.env.DB.prepare("SELECT n FROM showcase_like_caps WHERE day = ? AND iph = ?").bind(day, iph).first<{ n: number }>();
+  if ((cap?.n ?? 0) >= 10) return c.json({ error: "cap" }, 429, H);
+  const res = await c.env.DB.prepare("UPDATE artworks SET showcase_at = NULL, showcase_report = ? WHERE id = ? AND showcase_at IS NOT NULL").bind(Date.now(), id).run();
+  await c.env.DB.prepare("INSERT INTO showcase_like_caps (day, iph, n) VALUES (?, ?, 1) ON CONFLICT(day, iph) DO UPDATE SET n = n + 1").bind(day, iph).run();
+  await dropShowcaseCache(c.req.url, id);
+  return c.json({ ok: true, hidden: !!res.meta.changes }, 200, H);
+});
+
+// ── 전시용 사본(교사가 이름을 가린 그림) — 학생 원본·학급 썸네일은 그대로 두고 전시관에만 이것을 보인다
+app.put("/api/artworks/:id/showcase-image", requireTeacher, async (c) => {
+  const teacherId = c.get("teacherId");
+  const id = c.req.param("id");
+  const owned = await c.env.DB.prepare(
+    "SELECT a.id FROM artworks a JOIN classes cl ON cl.id = a.class_id WHERE a.id = ? AND cl.teacher_id = ?",
+  ).bind(id, teacherId).first();
+  if (!owned) return c.json({ error: "not_found" }, 404);
+  const buf = new Uint8Array(await c.req.arrayBuffer());
+  if (!buf.length || buf.length > 800_000) return c.json({ error: "size" }, 413);
+  const webp = buf[0] === 0x52 && buf[1] === 0x49 && buf[8] === 0x57 && buf[9] === 0x45, png = buf[0] === 0x89 && buf[1] === 0x50;
+  if (!webp && !png) return c.json({ error: "type" }, 415);
+  const key = `showcase/${id}.${webp ? "webp" : "png"}`;
+  await c.env.BUCKET.put(key, buf, { httpMetadata: { contentType: webp ? "image/webp" : "image/png" } });
+  await c.env.DB.prepare("UPDATE artworks SET showcase_path = ? WHERE id = ?").bind(key, id).run();
+  await dropShowcaseCache(c.req.url, id);
+  return c.json({ ok: true });
 });
 
 // ── 공개 하트(선행쌤 화면에서 바로) — 로그인 없음 · 기기 무작위 번호(did)를 서버 비밀로 해시한 열쇠만 남긴다(사람을 되짚을 수 없다)

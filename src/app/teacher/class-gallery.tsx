@@ -11,11 +11,13 @@ import {
   listArtworks,
   listStudents,
   setShowcase,
+  uploadShowcaseImage,
   signedUrl,
   type ArtworkRow,
   type ClassRow,
   type StudentRow,
 } from "@/lib/teacher-api";
+import { ShowcaseDialog } from "./showcase-dialog";
 
 /* 학급 갤러리: 날짜별 작품 목록 + 필요 없는 작품 삭제(큐레이션) + 작품집 A4 인쇄.
  * 승인 게이트는 2026-07-09 비활성(제출 즉시 전시) — 되살리려면 worker INSERT의
@@ -58,12 +60,17 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
   // 선행쌤 작품 전시관(2026-11-03) — 교사가 고른 작품만, 그림만(별명·제목 없이) 밖에 보인다
   const [showing, setShowing] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
-  const toggleShowcase = async (a: ArtworkRow) => {
+  // 걸 때는 확인 창(이름 가리기 · «이름 없음» 확인) — 2026-11-03 그림 속 실명이 전시관에 나갔다
+  const [asking, setAsking] = useState<ArtworkRow | null>(null);
+  const toggleShowcase = async (a: ArtworkRow, cover: Blob | null = null, checked = false) => {
     const on = !a.showcase_at;
+    if (on && !checked) { setAsking(a); return; }
     setShowing(a.id);
-    const ok = await setShowcase(a.id, on);
+    let ok = true;
+    if (on && cover) ok = await uploadShowcaseImage(a.id, cover);
+    if (ok) ok = await setShowcase(a.id, on, checked);
     setShowing(null);
-    if (ok) setItems((prev) => prev.map((x) => (x.id === a.id ? { ...x, showcase_at: on ? Date.now() : null } : x)));
+    if (ok) setItems((prev) => prev.map((x) => (x.id === a.id ? { ...x, showcase_at: on ? Date.now() : null, showcase_report: null } : x)));
     else {
       setShowError(true);
       setTimeout(() => setShowError(false), 3500);
@@ -165,6 +172,13 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
         </p>
       )}
 
+      {asking && urls[asking.id] && (
+        <ShowcaseDialog
+          src={urls[asking.id]}
+          onCancel={() => setAsking(null)}
+          onConfirm={async (cover) => { const a = asking; setAsking(null); await toggleShowcase(a, cover, true); }}
+        />
+      )}
       {showError && (
         <p className="mb-3 rounded-card bg-danger-soft px-4 py-2 text-sm font-semibold text-danger" role="status">
           전시관에 걸지(내리지) 못했어요. 잠시 후 다시 시도해 주세요.
@@ -172,7 +186,7 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
       )}
       <p className="mb-4 rounded-card bg-paper px-4 py-3 text-sm text-ink-soft shadow-soft" data-showcase-note>
         🏛️ <b className="text-ink">선행쌤 전시관</b> — 고른 작품만 <b>그림만</b> 선행쌤(ssamzip.com) 첫 화면 «친구들의 작품»에
-        보여요. 별명·제목·학교·반은 나가지 않아요. 그림 안에 이름이 써 있지 않은지 보고 걸어 주세요. 언제든 내릴 수 있어요.
+        보여요. 별명·제목·학교·반은 나가지 않아요. 걸 때 그림을 크게 보여 드려요 — 이름·학교가 보이면 네모로 가린 뒤 걸어 주세요(가린 그림만 나가요). 보는 사람이 «숨겨 주세요»를 누르면 바로 내려가요.
       </p>
 
       {/* 학생 별명 명단 — 별명을 까먹은 아이에게 알려주는 용도(접이식) */}
@@ -328,6 +342,11 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
                 >
                   {showing === a.id ? "바꾸는 중…" : a.showcase_at ? "🏛️ 전시 중 · 내리기" : "🏛️ 선행쌤 전시관에 걸기"}
                 </button>
+                {!a.showcase_at && a.showcase_report ? (
+                  <p className="mt-1 rounded-md bg-danger-soft px-2 py-1 text-xs font-semibold text-danger" data-showcase-report>
+                    «이름이 보여요» 신고로 내려졌어요 — 그림을 보고 가린 뒤 다시 걸 수 있어요
+                  </p>
+                ) : null}
                 <button
                   onClick={() => askDelete(a)}
                   disabled={deleting === a.id}

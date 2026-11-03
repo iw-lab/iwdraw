@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS artworks (
   showcase_at    INTEGER,
   -- 전시관 전용 그림(그림 속 이름을 지운 사본 R2 키 · NULL = 썸네일 그대로) · worker/migrations/2026-11-05-showcase-path.sql
   showcase_path  TEXT,
+  -- 선행쌤 화면 신고로 내려간 때(NULL = 신고 없음) · worker/migrations/2026-11-05-showcase-report.sql
+  showcase_report INTEGER,
   created_at     INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
 CREATE INDEX IF NOT EXISTS artworks_class_idx ON artworks(class_id);
