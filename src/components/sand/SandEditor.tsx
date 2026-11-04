@@ -377,7 +377,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
           </Link>
         )}
         {/* 폰에선 모드 탭이 둘째 줄을 다 쓴다(다섯 개 + 단추들이 한 줄에 안 들어간다) */}
-        <div className="editor-modes order-last flex basis-full justify-center sm:order-none sm:flex-[1_0_auto] sm:basis-auto">
+        <div className="editor-modes sand-modes order-last flex basis-full justify-center sm:order-none sm:flex-[1_0_auto] sm:basis-auto">
           <ModeTabs current="sand" />
         </div>
         {fsAvail && (

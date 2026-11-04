@@ -55,6 +55,7 @@ export function ModeTabs({ hasLineart = false, current }: { hasLineart?: boolean
               setMode(m.id);
             }}
             title={m.id === "coloring" && !hasLineart ? "도안을 골라 색칠해요" : m.label}
+            data-mode={m.id}
             className={`pressable touch-target flex min-h-12 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control px-3 py-1.5 text-sm font-semibold transition-colors ${
               active ? "bg-coral-soft text-coral-deep ring-2 ring-coral/60 ring-inset" : "text-ink-soft hover:bg-surface-2"
             }`}

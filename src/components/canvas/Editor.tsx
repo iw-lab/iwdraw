@@ -787,6 +787,12 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
                 {confirmNew ? "정말요?" : "새 그림"}
               </span>
             </button>
+            {/* 샌드아트 — 폰에서만 여기(헤더 모드 탭 다섯 개가 412px 헤더에 안 들어가 다섯째가 삐져나갔다 · 2026-11-04 사용자 폰).
+                태블릿·PC 는 모드 탭에 있고 이 단추는 감춘다(globals.css .editor-more-sand) */}
+            <Link href="/sand" className={`editor-more-sand ${iconBtn}`} aria-label="샌드아트" data-testid="more-sand">
+              <Icon name="sand" className="h-5 w-5" />
+              <span className="hdr-label">샌드아트</span>
+            </Link>
             {/* 그림 불러오기 — "사진"은 무슨 기능인지 헷갈린다는 실사용 피드백(2026-07-13) → "불러오기" */}
             <PhotoImport
               renderButton={(openPicker, converting) => (

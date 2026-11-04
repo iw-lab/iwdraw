@@ -217,3 +217,37 @@ test("학급 학생으로 열어도 화면 오류가 없고 «전시하기»가 
   await page.waitForTimeout(1000);
   expect(errors, "화면 오류").toEqual([]);
 });
+
+/* 2026-11-04 사용자 폰(412px) «저게 뭐야» — ① 모드 탭 다섯째가 헤더 칸 밖으로 삐져나감 ② 학급 안내 토스트가 화면 반 폭에 갇혀 동그란 덩어리 */
+for (const width of [360, 390, 412]) {
+  test(`폰 ${width}px 그리기 화면: 모드 탭이 칸 안에 · 안내 토스트가 넓게 · ⋯ 메뉴로 샌드아트`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width, height: 860 }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await page.goto("/draw");
+    await page.getByLabel("그림 캔버스").waitFor();
+    const m = await page.evaluate(() => {
+      const modes = document.querySelector(".editor-modes")!.getBoundingClientRect();
+      const tabs = [...document.querySelectorAll('.editor-modes [role="tab"]')]
+        .filter((e) => getComputedStyle(e).display !== "none")
+        .map((e) => e.getBoundingClientRect());
+      const hdr = document.querySelector("header")!;
+      return { l: modes.left, r: modes.right, tabs: tabs.map((t) => [t.left, t.right]), sw: hdr.scrollWidth, cw: hdr.clientWidth };
+    });
+    for (const [l, r] of m.tabs) {
+      expect(l, "탭이 칸 왼쪽 밖").toBeGreaterThanOrEqual(m.l - 1);
+      expect(r, "탭이 칸 오른쪽 밖(삐져나감)").toBeLessThanOrEqual(m.r + 1);
+    }
+    expect(m.sw, "헤더 넘침").toBeLessThanOrEqual(m.cw + 1);
+    // 학급 안내 토스트(백엔드 있는 배포본에서 첫 진입 때) — 뜨면 폭이 화면의 70% 이상이어야 한다
+    const toast = page.locator('[role="status"]').filter({ hasText: "학급 코드" });
+    if (await toast.isVisible({ timeout: 4000 }).catch(() => false)) {
+      const tb = (await toast.boundingBox())!;
+      expect(tb.width, "안내 토스트가 화면 반 폭에 갇힘").toBeGreaterThan(width * 0.7);
+      expect(tb.x + tb.width).toBeLessThanOrEqual(width);
+    }
+    await page.getByRole("button", { name: "더보기" }).click();
+    await page.getByTestId("more-sand").click();
+    await expect(page).toHaveURL(/\/sand/);
+    await ctx.close();
+  });
+}

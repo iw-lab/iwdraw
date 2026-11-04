@@ -212,6 +212,16 @@ button,
   }
 }
 
+/* ⋯ 메뉴 속 샌드아트 — 폰(⋯ 메뉴가 열리는 크기)에서만 */
+.editor-more-sand {
+  display: none !important;
+}
+@media (max-width: 639px), (max-height: 559px) {
+  .editor-more-sand {
+    display: flex !important;
+  }
+}
+
 @utility editor-more {
   display: contents;
   & > .editor-more-content {
@@ -277,10 +287,25 @@ button,
       gap: 0;
       padding: 0;
     }
+    /* 탭은 칸을 나눠 갖는다(최대 48 · 최소 40) — 48 고정이면 390px 폰에서 넷만으로도 칸(164px)을 28px 넘어
+       양쪽으로 삐져나갔다(2026-11-04 실측, 412px 도 6px) */
+    & .editor-modes:not(.sand-modes) [role="tablist"] {
+      width: 100%;
+      justify-content: center;
+    }
     & .editor-modes [role="tab"] {
       justify-content: center;
       width: 48px;
       padding-inline: 0;
+    }
+    & .editor-modes:not(.sand-modes) [role="tab"] {
+      width: auto;
+      flex: 0 1 48px;
+      min-width: 40px !important; /* .touch-target 의 min-width 48 을 이긴다 — 폰 헤더 탭만 */
+    }
+    /* 그리기 화면 폰 헤더엔 모드 탭 넷만 — 다섯째(샌드아트)는 ⋯ 메뉴로(.editor-more-sand). 샌드아트 화면은 탭이 둘째 줄이라 다섯 다 둔다 */
+    & .editor-modes:not(.sand-modes) [data-mode="sand"] {
+      display: none;
     }
     & .editor-save {
       justify-content: center;

@@ -36,6 +36,20 @@ describe("모래판", () => {
     expect(at(v2, 100, 70 + 40)).toBeLessThan(at(v2, 100, 70) * 0.2);
   });
 
+  /* 2026-11-04 사용자 «처음에 약간 스프레이 같은데 계속 뿌리면 쌓이긴 하네» — 2판은 줄 가운데까지 칸마다 0.2~1.8배로 흩어져 점박이 */
+  it("붓기 3판: 한 번 그은 줄 가운데가 꽉 차고(얼룩 적음) · 2판 기록은 2판 그대로", () => {
+    const pts = line(30, 70, 170, 70, 140, 1);
+    const v3 = new SandSim(W, H), v2 = new SandSim(W, H);
+    v3.apply({ ...(stroke("pour", 40, pts) as Extract<SandOp, { k: "stroke" }>), pv: 3 });
+    v2.apply({ ...(stroke("pour", 40, pts) as Extract<SandOp, { k: "stroke" }>), pv: 2 });
+    const core = (s: SandSim) => { const a: number[] = []; for (let x = 60; x < 140; x++) for (let y = 68; y <= 72; y++) a.push(at(s, x, y)); return a; };
+    const stat = (a: number[]) => { const m = a.reduce((p, c) => p + c, 0) / a.length; const sd = Math.sqrt(a.reduce((p, c) => p + (c - m) ** 2, 0) / a.length); return { m, cv: sd / m }; };
+    const s3 = stat(core(v3)), s2 = stat(core(v2));
+    expect(s3.m, "3판 줄 가운데 두께").toBeGreaterThan(1.5);
+    expect(s3.cv, "3판 줄 가운데 얼룩(변동계수)").toBeLessThan(s2.cv * 0.75);
+    expect(s2.m).toBeLessThan(1.5); // 2판 기록은 옛 공식 그대로(무비 불변)
+  });
+
   it("손가락: 모래를 없애지 않고 옆으로 민다 — 가운데는 빛이 나고 양옆에 둑이 생긴다", () => {
     const s = new SandSim(W, H);
     s.fill(3);

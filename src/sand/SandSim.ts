@@ -23,7 +23,7 @@ export const SAND_MAX = 6;
 export const FILL_LEVEL = 1.5;
 /** 붓기 공식 판 — 2: 움직인 거리만큼도 흘린다(한 번 그으면 진한 선). 옛 기록(pv 없음 = 1)은 옛 공식으로 다시 그려
  * 오늘 그린 그림의 무비가 바뀌지 않는다(결정성 불변식) */
-export const POUR_V = 2;
+export const POUR_V = 3;
 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -186,7 +186,9 @@ export class SandSim {
     // 1초 누르면 가운데가 약 2.4 두께(빛이 거의 막힘) — 더미.
     // 2판: + 움직인 거리 몫 — 한 번 지나간 줄 가운데가 약 1.3 두께(빛이 거의 안 샘)가 되게 a_d·√(2π)σ ≈ 1.3.
     //   (1판은 시간만 셌다 → 아이 손 빠르기(1칸/ms)·굵기 79 에서 줄 가운데 0.15 = 연한 안개)
-    const amp = dt * 0.0024 + (this.pv >= 2 ? dist * (0.52 / sig) : 0);
+    // 3판(2026-11-04 사용자 «처음엔 약간 스프레이 같다»): 한 번 지난 줄 가운데 1.3 → 1.7, 낱알 흔들림을 줄 가운데에선 줄인다
+    const amp = dt * 0.0024 + (this.pv >= 3 ? dist * (0.68 / sig) : this.pv >= 2 ? dist * (0.52 / sig) : 0);
+    const v3 = this.pv >= 3;
     if (amp <= 0) return;
     const R = Math.ceil(sig * 2.4);
     const inv = 1 / (2 * sig * sig);
@@ -203,9 +205,11 @@ export class SandSim {
         const ddx = xx - cx;
         const g = Math.exp(-(ddx * ddx + ddy * ddy) * inv);
         if (g < 0.01) continue;
-        // 낱알이 떨어지는 자리는 고르지 않다 — 칸마다 0.2~1.8배
+        // 낱알이 떨어지는 자리는 고르지 않다 — 칸마다 0.2~1.8배(1·2판). 3판: 줄기 가운데(g≈1)는 0.75~1.25배로 고르게,
+        // 가장자리(g 작음)로 갈수록 0.2~1.8배로 흩어져 «모래알 가장자리 + 꽉 찬 줄기»(가운데까지 흩뿌리면 에어브러시 스프레이)
         const i = yy * w + xx;
-        const v = H[i] + amp * g * (0.2 + 1.6 * rnd());
+        const spread = v3 ? 1.6 - 1.1 * g : 1.6;
+        const v = H[i] + amp * g * (1 - spread / 2 + spread * rnd());
         H[i] = v > SAND_MAX ? SAND_MAX : v;
       }
     }

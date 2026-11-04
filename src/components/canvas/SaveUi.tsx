@@ -69,10 +69,13 @@ export function TitleAsk({
  * 떠 있는 동안 그 자리의 탭·획을 통째로 삼킨다 — 아이가 캔버스 아래쪽을 누르는데 아무 일도
  * 안 일어난다(2026-09-04 실측: 페인트통 스펙이 이걸로 깨졌다. 안내가 없던 시절에도 저장
  * 토스트가 같은 자리를 막고 있었다). 안내 안의 링크만 pointer-events-auto 로 되살린다. */
+/* ⚠️ w-max + max-w 필수 — left:50% 인 고정 요소는 «남은 폭 = 화면의 반»까지만 늘어나, 폰(412px)에서 긴 안내가
+ * 206px 안에 몇 글자씩 접혀 동그란 덩어리가 됐다(2026-11-04 사용자 폰 «저게 뭐야»). 둥근 알약(rounded-full)도
+ * 두 줄이 되면 원이 된다 → rounded-3xl. */
 export function Toast({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "leaf" }) {
   return (
     <div
-      className={`pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full px-6 py-3 font-display text-white shadow-lift [&_a]:pointer-events-auto [&_button]:pointer-events-auto ${
+      className={`pointer-events-none fixed bottom-6 left-1/2 w-max max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-3xl px-5 py-3 text-center font-display leading-snug text-white shadow-lift [&_a]:pointer-events-auto [&_button]:pointer-events-auto ${
         tone === "leaf" ? "bg-leaf" : "bg-ink"
       }`}
       role="status"
