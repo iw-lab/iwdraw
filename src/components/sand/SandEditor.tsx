@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { SandEngine } from "@/sand/SandEngine";
+import { SandEngine, isSandSaved } from "@/sand/SandEngine";
 import { LIGHTS, SANDS } from "@/sand/SandRender";
 import type { SandTool } from "@/sand/SandSim";
 import { SandAudio } from "@/sand/sandAudio";
@@ -75,7 +75,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
     setPref(p);
     void loadSand().then((saved) => {
       if (!alive) return;
-      if (saved && saved.v === 1 && saved.w > 0 && saved.h > 0) {
+      if (isSandSaved(saved)) {
         setDims({ w: saved.w, h: saved.h });
         return;
       }
@@ -126,10 +126,15 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
       timer = null;
       firstDirty = 0;
       if (eng.version === savedVersion && eng.liveRev === savedLive) return;
-      savedVersion = eng.version;
-      savedLive = eng.liveRev;
+      // 저장이 «끝난 뒤»에만 저장됨으로 친다 — 용량 부족·IndexedDB 오류면 다음 기회에 다시(8way gptweb)
+      const v = eng.version;
+      const lv = eng.liveRev;
       lastSaveAt = Date.now();
-      void saveSand(eng.snapshot(draftRef.current));
+      void saveSand(eng.snapshot(draftRef.current)).then((ok) => {
+        if (!ok) return;
+        savedVersion = v;
+        savedLive = lv;
+      });
     };
     // 손을 떼지 않는 긴 붓질 — 획이 끝나야 오는 emit 만 보면 10초 넘게 뿌리는 동안 저장이 0이다.
     // 마지막 저장부터 잰다(처음 알아챈 때부터 재면 2초 늦어 12초가 된다). 닫힐 때(pagehide) 저장은
@@ -154,8 +159,14 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
 
     void loadSand().then((saved) => {
       if (!alive) return;
-      if (saved && eng.restore(saved)) {
-        draftRef.current = saved.draftId || genDraftId();
+      let ok = false;
+      try {
+        ok = !!saved && eng.restore(saved);
+      } catch {
+        ok = false; // 손상본 — 빈 판으로
+      }
+      if (ok && saved) {
+        draftRef.current = typeof saved.draftId === "string" && saved.draftId.length > 0 && saved.draftId.length <= 64 ? saved.draftId : genDraftId();
         savedVersion = eng.version;
       } else {
         draftRef.current = genDraftId();

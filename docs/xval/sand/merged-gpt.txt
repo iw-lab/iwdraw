@@ -1,0 +1,60 @@
+레인      상태          제출  재현  환각
+gptweb    정상              11    11     0
+
+병합 후 고유 발견 11건 (환각 0건은 기계가 이미 버렸다)
+
+[CRITICAL] src/sand/SandEngine.ts:607-614; src/components/sand/SandEditor.tsx:1206-1215  ⟨gptweb⟩
+  인용: this.commit({ k: "stroke"
+  이유: 한 획을 10초 넘게 계속 그리면 pointerup 전에는 commit·emit이 없어 10초 저장이 시작되지 않고, 직전 버전이 이미 저장된 상태에서 탭을 숨기면 같은 version으로 판단해 진행 중 획이 새로고침 뒤 사라진다.
+  수정: 진행 중 획도 저장 대상으로 표시하고 snapshot에 현재 획을 임시 op로 포함하거나 숨김 시 현재 획을 원자적으로 확정해 저장한다.
+
+[CRITICAL] src/sand/SandEngine.ts:743-754  ⟨gptweb⟩
+  인용: s.cur.length
+  이유: IndexedDB 손상본에 cur가 없거나 null이면 restore가 length 접근에서 TypeError를 내고 setReady까지 가지 못해 샌드 화면이 계속 초기화 상태에 남는다.
+  수정: restore 진입 전에 저장본 전체의 타입과 필수 필드를 검사하고 예외가 나면 저장본을 폐기한 뒤 빈 판으로 복구한다.
+
+[CRITICAL] src/components/sand/SandEditor.tsx:1152-1165  ⟨gptweb⟩
+  인용: setDims({ w: saved.w,
+  이유: 손상된 저장본의 양수 w·h를 cur 크기 검증보다 먼저 믿으므로 매우 큰 값이면 restore가 거부하기도 전에 SandEngine의 w×h 배열 할당에서 RangeError나 메모리 고갈이 날 수 있다.
+  수정: 허용한 판 크기와 cur의 타입·길이를 먼저 검증한 저장본만 dims 결정에 사용한다.
+
+[CRITICAL] src/components/sand/SandEditor.tsx:1198-1204  ⟨gptweb⟩
+  인용: savedVersion =
+  이유: saveSand가 용량 부족이나 IndexedDB 오류로 false를 반환해도 먼저 savedVersion을 올리므로 이후 변경이 없으면 탭 숨김·종료 때 재시도하지 않아 최신 그림을 잃을 수 있다.
+  수정: saveSand가 true로 끝난 뒤에만 savedVersion을 갱신하고 실패한 버전은 다음 flush에서 다시 저장한다.
+
+[MAJOR] src/sand/SandEngine.ts:730-738; src/components/sand/SandEditor.tsx:1198-1204  ⟨gptweb⟩
+  인용: ops: this.ops,
+  이유: 자동저장이 IndexedDB 열기를 기다리는 동안 다음 commit·undo가 같은 ops 배열을 바꾸면 cur는 이전 판인데 저장된 ops는 이후 기록이 되어 복원 판과 무비가 서로 달라진다.
+  수정: snapshot을 만들 때 ops를 즉시 slice하여 저장 완료까지 변하지 않는 배열 스냅샷을 넘긴다.
+
+[MAJOR] src/sand/SandEngine.ts:730-745  ⟨gptweb⟩
+  인용: quantize(this.sim.H)
+  이유: 정상 저장도 현재 판을 Uint16으로 양자화해 복원하지만 ops 재생은 원래 Float32 계산을 다시 하므로 새로고침 직후 base+ops 재생판과 현재 판이 정확히 같지 않다.
+  수정: 복원 시 현재 판을 검증된 base+ops에서 다시 만들거나 연산 경계마다 동일한 양자화를 재생 규칙에도 포함해 하나의 정규 상태만 사용한다.
+
+[MAJOR] src/sand/SandEngine.ts:624-627,665-688  ⟨gptweb⟩
+  인용: dequantize(snap
+  이유: 비양자화 상태에서 undo·redo·pointercancel을 하면 Uint16 스냅샷으로 판이 미세하게 바뀌어 ops 재생값과 달라지고 pointercancel도 붓질 전 판으로 정확히 돌아가지 않는다.
+  수정: 되돌리기 스냅샷을 무손실 상태로 보존하거나 undo·redo·cancel을 base+ops의 동일한 결정적 재생으로 복원한다.
+
+[MAJOR] src/sand/SandEngine.ts:697-713  ⟨gptweb⟩
+  인용: quantize(tmp.H)
+  이유: 기록을 접을 때 base만 양자화하고 현재 sim은 양자화 전 상태 그대로 두므로 fold 직후부터 새 base+남은 ops를 재생한 판과 현재 판이 달라진다.
+  수정: base를 만든 직후 그 base와 남은 ops로 현재 sim도 다시 구성해 두 상태를 같은 기준으로 맞춘다.
+
+[MAJOR] src/sand/SandEngine.ts:624-634  ⟨gptweb⟩
+  인용: this.undoSnaps.shift();
+  이유: 되돌리기 스냅샷이 20개일 때 새 획을 시작하면 가장 오래된 칸을 먼저 버리고 pointercancel에서는 새 스냅샷만 pop하므로 ops 변화 없이 되돌리기 가능 칸이 20개에서 19개로 줄어든다.
+  수정: 진행 중 획의 사전 스냅샷은 별도로 들고 있다가 commit할 때만 undoSnaps에 넣고 그때 20칸 제한을 적용한다.
+
+[MAJOR] src/sand/SandEngine.ts:577-603  ⟨gptweb⟩
+  인용: this.addDab(x, y, now);
+  이유: 한 pointermove에 여러 coalesced 이벤트가 들어오면 모두 같은 now를 써서 첫 점 뒤의 dt가 0이 되고 뿌리기 도구는 그 나머지 구간에 모래를 놓지 않아 빠른 펜·마우스 획에 빈 구간이 생긴다.
+  수정: 각 coalesced 이벤트의 timeStamp를 사용하거나 한 패킷의 경과 시간을 각 점 사이에 나누어 양의 dt가 기록되게 한다.
+
+[MAJOR] src/sand/SandEngine.ts:395-397,697-707  ⟨gptweb⟩
+  인용: LOG_MAX_NUMS = 600_000
+  이유: 마지막 20개 연산은 절대 접지 않아서 한 획이나 최근 20획만으로 600000개를 넘으면 기록 상한이 깨지며 number[] 600000개 자체도 숫자 원소만 약 4.8MB라 명시한 2.4MB 상한과 맞지 않는다.
+  수정: 획 기록을 고정 폭 typed array 등으로 압축하고 진행 중 획과 최근 20연산에도 실제 바이트 기준의 상한을 강제하면서 논리적 undo 한 칸은 유지한다.
+

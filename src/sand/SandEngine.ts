@@ -11,7 +11,7 @@ import { SandRender, type SandLook } from "./SandRender";
 
 export const UNDO_MAX = 20;
 export const PEN_PALM_MS = 1500;
-/** 기록 상한(점 수 ×3 숫자) — 넘으면 오래된 연산을 base 로 접는다(약 2.4MB) */
+/** 기록 상한(점 수 ×3 숫자) — 넘으면 오래된 연산을 base 로 접는다(숫자 60만 개 ≈ 메모리 4.8MB · 저장 구조복제도 그만큼) */
 export const LOG_MAX_NUMS = 600_000;
 const Q = 65535 / 8; // 두께 0~8 → Uint16
 
@@ -67,7 +67,9 @@ export class SandEngine {
   }
 
   // 진행 중 붓질
-  private cur: { id: number; tool: SandTool; size: number; seed: number; d: number[]; t: number; x: number; y: number; moved: number } | null = null;
+  /** pre = 붓질 전 판(되돌리기 칸). 획이 끝나야 되돌리기 줄에 넣는다 — 시작 때 넣으면 줄이 꽉 찼을 때
+   * 가장 오래된 칸을 먼저 버리고, 취소된 획이 칸 하나를 먹는다(8way gptweb) */
+  private cur: { id: number; tool: SandTool; size: number; seed: number; d: number[]; t: number; x: number; y: number; moved: number; pre: Uint16Array } | null = null;
   /** 마지막 펜 신호 시각 — 펜을 쓰는 동안(그리고 막 뗀 1.5초)만 손바닥 터치를 무시한다.
    * 한 번 펜을 쓰면 영영 터치를 막던 것 = 샌드아트는 손가락 놀이인데 손가락이 안 먹었다(8way meta) */
   private lastPen = -1e9;
@@ -191,9 +193,9 @@ export class SandEngine {
     const [x, y] = this.toGrid(e);
     const seed = (Date.now() ^ Math.imul(this.seedCounter++, 2654435761)) >>> 0;
     const size = this.size;
-    // 붓질 전 판 — 되돌리기 칸
-    this.pushUndo();
-    this.cur = { id: e.pointerId, tool: this.tool, size, seed, d: [], t: performance.now(), x, y, moved: 0 };
+    // 붓질 전 판 — 획이 끝날 때 되돌리기 칸이 된다
+    const pre = quantize(this.sim.H);
+    this.cur = { id: e.pointerId, tool: this.tool, size, seed, d: [], t: performance.now(), x, y, moved: 0, pre };
     this.sim.begin(this.tool, size, seed);
     this.addDab(x, y, this.cur.t, 0);
     this.onActivity?.(this.tool, 0);
@@ -206,9 +208,11 @@ export class SandEngine {
     const evs = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
     const list = evs.length ? evs : [e];
     const now = performance.now();
+    // 묶여 온 점마다 제 시각 — 한 시각(now)으로 찍으면 첫 점 뒤가 dt 0 이라 빠른 붓기 획에 빈 구간이 난다(8way gptweb)
     for (const ev of list) {
       const [x, y] = this.toGrid(ev);
-      this.addDab(x, y, now);
+      const ts = Number.isFinite(ev.timeStamp) ? Math.min(now, Math.max(c.t, ev.timeStamp)) : now;
+      this.addDab(x, y, ts);
     }
   };
 
@@ -239,6 +243,8 @@ export class SandEngine {
     this.sim.end();
     this.speed = 0;
     this.onActivity?.(null, 0);
+    this.undoSnaps.push(c.pre);
+    if (this.undoSnaps.length > UNDO_MAX) this.undoSnaps.shift();
     this.commit({ k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d });
   };
 
@@ -249,11 +255,8 @@ export class SandEngine {
     this.cur = null;
     this.sim.end();
     this.onActivity?.(null, 0);
-    const snap = this.undoSnaps.pop();
-    if (snap) {
-      dequantize(snap, this.sim.H);
-      this.sim.markAll();
-    }
+    dequantize(c.pre, this.sim.H);
+    this.sim.markAll();
   };
 
   /* ── 기록·되돌리기 ── */
@@ -359,7 +362,8 @@ export class SandEngine {
    * 복원 뒤 base+ops ≠ 판(무비 끝 장면이 달라짐)이고, 손을 떼기 전에 탭이 죽으면 그 붓질을 잃는다(8way grokweb) */
   snapshot(draftId: string): SandSaved {
     const c = this.cur;
-    const ops: SandOp[] = c ? [...this.ops, { k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d.slice() }] : this.ops;
+    // 늘 새 배열 — 저장(IndexedDB 열기)을 기다리는 사이 다음 획·되돌리기가 this.ops 를 바꾸면 판과 기록이 어긋난다(8way gptweb)
+    const ops: SandOp[] = c ? [...this.ops, { k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d.slice() }] : this.ops.slice();
     return {
       v: 1,
       w: this.w,
@@ -372,8 +376,9 @@ export class SandEngine {
     };
   }
 
+  /** 손상된 저장본(필드 없음·타입 다름·크기 다름)은 false — 화면은 빈 판으로 뜬다 */
   restore(s: SandSaved): boolean {
-    if (s.v !== 1 || s.w !== this.w || s.h !== this.h || s.cur.length !== this.w * this.h) return false;
+    if (!isSandSaved(s) || s.w !== this.w || s.h !== this.h) return false;
     dequantize(s.cur, this.sim.H);
     this.base = s.base && s.base.length === this.w * this.h ? s.base : null;
     this.ops = Array.isArray(s.ops) ? s.ops.filter(validOp) : [];
@@ -404,6 +409,23 @@ export class SandEngine {
     ctx.drawImage(src, 0, 0, out.width, out.height);
     return out;
   }
+}
+
+/** 허용하는 판 크기 — 저장본이 이 밖이면 믿지 않는다(손상본의 거대한 w·h 로 배열을 만들면 메모리가 터진다) */
+export const SAND_DIMS: [number, number][] = [
+  [800, 533],
+  [533, 800],
+];
+export function isSandSaved(s: unknown): s is SandSaved {
+  if (!s || typeof s !== "object") return false;
+  const v = s as SandSaved;
+  return (
+    v.v === 1 &&
+    SAND_DIMS.some(([w, h]) => v.w === w && v.h === h) &&
+    v.cur instanceof Uint16Array &&
+    v.cur.length === v.w * v.h &&
+    (v.base == null || (v.base instanceof Uint16Array && v.base.length === v.w * v.h))
+  );
 }
 
 export function validOp(o: unknown): o is SandOp {

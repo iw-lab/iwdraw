@@ -1,7 +1,7 @@
 // 샌드아트 모래판 — 붓기·손가락·손바닥의 물리 약속 + 무비·되돌리기의 결정성
 import { describe, expect, it } from "vitest";
 import { SandSim, FILL_LEVEL, type SandOp } from "@/sand/SandSim";
-import { SandEngine, LOG_MAX_NUMS, UNDO_MAX, quantize, dequantize } from "@/sand/SandEngine";
+import { SandEngine, LOG_MAX_NUMS, UNDO_MAX, quantize, dequantize, isSandSaved } from "@/sand/SandEngine";
 import { SandRender, LIGHTS, SANDS } from "@/sand/SandRender";
 
 const W = 200, H = 140;
@@ -141,5 +141,30 @@ describe("되돌리기·기록", () => {
     for (let i = 0; i < re.H.length; i++) { const d = Math.abs(re.H[i] - e.sim.H[i]); maxd = Math.max(maxd, d); sum += d; }
     expect(maxd).toBeLessThan(0.05);
     expect(sum / re.H.length).toBeLessThan(0.001);
+  });
+
+  /* 8way(gptweb): 손상된 저장본(cur 없음·타입 다름·거대한 크기)이면 restore 가 TypeError 로 죽어 화면이 «깔고 있어요»에 멈췄다 */
+  it("손상된 저장본은 거부하고 죽지 않는다", () => {
+    const e = new SandEngine(800, 533, look);
+    const good = e.snapshot("d1");
+    expect(isSandSaved(good)).toBe(true);
+    const bad: unknown[] = [
+      null, 3, "x", {}, { ...good, cur: undefined }, { ...good, cur: null }, { ...good, cur: [1, 2] },
+      { ...good, w: 100000, h: 100000 }, { ...good, cur: new Uint16Array(10) }, { ...good, base: "zz" }, { ...good, v: 2 },
+    ];
+    for (const b of bad) {
+      expect(isSandSaved(b)).toBe(false);
+      expect(() => e.restore(b as never)).not.toThrow();
+      expect(e.restore(b as never)).toBe(false);
+    }
+    expect(e.restore(good)).toBe(true);
+  });
+
+  it("저장본의 기록은 엔진 기록과 따로 논다(저장을 기다리는 사이 획이 더해져도 저장본이 안 바뀐다)", () => {
+    const e = new SandEngine(W, H, look);
+    e.fill();
+    const snap = e.snapshot("d");
+    e.clear();
+    expect(snap.ops.length).toBe(1);
   });
 });
