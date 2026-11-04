@@ -79,7 +79,7 @@ export class SandRender {
       typeof ImageData !== "undefined"
         ? new ImageData(sim.w, sim.h)
         : ({ data: new Uint8ClampedArray(sim.w * sim.h * 4), width: sim.w, height: sim.h } as ImageData);
-    // 유리판 가운데가 조금 더 밝다(가장자리 0.72배) — 평평한 단색 빛은 화면 배경처럼 보인다
+    // 유리판 가운데가 조금 더 밝다(가장자리 0.86배 · 2026-11-05 사용자 «불빛을 좀만 더 밝게» — 0.72배는 어둑했다) — 평평한 단색 빛은 화면 배경처럼 보인다
     const { w, h } = sim;
     this.vig = new Float32Array(w * h);
     for (let y = 0; y < h; y++) {
@@ -87,7 +87,7 @@ export class SandRender {
         const nx = (x / (w - 1)) * 2 - 1;
         const ny = (y / (h - 1)) * 2 - 1;
         const r2 = (nx * nx + ny * ny) / 2;
-        this.vig[y * w + x] = 1 - 0.28 * r2;
+        this.vig[y * w + x] = 1 - 0.14 * r2;
       }
     }
     this.lmap = new Uint8ClampedArray(w * h * 3);
@@ -109,9 +109,12 @@ export class SandRender {
       for (let x = 0; x < w; x++) {
         const i = y * w + x;
         const v = this.vig[i];
-        m[i * 3] = r * v;
-        m[i * 3 + 1] = g * v;
-        m[i * 3 + 2] = b * v;
+        // 전구 바로 위 = 가운데는 흰빛에 가깝고 둘레로 갈수록 빛 색이 짙어진다.
+        // 고른 색 한 장이면 «그런 색 도화지»로 보인다(2026-11-05 사용자) — 밝기 차이가 있어야 빛으로 읽힌다
+        const glow = 0.62 * Math.max(0, (v - 0.86) / 0.14) ** 1.6;
+        m[i * 3] = (r + (255 - r) * glow) * v;
+        m[i * 3 + 1] = (g + (255 - g) * glow) * v;
+        m[i * 3 + 2] = (b + (255 - b) * glow) * v;
       }
     }
   }
@@ -130,10 +133,14 @@ export class SandRender {
         const i = y * w + x;
         const hv = H[i];
         const gr = g[i] * (1 / 255);
-        // 얇은 곳은 낱알 결이 드러난다(두께를 칸마다 0.45~1.55배로 흔든다 — 가장자리가 «모래알»로 부서져 보이게)
-        const he = hv * (0.45 + 1.1 * gr);
+        // 모래알은 불투명하다 — 얇은 층 = 반투명 막(분무)이 아니라 «덮인 칸 + 빛이 보이는 칸»(2026-11-05 사용자 «스프레이처럼 보인다»).
+        // 두께가 늘수록 덮이는 칸이 늘고 약 0.6 부터 다 덮인다. 칸마다 다른 문턱 = grain.
+        let cov = (hv * 2 - gr) / 0.2;
+        cov = hv <= 0 ? 0 : cov < 0 ? 0 : cov > 1 ? 1 : cov;
+        // 사이로 보이는 빛은 흩어진 가루만큼 약간 어두워진다
+        const he = hv * 0.3;
         const li = he >= LUT_MAX ? LUT_N : ((he * (LUT_N / LUT_MAX)) | 0);
-        const T = TRANS[li];
+        const T = (1 - cov) * TRANS[li];
         // 볼록함: 왼쪽 위에서 비친 방 불빛 — 은은하게만. 세게(0.55·최대 1.7배) 두면 둑 가장자리가
         // 주황빛으로 볼록 튀어 «찰흙»처럼 보였다(2026-11-04 사용자 폰 화면). 라이트박스 위 모래는 거의 평평한 그림자다
         const gx = H[x < w - 1 ? i + 1 : i] - H[x > 0 ? i - 1 : i];

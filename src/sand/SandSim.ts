@@ -23,7 +23,7 @@ export const SAND_MAX = 6;
 export const FILL_LEVEL = 1.5;
 /** 붓기 공식 판 — 2: 움직인 거리만큼도 흘린다(한 번 그으면 진한 선). 옛 기록(pv 없음 = 1)은 옛 공식으로 다시 그려
  * 오늘 그린 그림의 무비가 바뀌지 않는다(결정성 불변식) */
-export const POUR_V = 3;
+export const POUR_V = 4;
 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -40,7 +40,22 @@ export function mulberry32(seed: number): () => number {
 export function makeGrain(w: number, h: number, seed = 20261104): Uint8Array {
   const g = new Uint8Array(w * h);
   const rnd = mulberry32(seed);
-  for (let i = 0; i < g.length; i++) g[i] = (rnd() * 256) | 0;
+  // 칸마다 값 + 4칸 간격 덩이 — 칸마다만 다르면 얇은 곳이 고운 분무처럼 보인다(모래는 뭉쳐 떨어진다)
+  const P = 4;
+  const cw = Math.ceil(w / P) + 2;
+  const coarse = new Float32Array(cw * (Math.ceil(h / P) + 2));
+  for (let i = 0; i < coarse.length; i++) coarse[i] = rnd();
+  for (let y = 0; y < h; y++) {
+    const fy = y / P, cy = fy | 0, ty = fy - cy;
+    for (let x = 0; x < w; x++) {
+      const fx = x / P, cx = fx | 0, tx = fx - cx;
+      const a = coarse[cy * cw + cx], b = coarse[cy * cw + cx + 1];
+      const c = coarse[(cy + 1) * cw + cx], d = coarse[(cy + 1) * cw + cx + 1];
+      const lump = (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+      const v = 0.6 * rnd() + 0.4 * lump;
+      g[y * w + x] = Math.min(255, v * 256) | 0;
+    }
+  }
   return g;
 }
 
@@ -124,8 +139,14 @@ export class SandSim {
 
   /* ── 붓질(스트리밍) — 화면은 begin → dab… → end, 무비는 같은 순서로 다시 넣는다 ── */
   private pv = POUR_V;
+  /* 4판 줄기의 떨림(손으로 붓는 줄기는 곧지도 고르지도 않다) — 붓질마다 0 에서 시작해 씨앗 난수로만 움직인다(무비 결정성) */
+  private wx = 0;
+  private wy = 0;
+  private wWidth = 0;
+  private wFlow = 0;
   begin(tool: SandTool, size: number, seed: number, pv: number = POUR_V): void {
     this.pv = pv;
+    this.wx = this.wy = this.wWidth = this.wFlow = 0;
     this.tool = tool;
     this.size = Math.max(2, Math.min(120, size));
     this.rnd = mulberry32(seed);
@@ -182,6 +203,7 @@ export class SandSim {
   }
 
   private pourAt(cx: number, cy: number, dt: number, dist = 0): void {
+    if (this.pv >= 4) return this.pourAt4(cx, cy, dt, dist);
     const sig = this.pourSig();
     // 1초 누르면 가운데가 약 2.4 두께(빛이 거의 막힘) — 더미.
     // 2판: + 움직인 거리 몫 — 한 번 지나간 줄 가운데가 약 1.3 두께(빛이 거의 안 샘)가 되게 a_d·√(2π)σ ≈ 1.3.
@@ -215,6 +237,75 @@ export class SandSim {
     }
     this.relax(x0 - 1, y0 - 1, x1 + 2, y1 + 2, 0.45);
     this.mark(x0 - 2, y0 - 2, x1 + 3, y1 + 3);
+  }
+
+  /**
+   * 4판(2026-11-05 사용자 «빈 판에 뿌리면 스프레이처럼 보인다»). 스프레이처럼 보인 까닭 셋을 고친다.
+   *  ① 종 모양 양 분포 = 뿌연 후광 → 윗면이 평평하고 가장자리에서 빨리 떨어지는 분포
+   *  ② 폭·방향이 자로 잰 듯 일정 → 줄기가 조금씩 흔들리고 굵어졌다 가늘어진다
+   *  ③ 낱알이 줄기 안에만 있다 → 줄기 밖으로 튄 낱알이 흩어진다(relax 범위 밖이라 무너지지 않는다)
+   */
+  private pourAt4(cx: number, cy: number, dt: number, dist: number): void {
+    const sig = this.pourSig();
+    const rnd = this.rnd;
+    const walk = dist > 0 ? Math.min(1, dist / sig) : 0.1;
+    this.wx = (this.wx + (rnd() - 0.5) * 0.5 * sig * walk) * (1 - 0.1 * walk);
+    this.wy = (this.wy + (rnd() - 0.5) * 0.5 * sig * walk) * (1 - 0.1 * walk);
+    this.wWidth = (this.wWidth + (rnd() - 0.5) * 0.28 * walk) * (1 - 0.08 * walk);
+    this.wFlow = (this.wFlow + (rnd() - 0.5) * 0.3 * walk) * (1 - 0.12 * walk);
+    const sigW = sig * Math.max(0.68, Math.min(1.32, 1 + this.wWidth));
+    const flow = Math.max(0.6, Math.min(1.4, 1 + this.wFlow));
+    const amp = (dt * 0.0024 + dist * (0.68 / sig)) * flow;
+    if (amp <= 0) return;
+    const px = cx + this.wx;
+    const py = cy + this.wy;
+    const R = Math.ceil(sigW * 2);
+    const inv = 1 / (2 * sigW * sigW);
+    const H = this.H;
+    const w = this.w;
+    const x0 = Math.max(0, Math.floor(px - R));
+    const x1 = Math.min(this.w - 1, Math.ceil(px + R));
+    const y0 = Math.max(0, Math.floor(py - R));
+    const y1 = Math.min(this.h - 1, Math.ceil(py + R));
+    for (let yy = y0; yy <= y1; yy++) {
+      const ddy = yy - py;
+      for (let xx = x0; xx <= x1; xx++) {
+        const ddx = xx - px;
+        const q = (ddx * ddx + ddy * ddy) * inv;
+        const g = Math.exp(-q * q * 0.9);
+        if (g < 0.01) continue;
+        const i = yy * w + xx;
+        const spread = 1.5 - 1.05 * g;
+        const v = H[i] + amp * g * (1 - spread / 2 + spread * rnd());
+        H[i] = v > SAND_MAX ? SAND_MAX : v;
+      }
+    }
+    this.relax(x0 - 1, y0 - 1, x1 + 2, y1 + 2, 0.45);
+    // 튄 낱알 — 흘린 양에 비례(한 자리에 오래 눌러도 조금씩 튄다). 한두 칸짜리 알갱이
+    const want = amp * sig * 0.9;
+    let n = want | 0;
+    if (rnd() < want - n) n++;
+    const far = sigW * 3.8;
+    for (let k = 0; k < n; k++) {
+      const a = rnd() * Math.PI * 2;
+      const u = rnd();
+      const d = sigW * (2.1 + 1.7 * u * u);
+      const gx = Math.round(px + Math.cos(a) * d);
+      const gy = Math.round(py + Math.sin(a) * d);
+      // 네모로 안 보이게: 한 칸 + 가끔 옆 칸 하나에 덜 얹는다
+      const amt = 0.8 + 0.6 * rnd();
+      const put = (xx: number, yy: number, v: number) => {
+        if (xx < 0 || yy < 0 || xx >= this.w || yy >= this.h) return;
+        const i = yy * w + xx;
+        H[i] = Math.min(SAND_MAX, H[i] + v);
+      };
+      put(gx, gy, amt);
+      if (rnd() < 0.25) {
+        const s = rnd() * 4 | 0;
+        put(gx + (s === 0 ? 1 : s === 1 ? -1 : 0), gy + (s === 2 ? 1 : s === 3 ? -1 : 0), amt * 0.5);
+      }
+    }
+    this.mark(Math.floor(px - far) - 2, Math.floor(py - far) - 2, Math.ceil(px + far) + 4, Math.ceil(py + far) + 4);
   }
 
   /* ── 손가락: 모래를 밀어내 빛나는 선이 생기고, 밀린 모래는 양옆에 둑으로 쌓인다 ── */

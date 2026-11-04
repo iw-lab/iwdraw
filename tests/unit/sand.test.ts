@@ -1,6 +1,6 @@
 // 샌드아트 모래판 — 붓기·손가락·손바닥의 물리 약속 + 무비·되돌리기의 결정성
 import { describe, expect, it } from "vitest";
-import { SandSim, FILL_LEVEL, type SandOp } from "@/sand/SandSim";
+import { SandSim, FILL_LEVEL, makeGrain, type SandOp } from "@/sand/SandSim";
 import { SandEngine, LOG_MAX_NUMS, UNDO_MAX, quantize, dequantize, isSandSaved } from "@/sand/SandEngine";
 import { SandRender, LIGHTS, SANDS } from "@/sand/SandRender";
 
@@ -208,5 +208,56 @@ describe("되돌리기·기록", () => {
     const snap = e.snapshot("d");
     e.clear();
     expect(snap.ops.length).toBe(1);
+  });
+});
+
+describe("붓기 4판 — 스프레이처럼 보이지 않게(2026-11-05 사용자)", () => {
+  const W2 = 400, H2 = 200, Y0 = 100;
+  const pts = line(30, Y0, 370, Y0, 90, 16);
+  const draw = (pv: number) => { const s = new SandSim(W2, H2); s.apply({ ...(stroke("pour", 40, pts) as Extract<SandOp, { k: "stroke" }>), pv }); return s; };
+  /** 줄 양쪽을 평균 낸 가로 단면 */
+  const profile = (s: SandSim) => { const out: number[] = []; for (let y = 0; y < H2; y++) { let a = 0; for (let x = 80; x < 320; x++) a += s.H[y * W2 + x]; out.push(a / 240); } return out; };
+  /** 세로줄마다 잰 «가장 진한 곳의 90%→10%» 폭의 가운데값(칸) = 가장자리가 얼마나 뿌연가. 줄이 흔들린 만큼은 안 섞이게 세로줄마다 잰다 */
+  const edge = (s: SandSim) => { const es: number[] = []; for (let x = 80; x < 320; x += 4) { const col: number[] = []; for (let y = 0; y < H2; y++) { let a = 0; for (let k = -2; k <= 2; k++) a += s.H[y * W2 + x + k]; col.push(a / 5); } const c = Math.max(...col), m = col.indexOf(c); let hi = m, lo = m; while (hi > 0 && col[hi] >= c * 0.9) hi--; lo = hi; while (lo > 0 && col[lo] >= c * 0.1) lo--; es.push(hi - lo); } es.sort((a, b) => a - b); return es[es.length >> 1]; };
+  /** 세로줄마다 잰 줄 폭의 들쭉날쭉함(표준편차) */
+  const wobble = (s: SandSim) => { const ws: number[] = []; for (let x = 80; x < 320; x += 4) { let n = 0; for (let y = 0; y < H2; y++) if (s.H[y * W2 + x] > 0.5) n++; ws.push(n); } const m = ws.reduce((a, b) => a + b, 0) / ws.length; return Math.sqrt(ws.reduce((a, b) => a + (b - m) ** 2, 0) / ws.length); };
+  /** 줄기 밖(가운데에서 2σ 넘게)에 떨어진 낱알 수 */
+  const strays = (s: SandSim) => { let n = 0; const sig = 40 * 0.22; for (let y = 0; y < H2; y++) { if (Math.abs(y - Y0) < sig * 2.4) continue; for (let x = 0; x < W2; x++) if (s.H[y * W2 + x] > 0.5) n++; } return n; };
+
+  it("가장자리가 또렷하고 · 폭이 손으로 부은 듯 들쭉날쭉하고 · 줄기 밖에 낱알이 튄다", () => {
+    const v3 = draw(3), v4 = draw(4);
+    expect(edge(v4)).toBeLessThan(edge(v3) * 0.8);
+    expect(wobble(v4)).toBeGreaterThan(wobble(v3) * 1.5);
+    expect(strays(v4)).toBeGreaterThan(strays(v3) + 30);
+    const c = profile(v4)[Y0];
+    expect(c).toBeGreaterThan(1.2); // 한 번 그어도 진한 줄은 그대로
+  });
+
+  it("같은 씨앗이면 같은 판(무비) · 3판 기록은 3판 그대로", () => {
+    expect(Array.from(draw(4).H)).toEqual(Array.from(draw(4).H));
+    expect(Array.from(draw(3).H)).toEqual(Array.from(draw(3).H));
+    expect(Array.from(draw(4).H)).not.toEqual(Array.from(draw(3).H));
+  });
+
+  it("얇은 모래는 반투명 막이 아니라 낱알 — 얇은 곳 화면에 어중간한 색이 적다", () => {
+    const s = new SandSim(W, H);
+    s.H.fill(0.25);
+    const g = makeGrain(W, H);
+    const r = new SandRender(s, g, look);
+    r.paintAll();
+    let mid = 0, dark = 0, n = 0;
+    for (let i = 0; i < W * H; i++) { const j = i * 4; const l = 0.3 * r.img.data[j] + 0.59 * r.img.data[j + 1] + 0.11 * r.img.data[j + 2]; n++; if (l < 70) dark++; else if (l < 150) mid++; }
+    expect(dark / n).toBeGreaterThan(0.15); // 낱알이 진하게 보인다
+    expect(mid / n).toBeLessThan(0.3);      // 뿌연 중간색이 많으면 스프레이
+  });
+
+  it("빛: 켜진 유리판처럼 — 가운데는 환하고 둘레로 갈수록 색이 짙다", () => {
+    const s = new SandSim(W, H);
+    const r = new SandRender(s, new Uint8Array(W * H).fill(128), look);
+    r.paintAll();
+    const lum = (x: number, y: number) => { const j = (y * W + x) * 4; return 0.3 * r.img.data[j] + 0.59 * r.img.data[j + 1] + 0.11 * r.img.data[j + 2]; };
+    expect(lum(W >> 1, H >> 1)).toBeGreaterThan(238);   // 가운데는 거의 흰빛
+    expect(lum(0, 0)).toBeGreaterThan(165);             // 가장자리도 어둑하지 않게
+    expect(lum(W >> 1, H >> 1) - lum(0, 0)).toBeGreaterThan(30); // 고른 한 색이면 «색 도화지»로 보인다
   });
 });

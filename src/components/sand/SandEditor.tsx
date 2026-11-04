@@ -43,6 +43,16 @@ function toBlob(c: HTMLCanvasElement, type: string, q?: number): Promise<Blob> {
   return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("toBlob"))), type, q));
 }
 
+/** 판 둘레로 새어 나오는 빛 — 판이 종이가 아니라 켜진 유리판으로 보이게(화면에만 · 저장 그림에는 안 들어간다) */
+function lightGlow(id: string) {
+  const l = LIGHTS.find((x) => x.id === id) ?? LIGHTS[0];
+  const [r, g, b] = l.rgb;
+  const [r2, g2, b2] = l.rgb2 ?? l.rgb;
+  return {
+    boxShadow: `0 -6px 28px rgba(${r},${g},${b},.55), 0 6px 28px rgba(${r2},${g2},${b2},.55), 0 0 70px rgba(${(r + r2) >> 1},${(g + g2) >> 1},${(b + b2) >> 1},.35)`,
+  };
+}
+
 export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEditorProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -446,13 +456,13 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
         </aside>
 
         {/* 모래판 */}
-        <div ref={stageRef} className="canvas-stage relative order-1 grid min-h-0 min-w-0 flex-1 place-items-center rounded-panel bg-[#2b2118] p-2 md:order-2">
+        <div ref={stageRef} className="canvas-stage relative order-1 grid min-h-0 min-w-0 flex-1 place-items-center rounded-panel bg-[#17110c] p-2 md:order-2">
           <canvas
             ref={canvasRef}
             data-testid="sand-canvas"
             aria-label="모래판"
-            className="canvas-surface touch-none select-none rounded-[10px] shadow-lift"
-            style={{ width: fit ? fit.w : 0, height: fit ? fit.h : 0, cursor: "crosshair" }}
+            className="canvas-surface touch-none select-none rounded-[10px]"
+            style={{ width: fit ? fit.w : 0, height: fit ? fit.h : 0, cursor: "crosshair", ...lightGlow(pref.light) }}
           />
           {!ready && <p className="absolute font-display text-cream">모래판을 깔고 있어요…</p>}
           <div className="absolute bottom-3 left-3 flex gap-2">
