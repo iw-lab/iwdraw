@@ -21,6 +21,8 @@ import { ArtonLogo } from "@/components/arton-logo";
 import { Icon } from "./icons";
 import { hasBackend } from "@/lib/backend";
 import { takeEntryHint, takeSaveHint } from "@/lib/class-hint";
+import { TitleAsk, Toast } from "./SaveUi";
+import { genDraftId } from "@/lib/draft-id";
 import {
   SOFT_REFRESH_KEY,
   shouldSoftRefresh,
@@ -84,22 +86,6 @@ export interface EditorProps {
  *  헤더 = 뒤로 · 로고 · [모드 탭] · 방향/무비/저학년 · 저장(주요 버튼)
  *  본체 = 좌 도구 레일(세로) · 캔버스(플로팅 되돌리기/다시) · 우 색/굵기/마법/레이어
  */
-/** 그리기 세션마다 발급하는 dedup 토큰(작품 id 아님·서버에 노출 안 되는 랜덤값). 구형 웹뷰 폴백 포함. */
-function genDraftId(): string {
-  try {
-    const u = globalThis.crypto?.randomUUID?.();
-    if (u) return u;
-    // randomUUID가 없는 구형 웹뷰(비보안 컨텍스트 등) — getRandomValues는 대개 살아있다.
-    const b = globalThis.crypto?.getRandomValues?.(new Uint8Array(16));
-    if (b) return Array.from(b, (n) => n.toString(16).padStart(2, "0")).join("");
-  } catch {
-    /* 폴백 */
-  }
-  // 최후 폴백. draft 토큰은 남의 작품을 지우지 못하고(자기 행 덮어쓰기뿐) 어떤 API로도 노출되지
-  // 않지만, 추측 저항성이 낮으면 같은 학생 명의로 재입장한 사람이 충돌을 노릴 수 있어 폭을 넓힌다.
-  return `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}${Math.random().toString(36).slice(2, 12)}`;
-}
-
 /* 마지막으로 "제출한" 그림의 draft 토큰을 자동저장(이어그리기)과 짝지어 보관한다.
  * 새로고침·탭 크래시 후 [이어그리기]로 돌아온 그림은 같은 작품이므로, 그때만 이 토큰을 되살려
  * 서버가 갤러리의 그 행을 덮어쓰게 한다. 반대로 단순 재마운트(가로/세로 전환 등)에는 항상
@@ -1057,67 +1043,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
   );
 }
 
-/* 제목 묻기 — 저장(제출) 직전 1회. 아이 손에 맞춰 큼직한 입력 한 칸과 버튼 두 개만. */
-function TitleAsk({
-  initial,
-  onDone,
-  onCancel,
-}: {
-  initial: string;
-  onDone: (title: string) => void;
-  /** 닫기 — 쓰던 제목을 초안으로 넘긴다(실수로 배경을 탭해도 다시 열면 그대로 있다) */
-  onCancel: (draft: string) => void;
-}) {
-  const [v, setV] = useState(initial);
-  return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="그림 제목 정하기"
-      onClick={() => onCancel(v)}
-    >
-      <div
-        className="w-[min(92vw,420px)] rounded-bubble bg-paper p-5 shadow-lift"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="font-display text-xl text-ink">그림에 제목을 지어 줄래요? ✏️</h2>
-        <p className="mt-1 text-sm text-ink-soft">갤러리에서 친구들이 제목과 함께 봐요.</p>
-        <input
-          autoFocus
-          value={v}
-          onChange={(e) => setV(e.target.value)}
-          onKeyDown={(e) => {
-            /* ⚠️ isComposing 가드 — 한글 조합을 확정하는 Enter 가 그대로 제출로 새면
-             * 마지막 음절이 빠진 제목("우리 강아")이 저장된다(교차검증 지적). */
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) onDone(v);
-            if (e.key === "Escape") onCancel(v);
-          }}
-          maxLength={30} // ⚠️ worker/lib/title.ts 의 TITLE_MAX 와 같은 값이어야 한다
-          placeholder="예) 우리 강아지"
-          aria-label="그림 제목"
-          className="mt-4 w-full rounded-card border border-cream-deep bg-white px-4 py-3 text-lg text-ink outline-none focus:border-sky"
-        />
-        <div className="mt-2 text-right text-xs text-ink-faint">{v.length}/30</div>
-        <div className="mt-3 flex gap-2">
-          <button
-            onClick={() => onDone("")}
-            className="pressable flex-1 rounded-card bg-cream-deep px-4 py-3 font-display text-ink-soft"
-          >
-            그냥 저장
-          </button>
-          <button
-            onClick={() => onDone(v)}
-            className="pressable flex-[2] rounded-card bg-coral px-4 py-3 font-display text-white shadow-soft"
-          >
-            이 제목으로 저장
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function RestoreBanner({
   savedAt,
   onRestore,
@@ -1139,23 +1064,6 @@ function RestoreBanner({
           새로 시작
         </button>
       </div>
-    </div>
-  );
-}
-
-/* ⚠️ pointer-events-none 필수. 토스트는 캔버스 위(bottom-6 중앙)에 떠서, 그대로 두면
- * 떠 있는 동안 그 자리의 탭·획을 통째로 삼킨다 — 아이가 캔버스 아래쪽을 누르는데 아무 일도
- * 안 일어난다(2026-09-04 실측: 페인트통 스펙이 이걸로 깨졌다. 안내가 없던 시절에도 저장
- * 토스트가 같은 자리를 막고 있었다). 안내 안의 링크만 pointer-events-auto 로 되살린다. */
-function Toast({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "leaf" }) {
-  return (
-    <div
-      className={`pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full px-6 py-3 font-display text-white shadow-lift [&_a]:pointer-events-auto [&_button]:pointer-events-auto ${
-        tone === "leaf" ? "bg-leaf" : "bg-ink"
-      }`}
-      role="status"
-    >
-      {children}
     </div>
   );
 }

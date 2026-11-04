@@ -111,7 +111,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* 히어로 비주얼: 4모드 — 클릭하면 바로 그 모드로 */}
+        {/* 히어로 비주얼: 4모드 + 샌드아트 — 클릭하면 바로 그 모드로 */}
         <div className="grid grid-cols-2 gap-3 rounded-panel border border-ink/6 bg-paper p-4 md:p-6">
           {[
             { emoji: "✏️", label: "스케치", bg: "bg-sun-soft", href: "/draw?mode=sketch" },
@@ -128,6 +128,22 @@ export default function LandingPage() {
               <span className="mt-4 text-lg font-semibold text-ink">{m.label}</span>
             </Link>
           ))}
+          {/* 다섯째 = 샌드아트(라이트박스 모래 그림) — 2×2 아래 한 줄을 다 쓴다 */}
+          <Link
+            href="/sand"
+            className="pressable col-span-2 flex items-center justify-center gap-4 rounded-control bg-[#2b2118] px-4 py-5 text-cream"
+            data-testid="landing-sand"
+          >
+            <span
+              aria-hidden="true"
+              className="h-12 w-20 rounded-[10px]"
+              style={{ background: "radial-gradient(ellipse at 35% 60%, #ffd68c 0 28%, #5a3e28 46%, #221a14 70%)" }}
+            />
+            <span className="text-left">
+              <span className="block text-lg font-semibold">샌드아트</span>
+              <span className="block text-sm text-cream/80">빛나는 판 위에 모래로 그려요</span>
+            </span>
+          </Link>
         </div>
       </section>
 

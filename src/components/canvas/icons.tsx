@@ -53,7 +53,15 @@ export type IconName =
   | "glasses"
   | "sketch"
   | "palette"
-  | "coloring";
+  | "coloring"
+  | "sand"
+  | "sandPour"
+  | "sandFinger"
+  | "sandPalm"
+  | "sandFill"
+  | "sweep"
+  | "sound"
+  | "soundOff";
 
 const ICONS: Record<IconName, ReactNode> = {
   /* ── 그리기 도구 ── */
@@ -448,6 +456,65 @@ const ICONS: Record<IconName, ReactNode> = {
       <path d="M16 4.5c6 4 10 4.5 10 10.5 0 5.5-4.5 10-10 10S6 20.5 6 15C6 9 10 8.5 16 4.5z" fill="#fff" />
       <path d="M16 4.5c6 4 10 4.5 10 10.5 0 5.5-4.5 10-10 10z" fill="#7BC96F" />
       <path d="M16 4.5V25" fill="none" strokeWidth="1.2" />
+    </g>
+  ),
+  /* ── 샌드아트 ── */
+  sand: (
+    <g {...O}>
+      <rect x="3.5" y="7" width="25" height="18" rx="3" fill="#FFD68C" />
+      <path d="M3.5 21c4-5 7-1.5 10.5-4.5S21 9 28.5 12v10a3 3 0 0 1-3 3h-19a3 3 0 0 1-3-3z" fill="#5A3E28" />
+      <path d="M9 22.5c3-2.5 6-1 9-3.5" stroke="#FFD68C" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+    </g>
+  ),
+  sandPour: (
+    <g {...O}>
+      <path d="M11 4h10l-2.5 7h-5z" fill="#C9A27A" />
+      <circle cx="16" cy="14.5" r="1.1" fill="#5A3E28" stroke="none" />
+      <circle cx="14.6" cy="17.6" r="1" fill="#5A3E28" stroke="none" />
+      <circle cx="17.4" cy="19.8" r="1" fill="#5A3E28" stroke="none" />
+      <circle cx="15.6" cy="22" r="0.9" fill="#5A3E28" stroke="none" />
+      <path d="M6 28c3-4.5 6.5-5.5 10-5.5s7 1 10 5.5z" fill="#5A3E28" />
+    </g>
+  ),
+  sandFinger: (
+    <g {...O}>
+      <rect x="3" y="18" width="26" height="10" rx="2.5" fill="#5A3E28" />
+      <path d="M6 23.2c5-1.6 15-1.6 20 0" stroke="#FFD68C" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+      <path d="M13 21V7.5a2.6 2.6 0 0 1 5.2 0V17l3.4.7a2.4 2.4 0 0 1 1.9 2.4V21z" fill="#FFD8BE" />
+    </g>
+  ),
+  sandPalm: (
+    <g {...O}>
+      <rect x="2.5" y="20" width="27" height="8.5" rx="2.5" fill="#5A3E28" />
+      <path d="M5 24.5h22" stroke="#FFD68C" strokeWidth="3.4" strokeLinecap="round" opacity="0.8" />
+      <path d="M8 21V12a2 2 0 0 1 4 0V9a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0v2.5a2 2 0 0 1 4 0V21z" fill="#FFD8BE" />
+    </g>
+  ),
+  sandFill: (
+    <g {...O}>
+      <path d="M7 5.5 20 9l-2.4 7.6L5.2 13.4z" fill="#C9A27A" />
+      <path d="M12 17.5c1 1.6 2.4 3 4.6 3.6M9.5 18.5c.6 2 1.8 3.5 3.6 4.4" stroke="#5A3E28" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+      <rect x="4" y="23" width="24" height="5.5" rx="2" fill="#5A3E28" />
+    </g>
+  ),
+  sweep: (
+    <g {...O}>
+      <path d="M22.5 3.5 15 15.5" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M11 14.5l7.5 4.5-3.6 8.3c-3.4.4-7.4-2-9.4-5.4z" fill="#F7C85A" />
+      <path d="M9.8 21.4l3.8 2.3M8.2 23.6l3.4 2" stroke="#B5852A" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M22 26.5h6M24 22.5h4" stroke="#C9A27A" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  ),
+  sound: (
+    <g {...O}>
+      <path d="M5 12.5h5l6-5v17l-6-5H5z" fill="#5BB8F5" />
+      <path d="M20.5 11.5a6 6 0 0 1 0 9M23.5 8a10.5 10.5 0 0 1 0 16" stroke={INK} strokeWidth="2" strokeLinecap="round" fill="none" />
+    </g>
+  ),
+  soundOff: (
+    <g {...O}>
+      <path d="M5 12.5h5l6-5v17l-6-5H5z" fill="#D9D2C7" />
+      <path d="M20.5 12.5l7 7M27.5 12.5l-7 7" stroke={INK} strokeWidth="2.2" strokeLinecap="round" />
     </g>
   ),
 };
