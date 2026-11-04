@@ -119,14 +119,25 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
     let timer: ReturnType<typeof setTimeout> | null = null;
     let firstDirty = 0;
     let savedVersion = -1;
+    let savedLive = eng.liveRev;
+    let lastSaveAt = Date.now();
     const flushSave = () => {
       if (timer) clearTimeout(timer);
       timer = null;
       firstDirty = 0;
-      if (eng.version === savedVersion) return;
+      if (eng.version === savedVersion && eng.liveRev === savedLive) return;
       savedVersion = eng.version;
+      savedLive = eng.liveRev;
+      lastSaveAt = Date.now();
       void saveSand(eng.snapshot(draftRef.current));
     };
+    // 손을 떼지 않는 긴 붓질 — 획이 끝나야 오는 emit 만 보면 10초 넘게 뿌리는 동안 저장이 0이다.
+    // 마지막 저장부터 잰다(처음 알아챈 때부터 재면 2초 늦어 12초가 된다). 닫힐 때(pagehide) 저장은
+    // IndexedDB 쓰기가 끝나기 전에 페이지가 사라질 수 있어 이것을 대신하지 못한다.
+    const liveTimer = setInterval(() => {
+      if (!eng.drawing || eng.liveRev === savedLive) return;
+      if (Date.now() - lastSaveAt >= 10_000) flushSave();
+    }, 1000);
     const off = eng.on(() => {
       setHist({ undo: eng.canUndo, redo: eng.canRedo, empty: eng.empty });
       // 3초 쉬면 저장 · 계속 그려도 10초마다는 저장(웨일북 통째 유실 교훈)
@@ -155,6 +166,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
 
     return () => {
       alive = false;
+      clearInterval(liveTimer);
       flushSave();
       off();
       document.removeEventListener("visibilitychange", onHide);

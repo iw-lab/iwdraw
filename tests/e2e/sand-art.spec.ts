@@ -151,3 +151,52 @@ test("모드 탭으로 샌드아트 ↔ 그리기를 오간다", async ({ page }
   await page.getByRole("tab", { name: "유화" }).first().click();
   await expect(page).toHaveURL(/\/draw\?mode=oil/);
 });
+
+/* 8way(grokweb): 한 번의 긴 붓질(10초 넘게 뿌리기) 중엔 저장이 없어 새로고침·크래시에 그린 모래를 잃었다 */
+test("손을 떼지 않고 11초 뿌리다 새로고침해도 모래가 남는다", async ({ page }) => {
+  const P = await openClean(page);
+  await page.getByTestId("sand-tool-pour").click({ force: true });
+  const [x, y] = P(0.5, 0.5);
+  const before = await lum(page, 0.5, 0.5);
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.waitForTimeout(11_500);
+  await page.reload(); // 손을 떼기 전에 탭이 죽는 것과 같다
+  await expect(page.getByText("모래판을 깔고 있어요")).toHaveCount(0);
+  await expect.poll(() => lum(page, 0.5, 0.5), { message: "긴 붓질이 저장됐나" }).toBeLessThan(before - 120);
+  // 저장된 판과 기록이 짝이 맞다 — 무비 끝 장면도 모래가 있다
+  await page.getByTestId("sand-movie-btn").click({ force: true });
+  await expect(page.getByTestId("sand-movie-progress")).toHaveAttribute("data-progress", "1.000", { timeout: 60_000 });
+  const mv = await page.evaluate(() => {
+    const c = document.querySelector('[data-testid="sand-movie-canvas"]') as HTMLCanvasElement;
+    const d = c.getContext("2d")!.getImageData(c.width >> 1, c.height >> 1, 1, 1).data;
+    return Math.round(0.3 * d[0] + 0.59 * d[1] + 0.11 * d[2]);
+  });
+  expect(mv, "무비 끝 장면 = 저장된 판").toBeLessThan(before - 120);
+});
+
+/* 8way(meta): 펜을 한 번 쓰면 그 뒤로 손가락이 영영 안 먹었다 — 샌드아트는 손가락 놀이다 */
+test("펜을 쓴 뒤 잠시 지나면 손가락으로 다시 그려진다", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true });
+  const page = await ctx.newPage();
+  await openClean(page);
+  await page.getByTestId("sand-fill").click();
+  await page.getByTestId("sand-tool-finger").click();
+  const box = (await page.getByTestId("sand-canvas").boundingBox())!;
+  const cdp = await ctx.newCDPSession(page);
+  const yPen = box.y + box.height * 0.3;
+  await cdp.send("Input.dispatchMouseEvent", { type: "mousePressed", x: box.x + box.width * 0.3, y: yPen, button: "left", clickCount: 1, pointerType: "pen" });
+  for (let i = 1; i <= 10; i++) await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: box.x + box.width * (0.3 + i * 0.03), y: yPen, button: "left", pointerType: "pen" });
+  await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: box.x + box.width * 0.6, y: yPen, button: "left", clickCount: 1, pointerType: "pen" });
+  await expect.poll(() => lum(page, 0.45, 0.3), { message: "펜 획" }).toBeGreaterThan(150);
+  await page.waitForTimeout(2500);
+  const y = box.y + box.height * 0.7;
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: box.x + box.width * 0.3, y }] });
+  for (let i = 1; i <= 20; i++) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: box.x + box.width * (0.3 + i * 0.015), y }] });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect.poll(() => lum(page, 0.45, 0.7), { message: "펜 뒤 손가락 획" }).toBeGreaterThan(150);
+  await ctx.close();
+});

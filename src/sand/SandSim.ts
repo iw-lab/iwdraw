@@ -255,8 +255,10 @@ export class SandSim {
         this.splat(cx + nx * t, cy + ny * t, take);
       }
     }
-    this.relax(x0 - 3, y0 - 3, x1 + 4, y1 + 4, 0.9);
-    this.mark(x0 - Rc - 4, y0 - Rc - 4, x1 + Rc + 5, y1 + Rc + 5);
+    // 둑은 가운데에서 최대 R×1.35+0.6(+네 칸 나눔 1) 떨어진 곳에 쌓인다 — 안식각·칠하기 범위가 그 둑까지 덮어야 한다
+    const reach = Math.ceil(R * 1.35 + 3);
+    this.relax(cx - reach, cy - reach, cx + reach + 1, cy + reach + 1, 0.9);
+    this.mark(cx - reach - 2, cy - reach - 2, cx + reach + 3, cy + reach + 3);
   }
 
   /* ── 손바닥: 넓게 쓸면 모래가 손을 따라 끌려가 장면이 바뀐다 ── */

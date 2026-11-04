@@ -599,7 +599,8 @@ async function dropShowcaseCache(reqUrl: string, id?: string | null) {
 }
 // 걸기 창이 미리 고를 시·도(2026-11-03 «다른 학교는 시·도를 모르나? 자동으로?») — 전에 고른 값 → 접속 위치. 아무것도 저장하지 않는다.
 app.get("/api/teacher/showcase-sido", requireTeacher, async (c) => {
-  const last = await c.env.DB.prepare(
+  // 한 선생님의 학급(classes_teacher_idx) → 그 학급 작품(artworks_class_idx)만 읽고, 그 몇백 행 안에서만 정렬한다
+  const last = await c.env.DB.prepare( // gb-scan-ok: 선생님 한 명의 작품만(색인 두 개로 좁힌 뒤 정렬)
     `SELECT a.showcase_sido AS s FROM artworks a JOIN classes k ON k.id = a.class_id
      WHERE k.teacher_id = ? AND a.showcase_sido IS NOT NULL ORDER BY a.showcase_at DESC LIMIT 1`,
   ).bind(c.get("teacherId")).first<{ s: string }>();

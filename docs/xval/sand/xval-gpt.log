@@ -1,0 +1,7 @@
+── 레인 사전점검(모델 호출 0) ──
+  ✅ gptweb
+── xval (에이전트 없음) · 레인 [gptweb] · 번들 78192바이트 ──
+
+레인   종료 초     응답바이트
+gptweb   0      370     5565
+OUT=docs/xval/sand/out-gpt

@@ -1,0 +1,2051 @@
+아트온(초등 교실 그림 웹앱)에 새로 넣은 «샌드아트» 모드 코드 검수. 라이트박스 위 모래 그림: 모래 두께 격자(SandSim) + 화면(SandRender, 바뀐 사각형만 칠함) + 엔진(입력·되돌리기·기록·자동저장) + React 화면·무비.
+성공조건(이것만 본다):
+ (a) 결정성 — base(시작 판) + ops 를 차례로 apply 하면 지금 판과 같다. 무비 마지막 장면 = 지금 그림. 되돌리기 칸 1개 = ops 끝의 연산 1개(undo/redo/cancel/fold 어느 경로에서도 어긋나지 않음).
+ (b) 입력 — 마우스·터치·펜에서 획이 끊기거나 브라우저에 가로채이지 않고, 두 번째 손가락·손바닥은 무시, pointercancel 이면 붓질 전 판으로 원복. 자동저장은 그린 것을 잃지 않는다(새로고침·탭 숨김·10초 연속 그리기).
+ (c) 자원 — 웨일북(저사양 크롬북)에서 프레임마다 큰 할당·전체 판 재계산 없음, 메모리 상한(되돌리기 20칸·기록 2.4MB 접기)이 지켜진다. 잘못된 저장본(IndexedDB 손상·크기 불일치)이 와도 화면이 죽지 않는다.
+실제 결함(재현 가능한 입력→잘못된 결과)만. 스타일·취향·«이렇게 하면 더 좋다»는 빼라. 인용은 번들 원문 그대로. 결함 없으면 [].
+
+렌즈 = 한국어 정확성·어미·되풀이·읽는 맛(문체).
+
+
+## 작업 방식 (엄수)
+🔴 **파일을 열거나 검색하지 마라.** 판정에 필요한 것은 전부 아래 「검토 대상」 안에 있다.
+   너는 격리된 홈에서 돌고 있어서 저장소가 보이지 않는다 — 탐색을 시도하면 그냥 실패한다
+   (2026-08-28 실측: Grok 레인이 523초를 쓰고 RC=1 로 죽었다. 원인은 능력이 아니라 배선이었다).
+
+## 출력 형식 (엄수)
+설명·서론·결론 없이 **JSON 배열 하나만** 출력한다. 발견이 없으면 정확히 `[]` 를 출력한다.
+각 원소:
+{"sev":"CRITICAL|MAJOR|MINOR","where":"파일:줄 또는 식별자","quote":"문제가 있는 원문을 그대로 25자 이내로","why":"왜 틀렸는지 한 문장","fix":"어떻게 고치는지 한 문장"}
+규칙:
+- "quote" 는 반드시 **내가 준 자료에 글자 그대로 존재하는 문자열**이어야 한다. 지어내면 그 발견은 폐기된다.
+- 최대 12 건. 확신이 낮으면 넣지 말고 버려라.
+- 칭찬·요약·개선제안 금지. 결함만.
+
+---- 검토 대상 ----
+# 아트온 샌드아트 모드 — 새 파일 전문 + 수정 파일 diff (Next.js 15 정적 export · Canvas2D · 의존성 추가 0)
+
+## FILE src/sand/SandSim.ts
+```ts
+/*
+ * 샌드아트 모래판 — 칸마다 «모래 두께» 하나만 기억하는 높이 격자(렌더·DOM import 0).
+ *
+ * 왜 낱알이 아니라 두께인가: 낱알 수십만 개를 매 프레임 움직이면 웨일북에서 못 버틴다.
+ * 라이트박스 위 모래 그림에서 눈에 보이는 건 «빛이 얼마나 새어 나오나» = 두께뿐이다.
+ *
+ * 결정성(무비·되돌리기의 바탕): 같은 연산(SandOp)을 같은 순서로 다시 넣으면 같은 판이 나온다.
+ *   - 난수는 연산마다 저장한 seed 로 만든 mulberry32 뿐(Math.random 0)
+ *   - 붓질 하나 = 프레임마다 찍힌 점 [x, y, dt] 목록 — 붓기 양이 시간(dt)에 비례하므로 dt 까지 적는다
+ */
+
+export type SandTool = "pour" | "finger" | "palm";
+
+/** 기록 단위. d = 평평한 [x, y, dtMs, x, y, dtMs, …](격자 좌표) */
+export type SandOp =
+  | { k: "stroke"; tool: SandTool; size: number; seed: number; d: number[] }
+  | { k: "fill"; seed: number }
+  | { k: "clear" };
+
+/** 두께 상한 — 붓기를 오래 눌러도 칸 하나가 끝없이 쌓이지 않게 */
+export const SAND_MAX = 6;
+/** 모래 쏟기 두께(빛이 거의 안 새는 두께) */
+export const FILL_LEVEL = 1.5;
+
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** 고정 시드 낱알 결(0~255) — 얇은 모래 가장자리가 매끈한 그러데이션이 아니라 «모래알»로 보이게 */
+export function makeGrain(w: number, h: number, seed = 20261104): Uint8Array {
+  const g = new Uint8Array(w * h);
+  const rnd = mulberry32(seed);
+  for (let i = 0; i < g.length; i++) g[i] = (rnd() * 256) | 0;
+  return g;
+}
+
+const smooth = (e0: number, e1: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+};
+
+export class SandSim {
+  readonly w: number;
+  readonly h: number;
+  H: Float32Array;
+  /** 마지막 flush 이후 바뀐 칸의 사각형(렌더가 이만큼만 다시 그린다). x1·y1 은 포함 안 함 */
+  dx0 = 0;
+  dy0 = 0;
+  dx1 = 0;
+  dy1 = 0;
+  private tmp: Float32Array;
+
+  // 진행 중 붓질 상태
+  private tool: SandTool = "pour";
+  private size = 20;
+  private rnd: () => number = mulberry32(1);
+  private lx = 0;
+  private ly = 0;
+  private started = false;
+  /** 손가락 자국 간격을 맞추려고 남은 거리를 다음 점으로 넘긴다 */
+  private carry = 0;
+
+  constructor(w: number, h: number) {
+    this.w = w;
+    this.h = h;
+    this.H = new Float32Array(w * h);
+    this.tmp = new Float32Array(w * h);
+    this.markAll();
+  }
+
+  markAll(): void {
+    this.dx0 = 0;
+    this.dy0 = 0;
+    this.dx1 = this.w;
+    this.dy1 = this.h;
+  }
+  private mark(x0: number, y0: number, x1: number, y1: number): void {
+    x0 = Math.max(0, Math.floor(x0));
+    y0 = Math.max(0, Math.floor(y0));
+    x1 = Math.min(this.w, Math.ceil(x1));
+    y1 = Math.min(this.h, Math.ceil(y1));
+    if (x1 <= x0 || y1 <= y0) return;
+    if (this.dx1 <= this.dx0) {
+      this.dx0 = x0;
+      this.dy0 = y0;
+      this.dx1 = x1;
+      this.dy1 = y1;
+      return;
+    }
+    this.dx0 = Math.min(this.dx0, x0);
+    this.dy0 = Math.min(this.dy0, y0);
+    this.dx1 = Math.max(this.dx1, x1);
+    this.dy1 = Math.max(this.dy1, y1);
+  }
+  /** 바뀐 사각형을 넘기고 비운다 — null = 바뀐 곳 없음 */
+  takeDirty(): { x0: number; y0: number; x1: number; y1: number } | null {
+    if (this.dx1 <= this.dx0 || this.dy1 <= this.dy0) return null;
+    const r = { x0: this.dx0, y0: this.dy0, x1: this.dx1, y1: this.dy1 };
+    this.dx0 = this.dy0 = this.dx1 = this.dy1 = 0;
+    return r;
+  }
+
+  /* ── 판 전체 연산 ── */
+  fill(seed: number): void {
+    const rnd = mulberry32(seed);
+    const H = this.H;
+    for (let i = 0; i < H.length; i++) H[i] = FILL_LEVEL + (rnd() - 0.5) * 0.35;
+    this.markAll();
+  }
+  clear(): void {
+    this.H.fill(0);
+    this.markAll();
+  }
+
+  /* ── 붓질(스트리밍) — 화면은 begin → dab… → end, 무비는 같은 순서로 다시 넣는다 ── */
+  begin(tool: SandTool, size: number, seed: number): void {
+    this.tool = tool;
+    this.size = Math.max(2, Math.min(120, size));
+    this.rnd = mulberry32(seed);
+    this.started = false;
+    this.carry = 0;
+  }
+
+  dab(x: number, y: number, dt: number): void {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const dtc = Math.max(0, Math.min(100, Number.isFinite(dt) ? dt : 0));
+    if (!this.started) {
+      this.started = true;
+      this.lx = x;
+      this.ly = y;
+      if (this.tool === "finger") this.fingerStamp(x, y, 1, 0);
+      else if (this.tool === "pour") this.pourAt(x, y, dtc);
+      return;
+    }
+    if (this.tool === "pour") this.pourSeg(x, y, dtc);
+    else if (this.tool === "finger") this.fingerSeg(x, y);
+    else this.palmSeg(x, y);
+    this.lx = x;
+    this.ly = y;
+  }
+
+  end(): void {
+    this.started = false;
+  }
+
+  /** 기록된 연산 하나를 통째로 적용(무비·복원·되돌리기 재생) */
+  apply(op: SandOp): void {
+    if (op.k === "clear") return this.clear();
+    if (op.k === "fill") return this.fill(op.seed);
+    this.begin(op.tool, op.size, op.seed);
+    const d = op.d;
+    for (let i = 0; i + 2 < d.length; i += 3) this.dab(d[i], d[i + 1], d[i + 2]);
+    this.end();
+  }
+
+  /* ── 붓기: 손끝에서 모래가 흘러내려 쌓인다. 양은 «누르고 있는 시간»에 비례 ── */
+  private pourSeg(x: number, y: number, dt: number): void {
+    const sig = this.size * 0.32;
+    const dist = Math.hypot(x - this.lx, y - this.ly);
+    const n = Math.max(1, Math.min(24, Math.ceil(dist / Math.max(1, sig * 0.6))));
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      this.pourAt(this.lx + (x - this.lx) * t, this.ly + (y - this.ly) * t, dt / n);
+    }
+  }
+
+  private pourAt(cx: number, cy: number, dt: number): void {
+    if (dt <= 0) return;
+    const sig = Math.max(1, this.size * 0.32);
+    const R = Math.ceil(sig * 2.4);
+    // 1초 누르면 가운데가 약 2.4 두께(빛이 거의 막힘). 굵은 손일수록 넓게 퍼지되 가운데 높이는 같다
+    const amp = dt * 0.0024;
+    const inv = 1 / (2 * sig * sig);
+    const H = this.H;
+    const w = this.w;
+    const rnd = this.rnd;
+    const x0 = Math.max(0, Math.floor(cx - R));
+    const x1 = Math.min(this.w - 1, Math.ceil(cx + R));
+    const y0 = Math.max(0, Math.floor(cy - R));
+    const y1 = Math.min(this.h - 1, Math.ceil(cy + R));
+    for (let yy = y0; yy <= y1; yy++) {
+      const ddy = yy - cy;
+      for (let xx = x0; xx <= x1; xx++) {
+        const ddx = xx - cx;
+        const g = Math.exp(-(ddx * ddx + ddy * ddy) * inv);
+        if (g < 0.01) continue;
+        // 낱알이 떨어지는 자리는 고르지 않다 — 칸마다 0.2~1.8배
+        const i = yy * w + xx;
+        const v = H[i] + amp * g * (0.2 + 1.6 * rnd());
+        H[i] = v > SAND_MAX ? SAND_MAX : v;
+      }
+    }
+    this.relax(x0 - 1, y0 - 1, x1 + 2, y1 + 2, 0.45);
+    this.mark(x0 - 2, y0 - 2, x1 + 3, y1 + 3);
+  }
+
+  /* ── 손가락: 모래를 밀어내 빛나는 선이 생기고, 밀린 모래는 양옆에 둑으로 쌓인다 ── */
+  private fingerSeg(x: number, y: number): void {
+    const step = Math.max(0.8, this.size * 0.18);
+    const dxm = x - this.lx;
+    const dym = y - this.ly;
+    const dist = Math.hypot(dxm, dym);
+    if (dist < 1e-6) return;
+    const ux = dxm / dist;
+    const uy = dym / dist;
+    let s = step - this.carry;
+    while (s <= dist) {
+      this.fingerStamp(this.lx + ux * s, this.ly + uy * s, ux, uy);
+      s += step;
+    }
+    this.carry = dist - (s - step);
+  }
+
+  private fingerStamp(cx: number, cy: number, ux: number, uy: number): void {
+    const R = Math.max(1.2, this.size * 0.5);
+    const Rc = Math.ceil(R + 1);
+    const H = this.H;
+    const w = this.w;
+    const rnd = this.rnd;
+    const x0 = Math.max(0, Math.floor(cx - Rc));
+    const x1 = Math.min(this.w - 1, Math.ceil(cx + Rc));
+    const y0 = Math.max(0, Math.floor(cy - Rc));
+    const y1 = Math.min(this.h - 1, Math.ceil(cy + Rc));
+    const side = rnd() < 0.5 ? 1 : -1;
+    for (let yy = y0; yy <= y1; yy++) {
+      for (let xx = x0; xx <= x1; xx++) {
+        const ddx = xx - cx;
+        const ddy = yy - cy;
+        const d = Math.hypot(ddx, ddy);
+        if (d >= R) continue;
+        const i = yy * w + xx;
+        const h0 = H[i];
+        if (h0 <= 1e-4) continue;
+        const wgt = 1 - smooth(R * 0.55, R, d);
+        const take = h0 * Math.min(1, 0.94 * wgt);
+        if (take <= 0) continue;
+        H[i] = h0 - take;
+        // 가운데에서 바깥으로 — 바로 가운데 칸은 진행 방향의 옆으로 민다
+        let nx: number, ny: number;
+        if (d < 0.5) {
+          nx = -uy * side;
+          ny = ux * side;
+        } else {
+          nx = ddx / d;
+          ny = ddy / d;
+        }
+        const t = R + 0.6 + rnd() * R * 0.35;
+        this.splat(cx + nx * t, cy + ny * t, take);
+      }
+    }
+    this.relax(x0 - 3, y0 - 3, x1 + 4, y1 + 4, 0.9);
+    this.mark(x0 - Rc - 4, y0 - Rc - 4, x1 + Rc + 5, y1 + Rc + 5);
+  }
+
+  /* ── 손바닥: 넓게 쓸면 모래가 손을 따라 끌려가 장면이 바뀐다 ── */
+  private palmSeg(x: number, y: number): void {
+    const R = Math.max(4, this.size * 1.1);
+    const dxm = x - this.lx;
+    const dym = y - this.ly;
+    const dist = Math.hypot(dxm, dym);
+    if (dist < 0.3) return;
+    const stepLen = Math.max(1, R * 0.22);
+    const n = Math.max(1, Math.min(40, Math.ceil(dist / stepLen)));
+    const sx = dxm / n;
+    const sy = dym / n;
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      this.palmStamp(this.lx + dxm * t - sx, this.ly + dym * t - sy, sx, sy, R);
+    }
+  }
+
+  private palmStamp(cx: number, cy: number, sx: number, sy: number, R: number): void {
+    const H = this.H;
+    const T = this.tmp;
+    const w = this.w;
+    const rnd = this.rnd;
+    const x0 = Math.max(0, Math.floor(cx - R));
+    const x1 = Math.min(this.w - 1, Math.ceil(cx + R));
+    const y0 = Math.max(0, Math.floor(cy - R));
+    const y1 = Math.min(this.h - 1, Math.ceil(cy + R));
+    // 1) 떼어 내기(임시 칸에) — 같은 자국 안에서 옮긴 모래를 또 옮기지 않게 두 단계로 나눈다
+    for (let yy = y0; yy <= y1; yy++) {
+      for (let xx = x0; xx <= x1; xx++) {
+        const d = Math.hypot(xx - cx, yy - cy);
+        const i = yy * w + xx;
+        if (d >= R) {
+          T[i] = 0;
+          continue;
+        }
+        const f = 0.8 * (1 - smooth(R * 0.45, R, d));
+        const mv = H[i] * f;
+        H[i] -= mv;
+        T[i] = mv;
+      }
+    }
+    // 2) 손이 간 만큼 옮겨 놓기 + 옆으로 살짝 흩기(손바닥 결)
+    const len = Math.hypot(sx, sy) || 1;
+    const px = -sy / len;
+    const py = sx / len;
+    for (let yy = y0; yy <= y1; yy++) {
+      for (let xx = x0; xx <= x1; xx++) {
+        const i = yy * w + xx;
+        const mv = T[i];
+        if (mv <= 0) continue;
+        T[i] = 0;
+        const j = (rnd() - 0.5) * 1.2;
+        this.splat(xx + sx * 1.05 + px * j, yy + sy * 1.05 + py * j, mv);
+      }
+    }
+    const Rc = Math.ceil(R + len + 2);
+    this.relax(cx - Rc, cy - Rc, cx + Rc, cy + Rc, 0.9);
+    this.mark(cx - Rc - 2, cy - Rc - 2, cx + Rc + 3, cy + Rc + 3);
+  }
+
+  /** 양 v 를 실수 좌표 둘레 네 칸에 나눠 놓는다(판 밖으로 나간 모래는 판 끝에 쌓인다) */
+  private splat(fx: number, fy: number, v: number): void {
+    const w = this.w;
+    const h = this.h;
+    fx = Math.min(w - 1.001, Math.max(0, fx));
+    fy = Math.min(h - 1.001, Math.max(0, fy));
+    const ix = fx | 0;
+    const iy = fy | 0;
+    const ax = fx - ix;
+    const ay = fy - iy;
+    const H = this.H;
+    const i = iy * w + ix;
+    H[i] += v * (1 - ax) * (1 - ay);
+    H[i + 1] += v * ax * (1 - ay);
+    H[i + w] += v * (1 - ax) * ay;
+    H[i + w + 1] += v * ax * ay;
+  }
+
+  /** 안식각 — 이웃보다 thr 넘게 높은 칸은 넘친 만큼을 나눠 흘려보낸다(뾰족한 탑·한 칸 가시를 없앤다) */
+  private relax(x0: number, y0: number, x1: number, y1: number, thr: number): void {
+    const w = this.w;
+    const H = this.H;
+    x0 = Math.max(1, Math.floor(x0));
+    y0 = Math.max(1, Math.floor(y0));
+    x1 = Math.min(this.w - 1, Math.ceil(x1));
+    y1 = Math.min(this.h - 1, Math.ceil(y1));
+    for (let yy = y0; yy < y1; yy++) {
+      for (let xx = x0; xx < x1; xx++) {
+        const i = yy * w + xx;
+        let hc = H[i];
+        if (hc <= thr) continue;
+        // 네 이웃 각각에 넘친 양의 1/5 (전부 보내면 진동한다)
+        const n0 = i - 1, n1 = i + 1, n2 = i - w, n3 = i + w;
+        let d = hc - H[n0] - thr;
+        if (d > 0) { d *= 0.2; H[n0] += d; hc -= d; }
+        d = hc - H[n1] - thr;
+        if (d > 0) { d *= 0.2; H[n1] += d; hc -= d; }
+        d = hc - H[n2] - thr;
+        if (d > 0) { d *= 0.2; H[n2] += d; hc -= d; }
+        d = hc - H[n3] - thr;
+        if (d > 0) { d *= 0.2; H[n3] += d; hc -= d; }
+        H[i] = hc;
+      }
+    }
+  }
+
+  /** 모래 총량(시험·디버그용 — 손가락·손바닥은 모래를 옮기기만 해야 한다) */
+  total(): number {
+    let s = 0;
+    const H = this.H;
+    for (let i = 0; i < H.length; i++) s += H[i];
+    return s;
+  }
+}
+```
+
+## FILE src/sand/SandEngine.ts
+```ts
+/*
+ * 샌드아트 엔진 — 모래판(SandSim) + 화면(SandRender) + 입력 + 되돌리기 + 기록(무비) + 자동저장 거리.
+ *
+ * 불변식(무비·되돌리기가 기대는 것):
+ *   base(시작 판, 없으면 빈 판) 에 ops 를 차례로 apply 하면 지금 판과 같다.
+ *   되돌리기 칸 하나 = ops 끝의 연산 하나(undo 는 ops 를 하나 빼고 그 직전 판으로).
+ *   ops 가 너무 길어지면 오래된 것을 base 로 접는다 — 단 되돌리기 칸(UNDO_MAX) 안의 것은 접지 않는다.
+ */
+import { SandSim, makeGrain, type SandOp, type SandTool } from "./SandSim";
+import { SandRender, type SandLook } from "./SandRender";
+
+export const UNDO_MAX = 20;
+/** 기록 상한(점 수 ×3 숫자) — 넘으면 오래된 연산을 base 로 접는다(약 2.4MB) */
+export const LOG_MAX_NUMS = 600_000;
+const Q = 65535 / 8; // 두께 0~8 → Uint16
+
+export function quantize(H: Float32Array): Uint16Array {
+  const out = new Uint16Array(H.length);
+  for (let i = 0; i < H.length; i++) {
+    const v = H[i] * Q;
+    out[i] = v <= 0 ? 0 : v >= 65535 ? 65535 : (v + 0.5) | 0;
+  }
+  return out;
+}
+export function dequantize(q: Uint16Array, into: Float32Array): void {
+  for (let i = 0; i < q.length; i++) into[i] = q[i] / Q;
+}
+
+export interface SandSaved {
+  v: 1;
+  w: number;
+  h: number;
+  cur: Uint16Array;
+  base: Uint16Array | null;
+  ops: SandOp[];
+  draftId: string;
+  savedAt: number;
+}
+
+type Listener = () => void;
+
+export class SandEngine {
+  readonly sim: SandSim;
+  readonly render: SandRender;
+  readonly grain: Uint8Array;
+  private canvas: HTMLCanvasElement | null = null;
+  private ctx: CanvasRenderingContext2D | null = null;
+  private raf = 0;
+  private listeners = new Set<Listener>();
+
+  tool: SandTool = "pour";
+  sizes: Record<SandTool, number> = { pour: 22, finger: 12, palm: 34 };
+
+  base: Uint16Array | null = null;
+  ops: SandOp[] = [];
+  private logNums = 0;
+  private undoSnaps: Uint16Array[] = [];
+  private redoSnaps: Uint16Array[] = [];
+  private redoOps: SandOp[] = [];
+  /** 기록이 바뀔 때마다 오른다 — 자동저장이 «바뀐 게 있나»를 본다 */
+  version = 0;
+
+  // 진행 중 붓질
+  private cur: { id: number; tool: SandTool; size: number; seed: number; d: number[]; t: number; x: number; y: number; moved: number } | null = null;
+  private penSeen = false;
+  private seedCounter = 1;
+  /** 소리·화면 반응에 쓰는 마지막 움직임 속도(칸/ms) */
+  speed = 0;
+  onActivity?: (tool: SandTool | null, speed: number) => void;
+
+  constructor(w: number, h: number, look: SandLook) {
+    this.sim = new SandSim(w, h);
+    this.grain = makeGrain(w, h);
+    this.render = new SandRender(this.sim, this.grain, look);
+  }
+
+  get w() {
+    return this.sim.w;
+  }
+  get h() {
+    return this.sim.h;
+  }
+  get size() {
+    return this.sizes[this.tool];
+  }
+  get canUndo() {
+    return this.undoSnaps.length > 0;
+  }
+  get canRedo() {
+    return this.redoOps.length > 0;
+  }
+  get empty() {
+    return this.ops.length === 0 && !this.base;
+  }
+
+  on(fn: Listener): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+  private emit(): void {
+    this.version++;
+    for (const fn of this.listeners) fn();
+  }
+
+  /* ── 화면 ── */
+  attach(canvas: HTMLCanvasElement): void {
+    this.canvas = canvas;
+    canvas.width = this.w;
+    canvas.height = this.h;
+    this.ctx = canvas.getContext("2d", { alpha: false });
+    this.sim.markAll();
+    canvas.addEventListener("pointerdown", this.onDown);
+    canvas.addEventListener("pointermove", this.onMove);
+    canvas.addEventListener("pointerup", this.onUp);
+    canvas.addEventListener("pointercancel", this.onCancel);
+    canvas.addEventListener("lostpointercapture", this.onUp);
+    this.raf = requestAnimationFrame(this.tick);
+  }
+
+  detach(): void {
+    const c = this.canvas;
+    if (c) {
+      c.removeEventListener("pointerdown", this.onDown);
+      c.removeEventListener("pointermove", this.onMove);
+      c.removeEventListener("pointerup", this.onUp);
+      c.removeEventListener("pointercancel", this.onCancel);
+      c.removeEventListener("lostpointercapture", this.onUp);
+    }
+    cancelAnimationFrame(this.raf);
+    this.canvas = null;
+    this.ctx = null;
+  }
+
+  setLook(look: SandLook): void {
+    this.render.look = look;
+    this.sim.markAll();
+  }
+
+  setTool(t: SandTool): void {
+    this.tool = t;
+  }
+  setSize(n: number): void {
+    this.sizes[this.tool] = Math.max(3, Math.min(80, Math.round(n)));
+  }
+
+  /** 화면 칠하기 — 바뀐 곳만 */
+  flush(): void {
+    const r = this.sim.takeDirty();
+    if (!r || !this.ctx) return;
+    this.render.paint(r.x0, r.y0, r.x1, r.y1);
+    this.ctx.putImageData(this.render.img, 0, 0, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
+  }
+
+  private tick = (now: number) => {
+    this.raf = requestAnimationFrame(this.tick);
+    const c = this.cur;
+    // 붓기는 손을 멈추고 있어도 모래가 계속 흘러내린다
+    if (c && c.tool === "pour" && now - c.t > 14) this.addDab(c.x, c.y, now);
+    if (c && now - c.t > 120) {
+      this.speed = 0;
+      this.onActivity?.(c.tool, 0);
+    }
+    this.flush();
+  };
+
+  /* ── 입력 ── */
+  private toGrid(e: PointerEvent): [number, number] {
+    const r = this.canvas!.getBoundingClientRect();
+    return [((e.clientX - r.left) / r.width) * this.w, ((e.clientY - r.top) / r.height) * this.h];
+  }
+
+  private onDown = (e: PointerEvent) => {
+    if (e.pointerType === "pen") this.penSeen = true;
+    // 펜을 쓰는 기기에선 손바닥(터치)을 무시한다 · 두 번째 손가락도 무시
+    if (this.cur || (this.penSeen && e.pointerType === "touch")) return;
+    if (e.button > 0) return;
+    e.preventDefault();
+    try {
+      this.canvas!.setPointerCapture(e.pointerId);
+    } catch {
+      /* 합성 이벤트 등 */
+    }
+    const [x, y] = this.toGrid(e);
+    const seed = (Date.now() ^ Math.imul(this.seedCounter++, 2654435761)) >>> 0;
+    const size = this.size;
+    // 붓질 전 판 — 되돌리기 칸
+    this.pushUndo();
+    this.cur = { id: e.pointerId, tool: this.tool, size, seed, d: [], t: performance.now(), x, y, moved: 0 };
+    this.sim.begin(this.tool, size, seed);
+    this.addDab(x, y, this.cur.t, 0);
+    this.onActivity?.(this.tool, 0);
+  };
+
+  private onMove = (e: PointerEvent) => {
+    const c = this.cur;
+    if (!c || e.pointerId !== c.id) return;
+    const evs = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
+    const list = evs.length ? evs : [e];
+    const now = performance.now();
+    for (const ev of list) {
+      const [x, y] = this.toGrid(ev);
+      this.addDab(x, y, now);
+    }
+  };
+
+  private addDab(x: number, y: number, now: number, dtOverride?: number): void {
+    const c = this.cur!;
+    const dt = dtOverride ?? Math.min(100, now - c.t);
+    const dist = Math.hypot(x - c.x, y - c.y);
+    // 정밀도 = 0.01칸·0.1ms(저장 크기) — 기록한 값 그대로 판에 넣어야 무비와 같은 판이 된다
+    const rx = Math.round(x * 100) / 100;
+    const ry = Math.round(y * 100) / 100;
+    const rdt = Math.round(dt * 10) / 10;
+    c.d.push(rx, ry, rdt);
+    this.sim.dab(rx, ry, rdt);
+    if (dt > 0) this.speed = this.speed * 0.6 + (dist / dt) * 0.4;
+    c.moved += dist;
+    c.t = now;
+    c.x = x;
+    c.y = y;
+    this.onActivity?.(c.tool, this.speed);
+  }
+
+  private onUp = (e: PointerEvent) => {
+    const c = this.cur;
+    if (!c || e.pointerId !== c.id) return;
+    this.cur = null;
+    this.sim.end();
+    this.speed = 0;
+    this.onActivity?.(null, 0);
+    this.commit({ k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d });
+  };
+
+  /** 취소(제스처 가로채임) — 붓질 전 판으로 되돌리고 기록하지 않는다 */
+  private onCancel = (e: PointerEvent) => {
+    const c = this.cur;
+    if (!c || e.pointerId !== c.id) return;
+    this.cur = null;
+    this.sim.end();
+    this.onActivity?.(null, 0);
+    const snap = this.undoSnaps.pop();
+    if (snap) {
+      dequantize(snap, this.sim.H);
+      this.sim.markAll();
+    }
+  };
+
+  /* ── 기록·되돌리기 ── */
+  private pushUndo(): void {
+    this.undoSnaps.push(quantize(this.sim.H));
+    if (this.undoSnaps.length > UNDO_MAX) this.undoSnaps.shift();
+  }
+
+  private commit(op: SandOp): void {
+    this.ops.push(op);
+    this.logNums += op.k === "stroke" ? op.d.length : 1;
+    this.redoOps = [];
+    this.redoSnaps = [];
+    this.foldIfLong();
+    this.emit();
+  }
+
+  /** 판 전체 연산(쏟기·쓸기) — 되돌리기 가능 */
+  fill(): void {
+    if (this.cur) return;
+    this.pushUndo();
+    const seed = (Date.now() ^ Math.imul(this.seedCounter++, 2246822519)) >>> 0;
+    const op: SandOp = { k: "fill", seed };
+    this.sim.apply(op);
+    this.commit(op);
+  }
+  clear(): void {
+    if (this.cur) return;
+    this.pushUndo();
+    const op: SandOp = { k: "clear" };
+    this.sim.apply(op);
+    this.commit(op);
+  }
+
+  undo(): boolean {
+    if (this.cur) return false;
+    const snap = this.undoSnaps.pop();
+    const op = this.ops.pop();
+    if (!snap || !op) {
+      if (snap) this.undoSnaps.push(snap);
+      if (op) this.ops.push(op);
+      return false;
+    }
+    this.logNums -= op.k === "stroke" ? op.d.length : 1;
+    this.redoSnaps.push(quantize(this.sim.H));
+    this.redoOps.push(op);
+    dequantize(snap, this.sim.H);
+    this.sim.markAll();
+    this.emit();
+    return true;
+  }
+
+  redo(): boolean {
+    if (this.cur) return false;
+    const op = this.redoOps.pop();
+    const snap = this.redoSnaps.pop();
+    if (!op || !snap) return false;
+    this.undoSnaps.push(quantize(this.sim.H));
+    if (this.undoSnaps.length > UNDO_MAX) this.undoSnaps.shift();
+    dequantize(snap, this.sim.H);
+    this.ops.push(op);
+    this.logNums += op.k === "stroke" ? op.d.length : 1;
+    this.sim.markAll();
+    this.emit();
+    return true;
+  }
+
+  /** 오래된 연산을 base 로 접는다 — 되돌리기 칸 안(끝 UNDO_MAX 개)은 남긴다 */
+  private foldIfLong(): void {
+    if (this.logNums <= LOG_MAX_NUMS) return;
+    const keep = Math.max(UNDO_MAX, 1);
+    let n = 0;
+    let nums = this.logNums;
+    while (n < this.ops.length - keep && nums > LOG_MAX_NUMS * 0.7) {
+      const op = this.ops[n];
+      nums -= op.k === "stroke" ? op.d.length : 1;
+      n++;
+    }
+    if (n === 0) return;
+    const tmp = new SandSim(this.w, this.h);
+    if (this.base) dequantize(this.base, tmp.H);
+    for (let i = 0; i < n; i++) tmp.apply(this.ops[i]);
+    this.base = quantize(tmp.H);
+    this.ops = this.ops.slice(n);
+    this.logNums = nums;
+  }
+
+  /** 새 그림 — 판·기록·되돌리기 전부 비운다 */
+  reset(): void {
+    this.cur = null;
+    this.sim.clear();
+    this.base = null;
+    this.ops = [];
+    this.logNums = 0;
+    this.undoSnaps = [];
+    this.redoSnaps = [];
+    this.redoOps = [];
+    this.emit();
+  }
+
+  /* ── 저장·복원 ── */
+  snapshot(draftId: string): SandSaved {
+    return {
+      v: 1,
+      w: this.w,
+      h: this.h,
+      cur: quantize(this.sim.H),
+      base: this.base,
+      ops: this.ops,
+      draftId,
+      savedAt: Date.now(),
+    };
+  }
+
+  restore(s: SandSaved): boolean {
+    if (s.v !== 1 || s.w !== this.w || s.h !== this.h || s.cur.length !== this.w * this.h) return false;
+    dequantize(s.cur, this.sim.H);
+    this.base = s.base && s.base.length === this.w * this.h ? s.base : null;
+    this.ops = Array.isArray(s.ops) ? s.ops.filter(validOp) : [];
+    this.logNums = this.ops.reduce((a, o) => a + (o.k === "stroke" ? o.d.length : 1), 0);
+    this.undoSnaps = [];
+    this.redoSnaps = [];
+    this.redoOps = [];
+    this.sim.markAll();
+    this.emit();
+    return true;
+  }
+
+  /** 지금 판을 캔버스로(저장·내보내기). scale 배로 부드럽게 키운다 */
+  toCanvas(scale = 2): HTMLCanvasElement {
+    this.render.paintAll();
+    const src = document.createElement("canvas");
+    src.width = this.w;
+    src.height = this.h;
+    src.getContext("2d")!.putImageData(this.render.img, 0, 0);
+    this.sim.markAll(); // 화면 쪽 img 를 통째로 다시 칠했으니 다음 flush 가 화면에도 반영
+    if (scale === 1) return src;
+    const out = document.createElement("canvas");
+    out.width = Math.round(this.w * scale);
+    out.height = Math.round(this.h * scale);
+    const ctx = out.getContext("2d")!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(src, 0, 0, out.width, out.height);
+    return out;
+  }
+}
+
+export function validOp(o: unknown): o is SandOp {
+  if (!o || typeof o !== "object") return false;
+  const op = o as SandOp;
+  if (op.k === "clear") return true;
+  if (op.k === "fill") return Number.isFinite(op.seed);
+  if (op.k === "stroke")
+    return (
+      (op.tool === "pour" || op.tool === "finger" || op.tool === "palm") &&
+      Number.isFinite(op.size) &&
+      Number.isFinite(op.seed) &&
+      Array.isArray(op.d) &&
+      op.d.length % 3 === 0
+    );
+  return false;
+}
+```
+
+## FILE src/sand/SandRender.ts
+```ts
+/*
+ * 모래판 → 화면 색. 라이트박스 = 아래에서 빛이 올라오는 유리판.
+ *   두꺼운 모래 = 모래색(위에서 비친 은은한 볼록함) · 얇으면 빛이 새어 노을빛 · 없으면 환한 빛
+ * 바뀐 사각형만 다시 칠한다(손가락 한 번 = 손 둘레 몇천 칸).
+ */
+import { SandSim } from "./SandSim";
+
+export type RGB = [number, number, number];
+
+export interface SandLook {
+  /** 빛 색(유리판) */
+  light: RGB;
+  /** 모래 색 */
+  sand: RGB;
+}
+
+export const LIGHTS: { id: string; label: string; rgb: RGB }[] = [
+  { id: "warm", label: "노을빛", rgb: [255, 214, 140] },
+  { id: "white", label: "하얀 빛", rgb: [252, 248, 236] },
+  { id: "sky", label: "하늘빛", rgb: [150, 214, 255] },
+  { id: "pink", label: "분홍빛", rgb: [255, 170, 205] },
+  { id: "green", label: "풀빛", rgb: [178, 238, 160] },
+];
+
+export const SANDS: { id: string; label: string; rgb: RGB }[] = [
+  { id: "dark", label: "검은 모래", rgb: [34, 26, 20] },
+  { id: "brown", label: "갈색 모래", rgb: [96, 64, 38] },
+  { id: "navy", label: "밤 모래", rgb: [26, 34, 72] },
+];
+
+/** 두께 → 빛이 새는 비율. exp 를 칸마다 부르지 않게 표로 */
+const LUT_N = 1024;
+const LUT_MAX = 8;
+const TRANS = new Float32Array(LUT_N + 1);
+for (let i = 0; i <= LUT_N; i++) TRANS[i] = Math.exp(-2.3 * ((i / LUT_N) * LUT_MAX));
+
+export class SandRender {
+  readonly img: ImageData;
+  private vig: Float32Array;
+  constructor(
+    private sim: SandSim,
+    private grain: Uint8Array,
+    public look: SandLook,
+  ) {
+    // 시험(jsdom)에는 ImageData 가 없다 — 같은 모양의 객체로 대신한다
+    this.img =
+      typeof ImageData !== "undefined"
+        ? new ImageData(sim.w, sim.h)
+        : ({ data: new Uint8ClampedArray(sim.w * sim.h * 4), width: sim.w, height: sim.h } as ImageData);
+    // 유리판 가운데가 조금 더 밝다(가장자리 0.72배) — 평평한 단색 빛은 화면 배경처럼 보인다
+    const { w, h } = sim;
+    this.vig = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const nx = (x / (w - 1)) * 2 - 1;
+        const ny = (y / (h - 1)) * 2 - 1;
+        const r2 = (nx * nx + ny * ny) / 2;
+        this.vig[y * w + x] = 1 - 0.28 * r2;
+      }
+    }
+  }
+
+  /** 사각형 [x0,x1)×[y0,y1) 을 img 에 칠한다 */
+  paint(x0: number, y0: number, x1: number, y1: number): void {
+    const { w, h, H } = this.sim;
+    const g = this.grain;
+    const px = this.img.data;
+    const vig = this.vig;
+    const [lr, lg, lb] = this.look.light;
+    const [sr, sg, sb] = this.look.sand;
+    for (let y = y0; y < y1; y++) {
+      const up = y > 0 ? -w : 0;
+      const dn = y < h - 1 ? w : 0;
+      for (let x = x0; x < x1; x++) {
+        const i = y * w + x;
+        const hv = H[i];
+        const gr = g[i] * (1 / 255);
+        // 얇은 곳은 낱알 결이 드러난다(두께를 칸마다 0.6~1.4배로 흔든다)
+        const he = hv * (0.6 + 0.8 * gr);
+        const li = he >= LUT_MAX ? LUT_N : ((he * (LUT_N / LUT_MAX)) | 0);
+        const T = TRANS[li];
+        // 볼록함: 왼쪽 위에서 비친 방 불빛 — 두꺼운 둑의 윗면이 밝고 아랫면이 어둡다
+        const gx = H[x < w - 1 ? i + 1 : i] - H[x > 0 ? i - 1 : i];
+        const gy = H[i + dn] - H[i + up];
+        let sh = 1 - (gx + gy) * 0.55;
+        sh = sh < 0.55 ? 0.55 : sh > 1.7 ? 1.7 : sh;
+        const sk = sh * (0.82 + 0.36 * gr);
+        const v = vig[i] * T;
+        const o = 1 - T;
+        const j = i * 4;
+        px[j] = sr * sk * o + lr * v;
+        px[j + 1] = sg * sk * o + lg * v;
+        px[j + 2] = sb * sk * o + lb * v;
+        px[j + 3] = 255;
+      }
+    }
+  }
+
+  paintAll(): void {
+    this.paint(0, 0, this.sim.w, this.sim.h);
+  }
+}
+```
+
+## FILE src/sand/sandSave.ts
+```ts
+/* 샌드아트 자동저장 — IndexedDB 한 칸(이 기기 안에만). 그리기 자동저장(arton DB)과 따로 둔다. */
+import type { SandSaved } from "./SandEngine";
+
+const DB = "arton-sand";
+const STORE = "state";
+const KEY = "cur";
+
+function open(): Promise<IDBDatabase> {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+export async function loadSand(): Promise<SandSaved | null> {
+  try {
+    const db = await open();
+    return await new Promise((res) => {
+      const tx = db.transaction(STORE, "readonly");
+      const r = tx.objectStore(STORE).get(KEY);
+      r.onsuccess = () => res((r.result as SandSaved) ?? null);
+      r.onerror = () => res(null);
+      tx.oncomplete = () => db.close();
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function saveSand(s: SandSaved): Promise<boolean> {
+  try {
+    const db = await open();
+    return await new Promise((res) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(s, KEY);
+      tx.oncomplete = () => {
+        db.close();
+        res(true);
+      };
+      tx.onerror = () => {
+        db.close();
+        res(false);
+      };
+      tx.onabort = () => {
+        db.close();
+        res(false);
+      };
+    });
+  } catch {
+    return false;
+  }
+}
+
+/** 설정(빛·모래·소리·굵기)은 작아서 localStorage */
+const PREF = "arton.sand.pref";
+export interface SandPref {
+  light: string;
+  sand: string;
+  sound: boolean;
+  sizes?: { pour: number; finger: number; palm: number };
+}
+export function loadPref(): SandPref {
+  const d: SandPref = { light: "warm", sand: "dark", sound: true };
+  try {
+    const v = JSON.parse(localStorage.getItem(PREF) || "null");
+    if (v && typeof v === "object") return { ...d, ...v };
+  } catch {
+    /* 사생활 보호 모드 */
+  }
+  return d;
+}
+export function savePref(p: SandPref): void {
+  try {
+    localStorage.setItem(PREF, JSON.stringify(p));
+  } catch {
+    /* 무시 */
+  }
+}
+```
+
+## FILE src/sand/sandAudio.ts
+```ts
+/*
+ * 모래 소리 — 녹음 파일 없이 걸러 낸 잡음 하나로. 손이 빠를수록 커지고, 멈추면 잦아든다.
+ *   붓기 = 높고 가는 «사르르» · 손가락 = 가운데 «사각» · 손바닥 = 낮고 넓은 «쓰윽»
+ * 교실에서 스물다섯 대가 같이 울리므로 크게 만들지 않는다(최대 0.18).
+ */
+import type { SandTool } from "./SandSim";
+
+const TONE: Record<SandTool, { f: number; q: number; base: number; k: number }> = {
+  pour: { f: 5200, q: 0.8, base: 0.07, k: 0 },
+  finger: { f: 2600, q: 1.1, base: 0, k: 0.22 },
+  palm: { f: 1100, q: 0.7, base: 0, k: 0.12 },
+};
+
+export class SandAudio {
+  private ctx: AudioContext | null = null;
+  private gain: GainNode | null = null;
+  private filter: BiquadFilterNode | null = null;
+  enabled = true;
+
+  /** 첫 손대기에서 부른다(자동재생 막힘 풀기) */
+  unlock(): void {
+    if (!this.enabled) return;
+    if (this.ctx) {
+      if (this.ctx.state === "suspended") void this.ctx.resume();
+      return;
+    }
+    const AC: typeof AudioContext | undefined =
+      typeof window !== "undefined"
+        ? window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+        : undefined;
+    if (!AC) return;
+    try {
+      const ctx = new AC();
+      const len = ctx.sampleRate * 2;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const ch = buf.getChannelData(0);
+      // 낱알 소리: 흰 잡음에 드문드문 작은 «톡»을 섞는다
+      let s = 12345;
+      for (let i = 0; i < len; i++) {
+        s = (s * 1103515245 + 12345) & 0x7fffffff;
+        const r = s / 0x7fffffff;
+        ch[i] = (r * 2 - 1) * (r > 0.985 ? 1 : 0.45);
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 2600;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      src.connect(filter).connect(gain).connect(ctx.destination);
+      src.start();
+      this.ctx = ctx;
+      this.gain = gain;
+      this.filter = filter;
+    } catch {
+      this.ctx = null;
+    }
+  }
+
+  /** tool=null 이면 조용히. speed = 칸/ms */
+  set(tool: SandTool | null, speed: number): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.gain || !this.filter) return;
+    const t = ctx.currentTime;
+    if (!tool || !this.enabled) {
+      this.gain.gain.setTargetAtTime(0, t, 0.06);
+      return;
+    }
+    const tone = TONE[tool];
+    this.filter.frequency.setTargetAtTime(tone.f * (0.85 + Math.min(0.4, speed * 0.3)), t, 0.05);
+    this.filter.Q.setTargetAtTime(tone.q, t, 0.05);
+    const v = Math.min(0.18, tone.base + tone.k * Math.min(1, speed));
+    this.gain.gain.setTargetAtTime(v, t, 0.04);
+  }
+
+  setEnabled(on: boolean): void {
+    this.enabled = on;
+    if (!on) this.set(null, 0);
+  }
+
+  dispose(): void {
+    void this.ctx?.close().catch(() => {});
+    this.ctx = null;
+  }
+}
+```
+
+## FILE src/components/sand/SandEditor.tsx
+```ts
+"use client";
+
+/*
+ * 샌드아트 화면 — 라이트박스 위 모래 그림.
+ *  헤더 = 뒤로 · 로고 · [모드 탭] · 전체화면 · 새 그림 · 무비 · 저장
+ *  본체 = 손 고르기(붓기·손가락·손바닥) + 굵기 · 모래판(되돌리기/다시 떠 있음) · 빛·모래 색 · 쏟기·쓸기 · 소리
+ * 엔진 = src/sand(모래 두께 격자). 그리기 화면(Editor)의 붓 엔진은 하나도 끌고 오지 않는다.
+ */
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { SandEngine } from "@/sand/SandEngine";
+import { LIGHTS, SANDS } from "@/sand/SandRender";
+import type { SandTool } from "@/sand/SandSim";
+import { SandAudio } from "@/sand/sandAudio";
+import { loadPref, loadSand, savePref, saveSand, type SandPref } from "@/sand/sandSave";
+import { ModeTabs } from "@/components/canvas/ModeTabs";
+import { Icon, type IconName } from "@/components/canvas/icons";
+import { TitleAsk, Toast } from "@/components/canvas/SaveUi";
+import { ArtonLogo } from "@/components/arton-logo";
+import { genDraftId } from "@/lib/draft-id";
+
+const SandMovie = dynamic(() => import("./SandMovie").then((m) => m.SandMovie), { ssr: false });
+
+/** 격자 크기 — 긴 변 800칸. 화면에선 부드럽게 늘려 보인다(모래는 원래 경계가 부드럽다) */
+const LONG = 800;
+const SHORT = 533;
+
+const TOOLS: { id: SandTool; label: string; hint: string; icon: IconName }[] = [
+  { id: "pour", label: "뿌리기", hint: "누르고 있으면 모래가 흘러내려요", icon: "sandPour" },
+  { id: "finger", label: "손가락", hint: "모래를 밀어 빛나는 선을 그려요", icon: "sandFinger" },
+  { id: "palm", label: "손바닥", hint: "넓게 쓸어 장면을 바꿔요", icon: "sandPalm" },
+];
+
+export interface SandEditorProps {
+  onSave?: (image: Blob, thumb: Blob, draftId?: string, title?: string) => Promise<unknown>;
+  who?: string;
+  backHref?: string;
+  galleryHref?: string;
+}
+
+function toBlob(c: HTMLCanvasElement, type: string, q?: number): Promise<Blob> {
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("toBlob"))), type, q));
+}
+
+export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEditorProps) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<SandEngine | null>(null);
+  const audioRef = useRef<SandAudio | null>(null);
+  const draftRef = useRef<string>("");
+  const [ready, setReady] = useState(false);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+  const [pref, setPref] = useState<SandPref>(() => ({ light: "warm", sand: "dark", sound: true }));
+  const [tool, setToolState] = useState<SandTool>("pour");
+  const [size, setSizeState] = useState(22);
+  const [hist, setHist] = useState({ undo: false, redo: false, empty: true });
+  const [showMovie, setShowMovie] = useState(false);
+  const [askTitle, setAskTitle] = useState(false);
+  const [title, setTitle] = useState("");
+  const [toast, setToast] = useState<{ text: string; tone?: "ink" | "leaf" } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const submits = !!onSave;
+
+  const flash = (text: string, tone: "ink" | "leaf" = "ink", ms = 2600) => {
+    setToast({ text, tone });
+    setTimeout(() => setToast((t) => (t?.text === text ? null : t)), ms);
+  };
+
+  /* 1) 판 크기 정하기 — 저장된 그림이 있으면 그 크기, 없으면 화면 모양(세로 화면 = 세로 판) */
+  useEffect(() => {
+    let alive = true;
+    const p = loadPref();
+    setPref(p);
+    void loadSand().then((saved) => {
+      if (!alive) return;
+      if (saved && saved.v === 1 && saved.w > 0 && saved.h > 0) {
+        setDims({ w: saved.w, h: saved.h });
+        return;
+      }
+      // 무대에 더 크게 들어가는 쪽으로(폰은 세로 판이 대개 크다). 비율 문턱으로 정하면
+      // 헤더가 두 줄인 폰에서 무대가 거의 정사각이라 가로 판이 골라졌다(실측 374×396)
+      const el = stageRef.current;
+      const aw = el?.clientWidth ?? LONG;
+      const ah = el?.clientHeight ?? SHORT;
+      const land = Math.min(aw / LONG, ah / SHORT) ** 2;
+      const port = Math.min(aw / SHORT, ah / LONG) ** 2;
+      setDims(port > land * 1.05 ? { w: SHORT, h: LONG } : { w: LONG, h: SHORT });
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /* 2) 엔진 만들기·복원·자동저장 */
+  useEffect(() => {
+    if (!dims || !canvasRef.current) return;
+    const p = loadPref();
+    const look = {
+      light: (LIGHTS.find((l) => l.id === p.light) ?? LIGHTS[0]).rgb,
+      sand: (SANDS.find((s) => s.id === p.sand) ?? SANDS[0]).rgb,
+    };
+    const eng = new SandEngine(dims.w, dims.h, look);
+    if (p.sizes) eng.sizes = { ...eng.sizes, ...p.sizes };
+    const audio = new SandAudio();
+    audio.enabled = p.sound;
+    audioRef.current = audio;
+    eng.onActivity = (t, sp) => audio.set(t, sp);
+    engineRef.current = eng;
+    eng.attach(canvasRef.current);
+    const canvas = canvasRef.current;
+    const unlock = () => audio.unlock();
+    canvas.addEventListener("pointerdown", unlock);
+    setToolState(eng.tool);
+    setSizeState(eng.size);
+
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let firstDirty = 0;
+    let savedVersion = -1;
+    const flushSave = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      firstDirty = 0;
+      if (eng.version === savedVersion) return;
+      savedVersion = eng.version;
+      void saveSand(eng.snapshot(draftRef.current));
+    };
+    const off = eng.on(() => {
+      setHist({ undo: eng.canUndo, redo: eng.canRedo, empty: eng.empty });
+      // 3초 쉬면 저장 · 계속 그려도 10초마다는 저장(웨일북 통째 유실 교훈)
+      const now = Date.now();
+      if (!firstDirty) firstDirty = now;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flushSave, now - firstDirty > 10_000 ? 0 : 3000);
+    });
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushSave();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flushSave);
+
+    void loadSand().then((saved) => {
+      if (!alive) return;
+      if (saved && eng.restore(saved)) {
+        draftRef.current = saved.draftId || genDraftId();
+        savedVersion = eng.version;
+      } else {
+        draftRef.current = genDraftId();
+      }
+      setHist({ undo: eng.canUndo, redo: eng.canRedo, empty: eng.empty });
+      setReady(true);
+    });
+
+    return () => {
+      alive = false;
+      flushSave();
+      off();
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flushSave);
+      canvas.removeEventListener("pointerdown", unlock);
+      eng.detach();
+      audio.dispose();
+      engineRef.current = null;
+    };
+  }, [dims]);
+
+  const updatePref = useCallback((patch: Partial<SandPref>) => {
+    setPref((p) => {
+      const n = { ...p, ...patch };
+      savePref(n);
+      return n;
+    });
+  }, []);
+
+  const setTool = (t: SandTool) => {
+    const eng = engineRef.current;
+    if (!eng) return;
+    eng.setTool(t);
+    setToolState(t);
+    setSizeState(eng.size);
+  };
+  const setSize = (n: number) => {
+    const eng = engineRef.current;
+    if (!eng) return;
+    eng.setSize(n);
+    setSizeState(eng.size);
+    updatePref({ sizes: { ...eng.sizes } });
+  };
+  const setLight = (id: string) => {
+    const eng = engineRef.current;
+    const l = LIGHTS.find((x) => x.id === id);
+    if (!eng || !l) return;
+    eng.setLook({ ...eng.render.look, light: l.rgb });
+    updatePref({ light: id });
+  };
+  const setSand = (id: string) => {
+    const eng = engineRef.current;
+    const s = SANDS.find((x) => x.id === id);
+    if (!eng || !s) return;
+    eng.setLook({ ...eng.render.look, sand: s.rgb });
+    updatePref({ sand: id });
+  };
+  const toggleSound = () => {
+    const on = !pref.sound;
+    audioRef.current?.setEnabled(on);
+    if (on) audioRef.current?.unlock();
+    updatePref({ sound: on });
+  };
+
+  const undo = () => engineRef.current?.undo();
+  const redo = () => engineRef.current?.redo();
+  const fill = () => engineRef.current?.fill();
+  const sweep = () => {
+    const eng = engineRef.current;
+    if (!eng || eng.empty) return;
+    eng.clear();
+    flash("모래를 다 쓸었어요 — 되돌리기로 다시 살릴 수 있어요");
+  };
+  const newDrawing = () => {
+    const eng = engineRef.current;
+    if (!eng) return;
+    eng.reset();
+    draftRef.current = genDraftId();
+    setTitle("");
+    flash("새 판을 깔았어요");
+  };
+
+  /* 헤더 글자 접기 — 넘치면 부가 항목(mid) → 탭 글자(off) 순으로 버린다(그리기 화면과 같은 단계) */
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => {
+      for (const lv of ["on", "mid", "off"]) {
+        el.dataset.labels = lv;
+        if (el.scrollWidth <= el.clientWidth + 1) return;
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    void document.fonts?.ready.then(measure);
+    return () => ro.disconnect();
+  }, [submits, who]);
+
+  /* 단축키: Ctrl/⌘+Z 되돌리기 · Shift+Z / Y 다시 · 1·2·3 손 고르기 */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) engineRef.current?.redo();
+        else engineRef.current?.undo();
+      } else if (mod && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        engineRef.current?.redo();
+      } else if (!mod && (e.key === "1" || e.key === "2" || e.key === "3")) {
+        setTool(TOOLS[Number(e.key) - 1].id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* 전체화면 — 그리기 화면과 같은 규칙(API 없는 곳엔 단추를 안 보인다) */
+  const [fsAvail, setFsAvail] = useState(false);
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    setFsAvail(!!document.documentElement.requestFullscreen);
+    const on = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, []);
+  const toggleFs = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
+  const exportImage = async (kind: "submit" | "download", t?: string) => {
+    const eng = engineRef.current;
+    if (!eng || busy) return;
+    setBusy(true);
+    const draftId = draftRef.current; // 인코딩 중 새 그림으로 갈려도 이 그림의 토큰을 쓴다
+    try {
+      const big = eng.toCanvas(2);
+      if (kind === "submit" && onSave) {
+        flash("우리 반 갤러리로 보내는 중…", "ink", 8000);
+        const image = await toBlob(big, "image/webp", 0.9);
+        const th = document.createElement("canvas");
+        const k = 400 / Math.max(eng.w, eng.h);
+        th.width = Math.round(eng.w * k);
+        th.height = Math.round(eng.h * k);
+        const tctx = th.getContext("2d")!;
+        tctx.imageSmoothingQuality = "high";
+        tctx.drawImage(big, 0, 0, th.width, th.height);
+        const thumb = await toBlob(th, "image/webp", 0.85);
+        await onSave(image, thumb, draftId, t);
+        flash("우리 반 갤러리에 전시했어요! 갤러리에서 확인해 보세요", "leaf", 3500);
+      } else {
+        const png = await toBlob(big, "image/png");
+        const url = URL.createObjectURL(png);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `arton-sand-${Date.now()}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        flash("내 기기에 그림 파일로 저장했어요", "leaf");
+      }
+    } catch {
+      flash("저장하지 못했어요 — 잠시 후 다시 눌러 주세요");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* 판을 무대에 «비율 그대로» 꽉 맞춘다 — CSS 비율+최대 높이로 하면 한쪽이 늘어나 모래가 찌그러진다 */
+  const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || !dims) return;
+    const measure = () => {
+      const pad = 16;
+      const aw = Math.max(50, el.clientWidth - pad);
+      const ah = Math.max(50, el.clientHeight - pad);
+      const k = Math.min(aw / dims.w, ah / dims.h);
+      setFit({ w: Math.floor(dims.w * k), h: Math.floor(dims.h * k) });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [dims]);
+
+  const toolInfo = TOOLS.find((t) => t.id === tool)!;
+
+  return (
+    <div className="editor-no-pinch flex h-dvh flex-col gap-2 bg-cream p-2" data-testid="sand-editor">
+      <header ref={headerRef} data-labels="on" className="editor-toolbar relative z-20 flex shrink-0 flex-wrap items-center gap-2 rounded-panel border border-ink/6 bg-paper px-3 py-2 shadow-panel sm:flex-nowrap sm:overflow-x-auto">
+        <Link href={backHref} className="editor-back pressable touch-target grid place-items-center rounded-control px-3 text-xl hover:bg-surface-2" aria-label="나가기">
+          ←
+        </Link>
+        <span className="hdr-extra block shrink-0">
+          <ArtonLogo className="h-8" />
+        </span>
+        {who && (
+          <span className="hdr-extra block shrink-0 whitespace-nowrap rounded-control bg-surface-2 px-3 py-1 text-sm font-semibold text-ink-soft">
+            {who}
+          </span>
+        )}
+        {galleryHref && (
+          <Link href={galleryHref} className="editor-context hdr-extra pressable touch-target flex shrink-0 items-center whitespace-nowrap rounded-control bg-surface-2 px-3 py-1 text-sm font-semibold text-ink-soft">
+            우리 반 갤러리
+          </Link>
+        )}
+        {/* 폰에선 모드 탭이 둘째 줄을 다 쓴다(다섯 개 + 단추들이 한 줄에 안 들어간다) */}
+        <div className="editor-modes order-last flex basis-full justify-center sm:order-none sm:flex-[1_0_auto] sm:basis-auto">
+          <ModeTabs current="sand" />
+        </div>
+        {fsAvail && (
+          <button onClick={toggleFs} className="pressable touch-target grid shrink-0 place-items-center rounded-control px-2 hover:bg-surface-2" aria-label={isFs ? "전체화면 끝내기" : "전체화면"} title="전체화면">
+            <Icon name={isFs ? "fullscreenExit" : "fullscreen"} className="h-5 w-5" />
+          </button>
+        )}
+        <button onClick={newDrawing} disabled={hist.empty} className="pressable touch-target grid shrink-0 place-items-center rounded-control px-2 hover:bg-surface-2 disabled:opacity-40" aria-label="새 그림" title="새 판 깔기">
+          <Icon name="plus" className="h-5 w-5" />
+        </button>
+        <button onClick={() => setShowMovie(true)} disabled={hist.empty} className="pressable touch-target grid shrink-0 place-items-center rounded-control px-2 hover:bg-surface-2 disabled:opacity-40" aria-label="무비" title="그린 과정을 영상으로 보기" data-testid="sand-movie-btn">
+          <Icon name="movie" className="h-5 w-5" />
+        </button>
+        {submits && (
+          <button onClick={() => void exportImage("download")} disabled={busy} className="hdr-extra pressable touch-target flex shrink-0 items-center gap-1 whitespace-nowrap rounded-control bg-surface-2 px-3 text-sm font-semibold text-ink-soft" title="그림 파일(PNG)로 저장해요">
+            내 기기에 저장
+          </button>
+        )}
+        <button
+          onClick={() => (submits ? setAskTitle(true) : void exportImage("download"))}
+          disabled={busy}
+          className="editor-save pressable touch-target ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control bg-coral px-4 font-display text-white hover:bg-coral-deep sm:ml-0"
+          aria-label={submits ? "우리 반 갤러리에 보내기" : "저장하기"}
+          data-testid="sand-save"
+        >
+          <Icon name="save" className="h-5 w-5" />
+          <span className="editor-save-label">{submits ? "전시하기" : "저장"}</span>
+        </button>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row">
+        {/* 손 고르기 + 굵기 */}
+        <aside className="order-2 flex shrink-0 items-center gap-2 rounded-panel border border-ink/6 bg-paper p-2 shadow-panel md:order-1 md:w-28 md:flex-col md:items-stretch">
+          <div className="flex gap-1.5 md:flex-col" role="radiogroup" aria-label="손 고르기">
+            {TOOLS.map((t) => (
+              <button
+                key={t.id}
+                role="radio"
+                aria-checked={tool === t.id}
+                aria-label={t.label}
+                title={t.hint}
+                onClick={() => setTool(t.id)}
+                data-testid={`sand-tool-${t.id}`}
+                className={`pressable flex min-h-14 min-w-14 flex-col items-center justify-center gap-0.5 rounded-control px-2 py-1.5 text-xs font-semibold ${
+                  tool === t.id ? "bg-sun-soft text-ink ring-2 ring-sun ring-inset" : "text-ink-soft hover:bg-surface-2"
+                }`}
+              >
+                <Icon name={t.icon} className="h-8 w-8" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <label className="flex min-w-0 flex-1 items-center gap-2 px-1 text-xs font-semibold text-ink-soft md:flex-none md:flex-col md:items-stretch">
+            <span className="shrink-0">굵기 {size}</span>
+            <input
+              type="range"
+              min={3}
+              max={80}
+              value={size}
+              onChange={(e) => setSize(Number(e.target.value))}
+              aria-label="굵기"
+              data-testid="sand-size"
+              className="min-h-11 w-full min-w-24 accent-coral"
+            />
+          </label>
+        </aside>
+
+        {/* 모래판 */}
+        <div ref={stageRef} className="canvas-stage relative order-1 grid min-h-0 min-w-0 flex-1 place-items-center rounded-panel bg-[#2b2118] p-2 md:order-2">
+          <canvas
+            ref={canvasRef}
+            data-testid="sand-canvas"
+            aria-label="모래판"
+            className="canvas-surface touch-none select-none rounded-[10px] shadow-lift"
+            style={{ width: fit ? fit.w : 0, height: fit ? fit.h : 0, cursor: "crosshair" }}
+          />
+          {!ready && <p className="absolute font-display text-cream">모래판을 깔고 있어요…</p>}
+          <div className="absolute bottom-3 left-3 flex gap-2">
+            <button onClick={undo} disabled={!hist.undo} className="pressable touch-target grid h-12 w-12 place-items-center rounded-full bg-paper/90 shadow-panel disabled:opacity-40" aria-label="되돌리기" data-testid="sand-undo">
+              <Icon name="undo" className="h-6 w-6" />
+            </button>
+            <button onClick={redo} disabled={!hist.redo} className="pressable touch-target grid h-12 w-12 place-items-center rounded-full bg-paper/90 shadow-panel disabled:opacity-40" aria-label="다시 하기" data-testid="sand-redo">
+              <Icon name="redo" className="h-6 w-6" />
+            </button>
+          </div>
+          <p className="pointer-events-none absolute right-3 top-3 hidden rounded-full bg-ink/55 px-3 py-1 text-xs font-semibold text-cream sm:block">
+            {toolInfo.hint}
+          </p>
+        </div>
+
+        {/* 빛·모래·판 */}
+        <aside className="order-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border border-ink/6 bg-paper p-2 shadow-panel md:w-44 md:flex-col md:flex-nowrap md:items-stretch">
+          <fieldset className="flex flex-col gap-1">
+            <legend className="mb-1 text-xs font-semibold text-ink-soft">빛 색</legend>
+            <div className="flex flex-wrap gap-1.5">
+              {LIGHTS.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => setLight(l.id)}
+                  aria-label={l.label}
+                  aria-pressed={pref.light === l.id}
+                  title={l.label}
+                  data-testid={`sand-light-${l.id}`}
+                  className={`pressable h-11 w-11 rounded-full border-2 ${pref.light === l.id ? "border-ink ring-2 ring-sun" : "border-ink/15"}`}
+                  style={{ background: `radial-gradient(circle at 40% 35%, #fff, rgb(${l.rgb.join(",")}) 70%)` }}
+                />
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="flex flex-col gap-1">
+            <legend className="mb-1 text-xs font-semibold text-ink-soft">모래 색</legend>
+            <div className="flex flex-wrap gap-1.5">
+              {SANDS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSand(s.id)}
+                  aria-label={s.label}
+                  aria-pressed={pref.sand === s.id}
+                  title={s.label}
+                  data-testid={`sand-color-${s.id}`}
+                  className={`pressable h-11 w-11 rounded-full border-2 ${pref.sand === s.id ? "border-ink ring-2 ring-sun" : "border-ink/15"}`}
+                  style={{ background: `rgb(${s.rgb.join(",")})` }}
+                />
+              ))}
+            </div>
+          </fieldset>
+          <div className="flex gap-1.5 md:flex-col">
+            <button onClick={fill} className="pressable touch-target flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2 text-sm font-semibold text-ink" data-testid="sand-fill" title="판 전체에 모래를 고르게 깔아요">
+              <Icon name="sandFill" className="h-6 w-6" />
+              모래 쏟기
+            </button>
+            <button onClick={sweep} disabled={hist.empty} className="pressable touch-target flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2 text-sm font-semibold text-ink disabled:opacity-40" data-testid="sand-sweep" title="판의 모래를 모두 쓸어 내요">
+              <Icon name="sweep" className="h-6 w-6" />
+              모두 쓸기
+            </button>
+            <button onClick={toggleSound} aria-pressed={pref.sound} className="pressable touch-target flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2 text-sm font-semibold text-ink" data-testid="sand-sound" title="모래 소리 켜고 끄기">
+              <Icon name={pref.sound ? "sound" : "soundOff"} className="h-6 w-6" />
+              소리 {pref.sound ? "켜짐" : "꺼짐"}
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      {toast && <Toast tone={toast.tone}>{toast.text}</Toast>}
+      {askTitle && (
+        <TitleAsk
+          initial={title}
+          onCancel={(d) => {
+            setTitle(d);
+            setAskTitle(false);
+          }}
+          onDone={(t) => {
+            setAskTitle(false);
+            if (t) setTitle(t);
+            void exportImage("submit", t);
+          }}
+        />
+      )}
+      {showMovie && engineRef.current && <SandMovie engine={engineRef.current} onClose={() => setShowMovie(false)} />}
+    </div>
+  );
+}
+```
+
+## FILE src/components/sand/SandMovie.tsx
+```ts
+"use client";
+
+/*
+ * 샌드아트 무비 — 기록(base + ops)을 빈 판에 다시 넣어 «그려지는 과정»을 보여 준다.
+ * 모래판은 결정적이라(SandSim 머리 주석) 마지막 장면 = 지금 그림.
+ * 영상 저장 = 같은 재생을 canvas.captureStream 으로 webm 에 담는다.
+ */
+import { useEffect, useRef, useState } from "react";
+import { SandSim } from "@/sand/SandSim";
+import { SandRender } from "@/sand/SandRender";
+import { dequantize, type SandEngine } from "@/sand/SandEngine";
+
+/** 재생 길이 목표(초) — 점 수가 많아도 이 안에 끝난다(빠르게 = 절반) */
+const TARGET_SEC = 24;
+
+export function SandMovie({ engine, onClose }: { engine: SandEngine; onClose: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [progress, setProgress] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [fast, setFast] = useState(false);
+  const stopRef = useRef<() => void>(() => {});
+  const canRecord = typeof MediaRecorder !== "undefined" && typeof HTMLCanvasElement !== "undefined" && "captureStream" in HTMLCanvasElement.prototype;
+
+  /** 처음부터 끝까지 한 번 재생. 끝나면 resolve */
+  const run = (speedMul: number): Promise<void> =>
+    new Promise((resolve) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return resolve();
+      const ctx = canvas.getContext("2d", { alpha: false })!;
+      const sim = new SandSim(engine.w, engine.h);
+      if (engine.base) dequantize(engine.base, sim.H);
+      const r = new SandRender(sim, engine.grain, engine.render.look);
+      const ops = engine.ops.slice();
+      const total = ops.reduce((a, o) => a + (o.k === "stroke" ? Math.max(1, o.d.length / 3) : 30), 0);
+      const perFrame = Math.max(1, Math.ceil((total / (TARGET_SEC * 60)) * speedMul));
+      let oi = 0;
+      let di = 0;
+      let done = 0;
+      let raf = 0;
+      let stopped = false;
+      const paint = () => {
+        const d = sim.takeDirty();
+        if (!d) return;
+        r.paint(d.x0, d.y0, d.x1, d.y1);
+        ctx.putImageData(r.img, 0, 0, d.x0, d.y0, d.x1 - d.x0, d.y1 - d.y0);
+      };
+      sim.markAll();
+      paint();
+      const step = () => {
+        if (stopped) return;
+        let budget = perFrame;
+        while (budget > 0 && oi < ops.length) {
+          const op = ops[oi];
+          if (op.k !== "stroke") {
+            sim.apply(op);
+            budget -= 30;
+            done += 30;
+            oi++;
+            continue;
+          }
+          if (di === 0) sim.begin(op.tool, op.size, op.seed);
+          const n = op.d.length;
+          while (budget > 0 && di < n) {
+            sim.dab(op.d[di], op.d[di + 1], op.d[di + 2]);
+            di += 3;
+            budget--;
+            done++;
+          }
+          if (di >= n) {
+            sim.end();
+            di = 0;
+            oi++;
+          }
+        }
+        paint();
+        setProgress(Math.min(1, done / Math.max(1, total)));
+        if (oi >= ops.length) {
+          stopRef.current = () => {};
+          return resolve();
+        }
+        raf = requestAnimationFrame(step);
+      };
+      stopRef.current = () => {
+        stopped = true;
+        cancelAnimationFrame(raf);
+        resolve();
+      };
+      raf = requestAnimationFrame(step);
+    });
+
+  const play = async () => {
+    stopRef.current();
+    setPlaying(true);
+    await run(fast ? 2 : 1);
+    setPlaying(false);
+  };
+
+  const record = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !canRecord) return;
+    stopRef.current();
+    setRecording(true);
+    try {
+      const stream = canvas.captureStream(30);
+      const type = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((t) => MediaRecorder.isTypeSupported(t));
+      const rec = new MediaRecorder(stream, type ? { mimeType: type, videoBitsPerSecond: 4_000_000 } : undefined);
+      const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      const stoppedP = new Promise<void>((res) => (rec.onstop = () => res()));
+      rec.start(250);
+      await run(fast ? 2 : 1);
+      // 마지막 장면을 1.5초 붙잡아 둔다(영상이 완성 그림에서 끝나게)
+      await new Promise((r) => setTimeout(r, 1500));
+      rec.stop();
+      await stoppedP;
+      const blob = new Blob(chunks, { type: "video/webm" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `arton-sand-movie-${Date.now()}.webm`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } finally {
+      setRecording(false);
+    }
+  };
+
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (c) {
+      c.width = engine.w;
+      c.height = engine.h;
+    }
+    void play();
+    return () => stopRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const portrait = engine.h > engine.w;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/80 p-4" role="dialog" aria-modal="true" aria-label="샌드아트 무비" data-testid="sand-movie">
+      <div className={`w-full rounded-bubble bg-paper p-5 shadow-lift ${portrait ? "max-w-md" : "max-w-3xl"}`}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-2xl text-ink">모래 그림 무비</h2>
+          <button onClick={onClose} className="pressable touch-target grid place-items-center text-xl" aria-label="닫기">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <canvas ref={canvasRef} className="w-full rounded-[10px] bg-[#2b2118]" style={{ aspectRatio: `${engine.w} / ${engine.h}`, maxHeight: "65vh", objectFit: "contain" }} data-testid="sand-movie-canvas" />
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
+          <div className="h-full bg-coral transition-[width]" style={{ width: `${Math.round(progress * 100)}%` }} data-testid="sand-movie-progress" data-progress={progress.toFixed(3)} />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={() => void play()} disabled={recording} className="pressable touch-target flex-1 rounded-card bg-coral px-4 py-3 font-display text-white disabled:opacity-50" data-testid="sand-movie-play">
+            {playing ? "처음부터 다시" : "다시 보기"}
+          </button>
+          <button onClick={() => setFast((f) => !f)} aria-pressed={fast} className="pressable touch-target rounded-card bg-surface-2 px-4 py-3 font-semibold text-ink">
+            {fast ? "빠르게" : "보통 빠르기"}
+          </button>
+          {canRecord && (
+            <button onClick={() => void record()} disabled={recording} className="pressable touch-target rounded-card bg-surface-2 px-4 py-3 font-semibold text-ink disabled:opacity-50" data-testid="sand-movie-record">
+              {recording ? "영상 만드는 중…" : "영상으로 저장"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## FILE src/app/sand/sand-client.tsx
+```ts
+"use client";
+
+import { useCallback } from "react";
+import { SandEditor } from "@/components/sand/SandEditor";
+import { getStudentSession } from "@/lib/student-session";
+import { submitArtwork } from "@/lib/artwork-client";
+
+/*
+ * /sand — 샌드아트(라이트박스 모래 그림).
+ * 학생 세션이 있으면 «전시하기» = 학급 갤러리 제출(mode=sand), 없으면 내 기기에 PNG 저장.
+ */
+export function SandClient() {
+  const session = getStudentSession();
+  const handleSave = useCallback(
+    async (image: Blob, thumb: Blob, draftId?: string, title?: string) =>
+      await submitArtwork({ image, thumb, mode: "sand", draftId, title }),
+    [],
+  );
+  return (
+    <SandEditor
+      onSave={session ? handleSave : undefined}
+      who={session ? `${session.nickname} · ${session.className}` : undefined}
+      galleryHref={session ? "/gallery" : undefined}
+    />
+  );
+}
+```
+
+## DIFF (수정 파일 — 아이콘 SVG 제외)
+```diff
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 5dd6f08..5f3da50 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -111,7 +111,7 @@ export default function LandingPage() {
+           </div>
+         </div>
+ 
+-        {/* 히어로 비주얼: 4모드 — 클릭하면 바로 그 모드로 */}
++        {/* 히어로 비주얼: 4모드 + 샌드아트 — 클릭하면 바로 그 모드로 */}
+         <div className="grid grid-cols-2 gap-3 rounded-panel border border-ink/6 bg-paper p-4 md:p-6">
+           {[
+             { emoji: "✏️", label: "스케치", bg: "bg-sun-soft", href: "/draw?mode=sketch" },
+@@ -128,6 +128,22 @@ export default function LandingPage() {
+               <span className="mt-4 text-lg font-semibold text-ink">{m.label}</span>
+             </Link>
+           ))}
++          {/* 다섯째 = 샌드아트(라이트박스 모래 그림) — 2×2 아래 한 줄을 다 쓴다 */}
++          <Link
++            href="/sand"
++            className="pressable col-span-2 flex items-center justify-center gap-4 rounded-control bg-[#2b2118] px-4 py-5 text-cream"
++            data-testid="landing-sand"
++          >
++            <span
++              aria-hidden="true"
++              className="h-12 w-20 rounded-[10px]"
++              style={{ background: "radial-gradient(ellipse at 35% 60%, #ffd68c 0 28%, #5a3e28 46%, #221a14 70%)" }}
++            />
++            <span className="text-left">
++              <span className="block text-lg font-semibold">샌드아트</span>
++              <span className="block text-sm text-cream/80">빛나는 판 위에 모래로 그려요</span>
++            </span>
++          </Link>
+         </div>
+       </section>
+ 
+diff --git a/src/components/canvas/Editor.tsx b/src/components/canvas/Editor.tsx
+index 45e4ea4..65ac298 100644
+--- a/src/components/canvas/Editor.tsx
++++ b/src/components/canvas/Editor.tsx
+@@ -21,6 +21,8 @@ import { ArtonLogo } from "@/components/arton-logo";
+ import { Icon } from "./icons";
+ import { hasBackend } from "@/lib/backend";
+ import { takeEntryHint, takeSaveHint } from "@/lib/class-hint";
++import { TitleAsk, Toast } from "./SaveUi";
++import { genDraftId } from "@/lib/draft-id";
+ import {
+   SOFT_REFRESH_KEY,
+   shouldSoftRefresh,
+@@ -84,22 +86,6 @@ export interface EditorProps {
+  *  헤더 = 뒤로 · 로고 · [모드 탭] · 방향/무비/저학년 · 저장(주요 버튼)
+  *  본체 = 좌 도구 레일(세로) · 캔버스(플로팅 되돌리기/다시) · 우 색/굵기/마법/레이어
+  */
+-/** 그리기 세션마다 발급하는 dedup 토큰(작품 id 아님·서버에 노출 안 되는 랜덤값). 구형 웹뷰 폴백 포함. */
+-function genDraftId(): string {
+-  try {
+-    const u = globalThis.crypto?.randomUUID?.();
+-    if (u) return u;
+-    const b = globalThis.crypto?.getRandomValues?.(new Uint8Array(16));
+-    if (b) return Array.from(b, (n) => n.toString(16).padStart(2, "0")).join("");
+-  } catch {
+-    /* 폴백 */
+-  }
+-  return `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}${Math.random().toString(36).slice(2, 12)}`;
+-}
+-
+ /* 마지막으로 "제출한" 그림의 draft 토큰을 자동저장(이어그리기)과 짝지어 보관한다.
+  * 새로고침·탭 크래시 후 [이어그리기]로 돌아온 그림은 같은 작품이므로, 그때만 이 토큰을 되살려
+  * 서버가 갤러리의 그 행을 덮어쓰게 한다. 반대로 단순 재마운트(가로/세로 전환 등)에는 항상
+@@ -1057,67 +1043,6 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who,
+   );
+ }
+ 
+-/* 제목 묻기 — 저장(제출) 직전 1회. 아이 손에 맞춰 큼직한 입력 한 칸과 버튼 두 개만. */
+-function TitleAsk({
+-  initial,
+-  onDone,
+-  onCancel,
+-}: {
+-  initial: string;
+-  onDone: (title: string) => void;
+-  /** 닫기 — 쓰던 제목을 초안으로 넘긴다(실수로 배경을 탭해도 다시 열면 그대로 있다) */
+-  onCancel: (draft: string) => void;
+-}) {
+-  const [v, setV] = useState(initial);
+-  return (
+-    <div
+-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+-      role="dialog"
+-      aria-modal="true"
+-      aria-label="그림 제목 정하기"
+-      onClick={() => onCancel(v)}
+-    >
+-      <div
+-        className="w-[min(92vw,420px)] rounded-bubble bg-paper p-5 shadow-lift"
+-        onClick={(e) => e.stopPropagation()}
+-      >
+-        <h2 className="font-display text-xl text-ink">그림에 제목을 지어 줄래요? ✏️</h2>
+-        <p className="mt-1 text-sm text-ink-soft">갤러리에서 친구들이 제목과 함께 봐요.</p>
+-        <input
+-          autoFocus
+-          value={v}
+-          onChange={(e) => setV(e.target.value)}
+-          onKeyDown={(e) => {
+-            /* ⚠️ isComposing 가드 — 한글 조합을 확정하는 Enter 가 그대로 제출로 새면
+-             * 마지막 음절이 빠진 제목("우리 강아")이 저장된다(교차검증 지적). */
+-            if (e.key === "Enter" && !e.nativeEvent.isComposing) onDone(v);
+-            if (e.key === "Escape") onCancel(v);
+-          }}
+-          maxLength={30} // ⚠️ worker/lib/title.ts 의 TITLE_MAX 와 같은 값이어야 한다
+-          placeholder="예) 우리 강아지"
+-          aria-label="그림 제목"
+-          className="mt-4 w-full rounded-card border border-cream-deep bg-white px-4 py-3 text-lg text-ink outline-none focus:border-sky"
+-        />
+-        <div className="mt-2 text-right text-xs text-ink-faint">{v.length}/30</div>
+-        <div className="mt-3 flex gap-2">
+-          <button
+-            onClick={() => onDone("")}
+-            className="pressable flex-1 rounded-card bg-cream-deep px-4 py-3 font-display text-ink-soft"
+-          >
+-            그냥 저장
+-          </button>
+-          <button
+-            onClick={() => onDone(v)}
+-            className="pressable flex-[2] rounded-card bg-coral px-4 py-3 font-display text-white shadow-soft"
+-          >
+-            이 제목으로 저장
+-          </button>
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+-
+ function RestoreBanner({
+   savedAt,
+   onRestore,
+@@ -1142,20 +1067,3 @@ function RestoreBanner({
+     </div>
+   );
+ }
+-
+-/* ⚠️ pointer-events-none 필수. 토스트는 캔버스 위(bottom-6 중앙)에 떠서, 그대로 두면
+- * 떠 있는 동안 그 자리의 탭·획을 통째로 삼킨다 — 아이가 캔버스 아래쪽을 누르는데 아무 일도
+- * 안 일어난다(2026-09-04 실측: 페인트통 스펙이 이걸로 깨졌다. 안내가 없던 시절에도 저장
+- * 토스트가 같은 자리를 막고 있었다). 안내 안의 링크만 pointer-events-auto 로 되살린다. */
+-function Toast({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "leaf" }) {
+-  return (
+-    <div
+-      className={`pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full px-6 py-3 font-display text-white shadow-lift [&_a]:pointer-events-auto [&_button]:pointer-events-auto ${
+-        tone === "leaf" ? "bg-leaf" : "bg-ink"
+-      }`}
+-      role="status"
+-    >
+-      {children}
+-    </div>
+-  );
+-}
+diff --git a/src/components/canvas/ModeTabs.tsx b/src/components/canvas/ModeTabs.tsx
+index 9af49c9..6880718 100644
+--- a/src/components/canvas/ModeTabs.tsx
++++ b/src/components/canvas/ModeTabs.tsx
+@@ -5,19 +5,23 @@ import { useEditor } from "@/store/editor";
+ import type { Mode } from "@/engine/types";
+ import { ToolIcon, type IconName } from "./icons";
+ 
+-const MODES: { id: Mode; label: string; icon: IconName; tone: string; ring: string }[] = [
++const MODES: { id: Mode | "sand"; label: string; icon: IconName; tone: string; ring: string }[] = [
+   { id: "sketch", label: "스케치", icon: "pencil", tone: "bg-sun-soft", ring: "ring-sun" },
+   { id: "watercolor", label: "수채화", icon: "watercolor", tone: "bg-sky-soft", ring: "ring-sky" },
+   { id: "oil", label: "유화", icon: "palette", tone: "bg-coral-soft", ring: "ring-coral" },
+   { id: "coloring", label: "색칠하기", icon: "coloring", tone: "bg-leaf-soft", ring: "ring-leaf" },
++  { id: "sand", label: "샌드아트", icon: "sand", tone: "bg-sun-soft", ring: "ring-sun" },
+ ];
+ 
+ /*
+  * 모드 탭(헤더 중앙). 색칠하기는 도안이 있어야 의미가 있으므로,
+  * 도안 없이 누르면 도안 고르기(/coloring)로 데려간다.
++ * 샌드아트는 붓 엔진이 아니라 모래판이라 따로 연 화면(/sand)이다 — current="sand" 면 그 화면 안에서 쓰고,
++ * 다른 모드를 누르면 그리기 화면으로 간다.
+  */
+-export function ModeTabs({ hasLineart = false }: { hasLineart?: boolean }) {
+-  const mode = useEditor((s) => s.mode);
++export function ModeTabs({ hasLineart = false, current }: { hasLineart?: boolean; current?: "sand" }) {
++  const editorMode = useEditor((s) => s.mode);
++  const mode = current ?? editorMode;
+   const setMode = useEditor((s) => s.setMode);
+   const router = useRouter();
+ 
+@@ -36,6 +40,14 @@ export function ModeTabs({ hasLineart = false }: { hasLineart?: boolean }) {
+             aria-selected={active}
+             aria-label={m.label}
+             onClick={() => {
++              if (m.id === "sand") {
++                if (current !== "sand") router.push("/sand");
++                return;
++              }
++              if (current === "sand") {
++                router.push(m.id === "coloring" ? "/coloring" : `/draw?mode=${m.id}`);
++                return;
++              }
+               if (m.id === "coloring" && !hasLineart) {
+                 router.push("/coloring"); // 도안 먼저 고르기
+                 return;
+diff --git a/worker/index.ts b/worker/index.ts
+index 03f6bb0..e46929d 100644
+--- a/worker/index.ts
++++ b/worker/index.ts
+@@ -53,7 +53,7 @@ const RATE_WINDOW_MS = 5 * 60_000;
+ const RATE_MAX = 8; // 학생 join 시도 상한/윈도우
+ const AUTH_RATE_MAX = 10; // 교사 로그인·가입 시도 상한/윈도우(크리덴셜 스터핑 방어)
+ const AUTH_MARKER = "__AUTH__"; // join_attempts 재사용 시 교사 인증 시도 표식
+-const MODES = ["sketch", "watercolor", "oil", "coloring"];
++const MODES = ["sketch", "watercolor", "oil", "coloring", "sand"];
+ const MAX_BYTES = 8 * 1024 * 1024;
+ const DAY_MS = 86_400_000;
+ const RETENTION_MS = 180 * DAY_MS; // 작품 보관 기간(6개월). 이후 매일 cron이 영구 삭제.
+```

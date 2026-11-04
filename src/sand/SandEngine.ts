@@ -10,6 +10,7 @@ import { SandSim, makeGrain, type SandOp, type SandTool } from "./SandSim";
 import { SandRender, type SandLook } from "./SandRender";
 
 export const UNDO_MAX = 20;
+export const PEN_PALM_MS = 1500;
 /** 기록 상한(점 수 ×3 숫자) — 넘으면 오래된 연산을 base 로 접는다(약 2.4MB) */
 export const LOG_MAX_NUMS = 600_000;
 const Q = 65535 / 8; // 두께 0~8 → Uint16
@@ -59,10 +60,17 @@ export class SandEngine {
   private redoOps: SandOp[] = [];
   /** 기록이 바뀔 때마다 오른다 — 자동저장이 «바뀐 게 있나»를 본다 */
   version = 0;
+  /** 진행 중 붓질에 점이 찍힐 때마다 오른다 — 손을 안 떼고 오래 그려도 저장할 거리 */
+  liveRev = 0;
+  get drawing() {
+    return !!this.cur;
+  }
 
   // 진행 중 붓질
   private cur: { id: number; tool: SandTool; size: number; seed: number; d: number[]; t: number; x: number; y: number; moved: number } | null = null;
-  private penSeen = false;
+  /** 마지막 펜 신호 시각 — 펜을 쓰는 동안(그리고 막 뗀 1.5초)만 손바닥 터치를 무시한다.
+   * 한 번 펜을 쓰면 영영 터치를 막던 것 = 샌드아트는 손가락 놀이인데 손가락이 안 먹었다(8way meta) */
+  private lastPen = -1e9;
   private seedCounter = 1;
   /** 소리·화면 반응에 쓰는 마지막 움직임 속도(칸/ms) */
   speed = 0;
@@ -170,9 +178,9 @@ export class SandEngine {
   }
 
   private onDown = (e: PointerEvent) => {
-    if (e.pointerType === "pen") this.penSeen = true;
-    // 펜을 쓰는 기기에선 손바닥(터치)을 무시한다 · 두 번째 손가락도 무시
-    if (this.cur || (this.penSeen && e.pointerType === "touch")) return;
+    if (e.pointerType === "pen") this.lastPen = performance.now();
+    // 펜으로 그리는 중·막 뗀 직후의 손바닥(터치)은 무시한다 · 두 번째 손가락도 무시
+    if (this.cur || (e.pointerType === "touch" && performance.now() - this.lastPen < PEN_PALM_MS)) return;
     if (e.button > 0) return;
     e.preventDefault();
     try {
@@ -192,6 +200,7 @@ export class SandEngine {
   };
 
   private onMove = (e: PointerEvent) => {
+    if (e.pointerType === "pen") this.lastPen = performance.now();
     const c = this.cur;
     if (!c || e.pointerId !== c.id) return;
     const evs = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
@@ -212,6 +221,7 @@ export class SandEngine {
     const ry = Math.round(y * 100) / 100;
     const rdt = Math.round(dt * 10) / 10;
     c.d.push(rx, ry, rdt);
+    this.liveRev++;
     this.sim.dab(rx, ry, rdt);
     if (dt > 0) this.speed = this.speed * 0.6 + (dist / dt) * 0.4;
     c.moved += dist;
@@ -222,6 +232,7 @@ export class SandEngine {
   }
 
   private onUp = (e: PointerEvent) => {
+    if (e.pointerType === "pen") this.lastPen = performance.now();
     const c = this.cur;
     if (!c || e.pointerId !== c.id) return;
     this.cur = null;
@@ -344,14 +355,18 @@ export class SandEngine {
   }
 
   /* ── 저장·복원 ── */
+  /** 진행 중 붓질도 연산 하나로 넣어 저장한다 — 판(cur)엔 이미 들어간 모래가 기록(ops)에 없으면
+   * 복원 뒤 base+ops ≠ 판(무비 끝 장면이 달라짐)이고, 손을 떼기 전에 탭이 죽으면 그 붓질을 잃는다(8way grokweb) */
   snapshot(draftId: string): SandSaved {
+    const c = this.cur;
+    const ops: SandOp[] = c ? [...this.ops, { k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d.slice() }] : this.ops;
     return {
       v: 1,
       w: this.w,
       h: this.h,
       cur: quantize(this.sim.H),
       base: this.base,
-      ops: this.ops,
+      ops,
       draftId,
       savedAt: Date.now(),
     };

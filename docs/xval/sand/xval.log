@@ -1,0 +1,16 @@
+── 레인 사전점검(모델 호출 0) ──
+  ✅ codex
+  ✅ gemini
+  ✅ grokweb
+  ✅ meta
+  ↳ meta 프로필 = /Users/sim-insu/.vibeflow/profile-2
+── xval (에이전트 없음) · 레인 [codex,gemini,grokweb,meta] · 번들 78192바이트 ──
+  🪂 codex 한도 → gptweb(GPT 채팅 웹 통)로 대체
+🔧 SELF_IMPROVE_DUE 81b6a08404 — xval-lane-dead: codex 레인 rc=2 ( · 홀더 pid=50658 나이 01:54:51 🛑 홀더가 01:54:51 째다 — 멈춰 있을 수 있다. 확인: ps -p 50658 -o command= · 정리: kill -TERM 50658 ) · 이 턴 안에 재현→고침→시험(빨강→초록) 후 `self-improve.sh fix 81b6a08404 "…" --test <경로>` (외부 원인이면 defer)
+
+레인   종료 초     응답바이트
+codex    2      42      83043
+gemini   0      133     1425
+grokweb  0      205     917
+meta     0      121     986
+OUT=docs/xval/sand/out

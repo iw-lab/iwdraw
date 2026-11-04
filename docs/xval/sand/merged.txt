@@ -1,0 +1,50 @@
+레인      상태          제출  재현  환각
+codex     정상               0     0     0
+gemini    정상               3     3     0
+grokweb   정상               2     2     0
+meta(보조)  정상               3     3     0
+
+병합 후 고유 발견 8건 (환각 0건은 기계가 이미 버렸다)
+
+⚠️ 의심 빈답: codex — 제출 0건인데 다른 레인 재현 8건. 가짜 초록일 수 있다 → 이 레인만 다시 돌려 «조건별 NONE 근거»를 받아라(답한 레인으로 세지 말 것)
+
+[CRITICAL] SandSim.ts:251  ⟨gemini⟩
+  인용: this.relax(x0 - 1, y0 - 1, x1 + 2, y1 + 2, 0.45);
+  이유: relax의 x1, y1 범위 루프(xx < x1)에서 x1+2는 x1+1까지만 순회하여 x1+2에 분배된 spill 모래가 완화되지 않고 누락됩니다.
+  수정: relax 호출 인자의 x1, y1 상한을 순회 범위에 맞게 조정합니다.
+
+[CRITICAL] src/sand/SandEngine.ts:snapshot  ⟨grokweb⟩
+  인용: cur: quantize(this.sim.H),
+  이유: 진행 중 붓질은 sim.H에 이미 반영되지만 ops에는 아직 없으므로 탭 숨김·pagehide·언마운트 시 저장하면 복원 후 base+ops ≠ 현재 판이 되고 무비 마지막 장면이 지금 그림과 달라진다.
+  수정: cur가 활성일 때는 snapshot을 건너뛰거나 진행 중 d를 임시 stroke op로 포함해 저장하라.
+
+[CRITICAL] src/sand/SandEngine.ts:foldIfLong  ⟨meta⟩  ⚠️ 보조 단독(오탐 많음) — 메인이 재현한 뒤에만 채택
+  인용: this.base = quantize(tmp.H)
+  이유: base를 양자화해 접으면 base+ops를 차례로 apply한 결과가 현재 판과 달라져 결정성이 깨짐
+  수정: base를 Float32로 유지하거나 접은 후 sim.H를 dequantize(base)+남은 ops로 재계산해 일치시킴
+
+[MAJOR] SandSim.ts:333  ⟨gemini⟩
+  인용: let d = hc - H[n0] - thr;
+  이유: 안식각 완화 루프에서 hc를 깎는 동시에 H[n0]~H[n3]을 제자리에서 갱신하므로, 다음 칸 계산 시 직전 칸의 누적 값이 즉시 반영되어 방향성 비대칭 및 질량 쏠림이 발생합니다.
+  수정: 완화 계산 시 변경량을 버퍼에 기록하거나 순차 갱신 시 편향이 생기지 않도록 분리 처리합니다.
+
+[MAJOR] src/components/sand/SandEditor.tsx  ⟨grokweb⟩
+  인용: 계속 그려도 10초마다는 저장
+  이유: firstDirty와 타이머가 emit(붓질 commit) 시에만 설정되므로 한 번의 긴 붓질(10초 초과 연속 뿌리기) 중에는 중간 저장이 없어 새로고침·크래시 시 그린 모래를 잃는다.
+  수정: onActivity 또는 독립 interval에서 진행 중 변경을 감지해 10초마다 flushSave를 호출하라.
+
+[MAJOR] src/sand/SandEngine.ts:onDown  ⟨meta⟩  ⚠️ 보조 단독(오탐 많음) — 메인이 재현한 뒤에만 채택
+  인용: penSeen && e.pointerType
+  이유: penSeen이 한 번 true가 되면 이후 터치 입력을 영구히 무시해 손가락/손바닥 획이 끊김
+  수정: pointerup/cancel 시 penSeen을 false로 초기화하거나 cur가 없을 때만 무시하도록 수정
+
+[MAJOR] src/sand/SandEngine.ts:onCancel  ⟨meta⟩  ⚠️ 보조 단독(오탐 많음) — 메인이 재현한 뒤에만 채택
+  인용: dequantize(snap, this.sim.H)
+  이유: 되돌리기 스냅이 양자화된 Uint16이라 pointercancel 시 붓질 전 판으로 정확히 원복되지 않음
+  수정: pushUndo에서 Float32Array 원본을 저장하거나 cancel 시 원본으로 복원
+
+[MINOR] SandMovie.tsx:75  ⟨gemini⟩
+  인용: sim.dab(op.d[di], op.d[di + 1], op.d[di + 2]);
+  이유: Movie 재생 시 첫 dab은 engine.onDown처럼 dtOverride(0) 없이 op.d[2]를 그대로 전달하므로 첫 점의 상태 전이가 미세하게 달라질 수 있습니다.
+  수정: di === 0인 첫 dab 호출 시 시작 점 처리 규칙을 명시적으로 일치시킵니다.
+
