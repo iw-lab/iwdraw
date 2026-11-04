@@ -200,3 +200,20 @@ test("펜을 쓴 뒤 잠시 지나면 손가락으로 다시 그려진다", asyn
   await expect.poll(() => lum(page, 0.45, 0.7), { message: "펜 뒤 손가락 획" }).toBeGreaterThan(150);
   await ctx.close();
 });
+
+/* 학급 학생으로 들어오면 단추가 «전시하기» — 세션을 렌더 중에 읽어 정적 HTML(«저장»)과 어긋나 React #418 이 났다(로컬 워커 실측) */
+test("학급 학생으로 열어도 화면 오류가 없고 «전시하기»가 보인다", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await page.goto("/privacy");
+  await page.evaluate(() =>
+    sessionStorage.setItem(
+      "arton.student",
+      JSON.stringify({ token: "x", studentId: "s", classId: "c", className: "반", nickname: "닉", classCode: "AAAAAA" }),
+    ),
+  );
+  await page.goto("/sand");
+  await expect(page.getByTestId("sand-save")).toContainText("전시하기");
+  await page.waitForTimeout(1000);
+  expect(errors, "화면 오류").toEqual([]);
+});
