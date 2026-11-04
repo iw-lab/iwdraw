@@ -86,7 +86,9 @@ for (const id of BRUSHES) {
     //    (예전 1픽셀 스포이트 실측: 크레용 104,160,209 · 유화 78,139,194 · 색연필 205,223,241 — 칠한 색 70,140,200)
     for (const k of ["r", "g", "b"] as const) expect(Math.abs(picked[k] - C0[k]), `${id}: 찍은 색 ${k}`).toBeLessThanOrEqual(3);
     // ② 화면 확인 — 유화·납작붓은 같은 색을 두 칸에 칠해도 결이 달라 밝기 차가 ±10 까지 난다(대조군 EYE_CONTROL 실측 −1.4~9.5)
-    const tol = id === "oil" || id === "oilribbon" ? 12 : 6;
+    //    수채는 번짐(젖은 칸 확산)이 칸마다 달라 더 넓다 — 2026-11-04 대조군 8회 −8.1~+9.1, 배포본 부하 중 찍은 색 = C0 그대로(70,140,200)인데
+    //    −13.6 까지 났다(①이 정확히 통과해도 ②가 33% 빨강 — 작업 전 빌드도 같았다). 붓 자체 편차보다 좁은 허용은 스포이트가 아니라 붓을 잰다.
+    const tol = id === "oil" || id === "oilribbon" ? 12 : id === "watercolor" ? 15 : 6;
     expect(Math.abs(dl), `${id}: 찍은 색으로 칠한 B 가 원래 A 보다 ${dl.toFixed(1)} 밝기 차`).toBeLessThan(tol);
   });
 }
