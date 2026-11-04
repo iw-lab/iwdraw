@@ -185,7 +185,7 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
           전시관에 걸지(내리지) 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
       )}
-      <ShowcaseGuide compact />
+      <ShowcaseGuide />
 
       {/* 학생 별명 명단 — 별명을 까먹은 아이에게 알려주는 용도(접이식) */}
       {students.length > 0 && (
@@ -333,7 +333,8 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
                   disabled={showing === a.id}
                   aria-pressed={!!a.showcase_at}
                   data-showcase={a.showcase_at ? "on" : "off"}
-                  title="선행쌤(ssamzip.com) 작품 전시관에 그림만 보여요 — 별명·제목은 안 나가요"
+                  data-showcase-art={a.id}
+                  title="선행쌤(ssamzip.kr) 작품 전시관에 그림만 보여요 — 별명·제목은 안 나가요"
                   className={`pressable mt-2 w-full rounded-lg py-1.5 text-sm font-semibold disabled:opacity-60 ${
                     a.showcase_at ? "bg-sun text-ink" : "bg-cream text-ink-soft hover:bg-sun/60 hover:text-ink"
                   }`}

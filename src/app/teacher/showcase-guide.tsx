@@ -1,30 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 /* 선행쌤 «학생 작품» 전시관 안내(2026-11-03 사용자 «아트온 선생님 계정에서 안내문 잘 해줘»).
- * 대시보드·학급 갤러리 두 곳이 같은 안내를 쓴다. 처음엔 펼쳐 두고, 접으면 이 기기에서 기억한다. */
-const KEY = "arton.showcaseGuideClosed";
-export const SHOWCASE_PAGE = "https://ssamzip.com/tools";
+ * 대시보드·학급 갤러리 두 곳이 같은 안내를 쓴다.
+ * 2026-11-04 사용자 «화면이 너무 첫화면 다 차지 · 정리해줘» → 늘 한 줄로 접어 두고, 궁금할 때만 펼친다. */
+export const SHOWCASE_PAGE = "https://ssamzip.kr/tools/";
 
-export function ShowcaseGuide({ compact = false }: { compact?: boolean }) {
-  const [open, setOpen] = useState(!compact);
-  useEffect(() => {
-    try { if (localStorage.getItem(KEY) === "1") setOpen(false); } catch {}
-  }, []);
-  const toggle = (o: boolean) => {
-    setOpen(o);
-    try { localStorage.setItem(KEY, o ? "0" : "1"); } catch {}
-  };
+export function ShowcaseGuide() {
   return (
     <details
-      open={open}
-      onToggle={(e) => toggle((e.currentTarget as HTMLDetailsElement).open)}
       data-showcase-guide
-      className="mb-6 rounded-card border-2 border-sun bg-sun-soft px-4 py-3 text-sm text-ink shadow-soft"
+      className="mb-6 rounded-card border border-sun bg-sun-soft px-4 py-2 text-sm text-ink"
     >
-      <summary className="cursor-pointer select-none font-display text-base">
-        🏛️ 선행쌤 «학생 작품» 전시관 — 우리 반 그림을 전국 친구들에게 보여 주세요
+      <summary className="cursor-pointer select-none py-1 font-semibold">
+        🏛️ 선행쌤 전시관 안내 <span className="font-normal text-ink-soft">— 잘 그린 그림을 이름 없이 전국에 걸어요 · 눌러서 보기</span>
       </summary>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <section>

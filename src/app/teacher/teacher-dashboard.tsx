@@ -123,8 +123,6 @@ export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
         </div>
       </Card>
 
-      {/* 선행쌤 «학생 작품» 전시관 안내(2026-11-03) */}
-      <ShowcaseGuide />
       {/* 삭제 임박 안내: 작품은 만든 지 180일 후 자동 삭제, 30일 전부터 알림 */}
       {(() => {
         const total = classes.reduce((s, c) => s + (c.expiring_soon ?? 0), 0);
@@ -204,6 +202,9 @@ export function TeacherDashboard({ onSignOut }: { onSignOut: () => void }) {
           ))}
         </div>
       )}
+
+      {/* 선행쌤 전시관 안내 — 학급 목록 아래 한 줄로 접어 둔다(2026-11-04 사용자 «첫 화면 다 차지 · 정리해줘») */}
+      <div className="mt-6"><ShowcaseGuide /></div>
 
       <p className="mt-6 text-center text-sm text-ink-faint">
         도안 관리는 <Link href="/coloring" className="underline">색칠 도안</Link>에서 할 수 있어요.

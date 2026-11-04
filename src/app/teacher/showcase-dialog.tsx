@@ -77,14 +77,14 @@ export function ShowcaseDialog({
 
   return (
     <div role="dialog" aria-modal="true" aria-label="선행쌤 전시관에 걸기 전 확인" data-showcase-dialog className="fixed inset-0 z-50 grid place-items-center bg-ink/70 p-4" onClick={onCancel}>
-      <div className="w-full max-w-xl rounded-card bg-paper p-4 shadow-soft" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-card bg-paper p-4 shadow-soft" onClick={(e) => e.stopPropagation()}>
         <h2 className="font-display text-lg text-ink">🏛️ 선행쌤 전시관에 걸기 전에</h2>
         <p className="mt-1 text-sm text-ink-soft">
           그림 안에 <b className="text-ink">이름·학교·반·얼굴 사진</b>이 보이면 그 자리를 손가락으로 <b>네모 그려 가려</b> 주세요. 가린 그림만 전시관에 나가고, 학생 원본은 그대로예요.
         </p>
         <div
           ref={boxRef}
-          className="relative mt-3 w-full touch-none select-none overflow-hidden rounded-lg bg-white"
+          className="relative mx-auto mt-3 w-fit max-w-full touch-none select-none overflow-hidden rounded-lg bg-white"
           onPointerDown={down}
           onPointerMove={move}
           onPointerUp={up}
@@ -92,7 +92,7 @@ export function ShowcaseDialog({
           data-cover-box
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- 같은 출처 썸네일(캔버스로 가리기) */}
-          <img ref={imgRef} src={src} alt="걸 작품" draggable={false} className="block w-full" />
+          <img ref={imgRef} src={src} alt="걸 작품" draggable={false} className="block h-auto max-h-[52dvh] w-auto max-w-full" />
           {[...rects, ...(drag ? [drag] : [])].map((r, i) => (
             <span key={i} className="absolute rounded-sm bg-ink/85 ring-2 ring-sun" style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` }} />
           ))}
