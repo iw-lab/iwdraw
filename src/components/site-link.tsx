@@ -2,7 +2,7 @@
 export function SiteLink({ className = "" }: { className?: string }) {
   return (
     <a
-      href="https://ssamzip.kr"
+      href="https://sunhaengssam.web.app"
       target="_blank"
       rel="noopener"
       data-gb="site-link"

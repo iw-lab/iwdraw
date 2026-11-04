@@ -334,7 +334,7 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
                   aria-pressed={!!a.showcase_at}
                   data-showcase={a.showcase_at ? "on" : "off"}
                   data-showcase-art={a.id}
-                  title="선행쌤(ssamzip.kr) 작품 전시관에 그림만 보여요 — 별명·제목은 안 나가요"
+                  title="선행쌤(sunhaengssam.web.app) 작품 전시관에 그림만 보여요 — 별명·제목은 안 나가요"
                   className={`pressable mt-2 w-full rounded-lg py-1.5 text-sm font-semibold disabled:opacity-60 ${
                     a.showcase_at ? "bg-sun text-ink" : "bg-cream text-ink-soft hover:bg-sun/60 hover:text-ink"
                   }`}

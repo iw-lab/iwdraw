@@ -89,7 +89,7 @@ export default function PrivacyPage() {
       <Section n={4} title="개인정보의 제3자 제공">
         <p>서비스는 이용자의 개인정보를 외부에 제공하지 않습니다.</p>
         <p className="mt-2">
-          교사가 고른 작품은 선행쌤(ssamzip.kr) 작품 전시관에 그림만 보이며, 학생 별명·작품 제목·학교·학급 같은
+          교사가 고른 작품은 선행쌤(sunhaengssam.web.app) 작품 전시관에 그림만 보이며, 학생 별명·작품 제목·학교·학급 같은
           정보는 함께 나가지 않습니다.
         </p>
       </Section>

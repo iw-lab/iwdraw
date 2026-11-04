@@ -3,7 +3,7 @@
 /* 선행쌤 «학생 작품» 전시관 안내(2026-11-03 사용자 «아트온 선생님 계정에서 안내문 잘 해줘»).
  * 대시보드·학급 갤러리 두 곳이 같은 안내를 쓴다.
  * 2026-11-04 사용자 «화면이 너무 첫화면 다 차지 · 정리해줘» → 늘 한 줄로 접어 두고, 궁금할 때만 펼친다. */
-export const SHOWCASE_PAGE = "https://ssamzip.kr/tools/";
+export const SHOWCASE_PAGE = "https://sunhaengssam.web.app/tools/";
 
 export function ShowcaseGuide() {
   return (

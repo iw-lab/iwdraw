@@ -705,7 +705,7 @@ app.put("/api/artworks/:id/showcase-image", requireTeacher, async (c) => {
 // ── 공개 하트(선행쌤 화면에서 바로) — 로그인 없음 · 기기 무작위 번호(did)를 서버 비밀로 해시한 열쇠만 남긴다(사람을 되짚을 수 없다)
 //    같은 기기는 한 작품에 하트 하나(다시 누르면 취소) · IP 해시 하루 SHOWCASE_LIKE_CAP 번 · 선행쌤 출처만
 const SHOWCASE_LIKE_CAP = 60;
-const SHOWCASE_ORIGINS = /^https:\/\/((www\.)?ssamzip\.com|sunhaengssam\.web\.app|madchumbub\.web\.app)$|^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const SHOWCASE_ORIGINS = /^https:\/\/((www\.)?ssamzip\.(com|kr)|sunhaengssam\.web\.app|madchumbub\.web\.app)$|^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
 async function hex16(s: string) {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
