@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { SandEngine, isSandSaved } from "@/sand/SandEngine";
-import { LIGHTS, SANDS } from "@/sand/SandRender";
+import { LIGHTS, SANDS, lookOf } from "@/sand/SandRender";
 import type { SandTool } from "@/sand/SandSim";
 import { SandAudio } from "@/sand/sandAudio";
 import { loadPref, loadSand, savePref, saveSand, type SandPref } from "@/sand/sandSave";
@@ -97,10 +97,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
   useEffect(() => {
     if (!dims || !canvasRef.current) return;
     const p = loadPref();
-    const look = {
-      light: (LIGHTS.find((l) => l.id === p.light) ?? LIGHTS[0]).rgb,
-      sand: (SANDS.find((s) => s.id === p.sand) ?? SANDS[0]).rgb,
-    };
+    const look = lookOf(p.light, p.sand);
     const eng = new SandEngine(dims.w, dims.h, look);
     if (p.sizes) eng.sizes = { ...eng.sizes, ...p.sizes };
     const audio = new SandAudio();
@@ -215,7 +212,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
     const eng = engineRef.current;
     const l = LIGHTS.find((x) => x.id === id);
     if (!eng || !l) return;
-    eng.setLook({ ...eng.render.look, light: l.rgb });
+    eng.setLook({ ...eng.render.look, light: l.rgb, light2: l.rgb2 });
     updatePref({ light: id });
   };
   const setSand = (id: string) => {
@@ -472,10 +469,11 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
         </div>
 
         {/* 빛·모래·판 */}
-        <aside className="order-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border border-ink/6 bg-paper p-2 shadow-panel md:w-44 md:flex-col md:flex-nowrap md:items-stretch">
-          <fieldset className="flex flex-col gap-1">
+        <aside className="order-3 flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-2 rounded-panel border border-ink/6 bg-paper p-2 shadow-panel md:w-44 md:flex-col md:flex-nowrap md:items-stretch">
+          <fieldset className="flex w-full min-w-0 flex-col gap-1">
             <legend className="mb-1 text-xs font-semibold text-ink-soft">빛 색</legend>
-            <div className="flex flex-wrap gap-1.5">
+            {/* 폰: 한 줄 옆 넘기기(빛 11·모래 8을 접어 쌓으면 판이 작아져 세로 판을 못 깐다) · md 이상: 접어 쌓기 */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
               {LIGHTS.map((l) => (
                 <button
                   key={l.id}
@@ -484,15 +482,20 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
                   aria-pressed={pref.light === l.id}
                   title={l.label}
                   data-testid={`sand-light-${l.id}`}
-                  className={`pressable h-11 w-11 rounded-full border-2 ${pref.light === l.id ? "border-ink ring-2 ring-sun" : "border-ink/15"}`}
-                  style={{ background: `radial-gradient(circle at 40% 35%, #fff, rgb(${l.rgb.join(",")}) 70%)` }}
+                  className={`pressable h-11 w-11 shrink-0 rounded-full border-2 ${pref.light === l.id ? "border-ink ring-2 ring-sun" : "border-ink/15"}`}
+                  style={{
+                    background: l.rgb2
+                      ? `linear-gradient(180deg, rgb(${l.rgb.join(",")}), rgb(${l.rgb2.join(",")}))`
+                      : `radial-gradient(circle at 40% 35%, #fff, rgb(${l.rgb.join(",")}) 70%)`,
+                  }}
                 />
               ))}
             </div>
           </fieldset>
-          <fieldset className="flex flex-col gap-1">
+          <fieldset className="flex w-full min-w-0 flex-col gap-1">
             <legend className="mb-1 text-xs font-semibold text-ink-soft">모래 색</legend>
-            <div className="flex flex-wrap gap-1.5">
+            {/* 폰: 한 줄 옆 넘기기(빛 11·모래 8을 접어 쌓으면 판이 작아져 세로 판을 못 깐다) · md 이상: 접어 쌓기 */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
               {SANDS.map((s) => (
                 <button
                   key={s.id}
@@ -501,7 +504,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
                   aria-pressed={pref.sand === s.id}
                   title={s.label}
                   data-testid={`sand-color-${s.id}`}
-                  className={`pressable h-11 w-11 rounded-full border-2 ${pref.sand === s.id ? "border-ink ring-2 ring-sun" : "border-ink/15"}`}
+                  className={`pressable h-11 w-11 shrink-0 rounded-full border-2 ${pref.sand === s.id ? "border-ink ring-2 ring-sun" : "border-ink/15"}`}
                   style={{ background: `rgb(${s.rgb.join(",")})` }}
                 />
               ))}

@@ -59,7 +59,7 @@ export function SandMovie({ engine, onClose }: { engine: SandEngine; onClose: ()
             oi++;
             continue;
           }
-          if (di === 0) sim.begin(op.tool, op.size, op.seed);
+          if (di === 0) sim.begin(op.tool, op.size, op.seed, op.pv ?? 1);
           const n = op.d.length;
           while (budget > 0 && di < n) {
             sim.dab(op.d[di], op.d[di + 1], op.d[di + 2]);

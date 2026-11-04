@@ -13,7 +13,7 @@ export type SandTool = "pour" | "finger" | "palm";
 
 /** 기록 단위. d = 평평한 [x, y, dtMs, x, y, dtMs, …](격자 좌표) */
 export type SandOp =
-  | { k: "stroke"; tool: SandTool; size: number; seed: number; d: number[] }
+  | { k: "stroke"; tool: SandTool; size: number; seed: number; d: number[]; pv?: number }
   | { k: "fill"; seed: number }
   | { k: "clear" };
 
@@ -21,6 +21,9 @@ export type SandOp =
 export const SAND_MAX = 6;
 /** 모래 쏟기 두께(빛이 거의 안 새는 두께) */
 export const FILL_LEVEL = 1.5;
+/** 붓기 공식 판 — 2: 움직인 거리만큼도 흘린다(한 번 그으면 진한 선). 옛 기록(pv 없음 = 1)은 옛 공식으로 다시 그려
+ * 오늘 그린 그림의 무비가 바뀌지 않는다(결정성 불변식) */
+export const POUR_V = 2;
 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -120,7 +123,9 @@ export class SandSim {
   }
 
   /* ── 붓질(스트리밍) — 화면은 begin → dab… → end, 무비는 같은 순서로 다시 넣는다 ── */
-  begin(tool: SandTool, size: number, seed: number): void {
+  private pv = POUR_V;
+  begin(tool: SandTool, size: number, seed: number, pv: number = POUR_V): void {
+    this.pv = pv;
     this.tool = tool;
     this.size = Math.max(2, Math.min(120, size));
     this.rnd = mulberry32(seed);
@@ -154,7 +159,7 @@ export class SandSim {
   apply(op: SandOp): void {
     if (op.k === "clear") return this.clear();
     if (op.k === "fill") return this.fill(op.seed);
-    this.begin(op.tool, op.size, op.seed);
+    this.begin(op.tool, op.size, op.seed, op.pv ?? 1);
     const d = op.d;
     for (let i = 0; i + 2 < d.length; i += 3) this.dab(d[i], d[i + 1], d[i + 2]);
     this.end();
@@ -162,21 +167,28 @@ export class SandSim {
 
   /* ── 붓기: 손끝에서 모래가 흘러내려 쌓인다. 양은 «누르고 있는 시간»에 비례 ── */
   private pourSeg(x: number, y: number, dt: number): void {
-    const sig = this.size * 0.32;
+    const sig = this.pourSig();
     const dist = Math.hypot(x - this.lx, y - this.ly);
-    const n = Math.max(1, Math.min(24, Math.ceil(dist / Math.max(1, sig * 0.6))));
+    const n = Math.max(1, Math.min(48, Math.ceil(dist / Math.max(1, sig * 0.5))));
     for (let k = 1; k <= n; k++) {
       const t = k / n;
-      this.pourAt(this.lx + (x - this.lx) * t, this.ly + (y - this.ly) * t, dt / n);
+      this.pourAt(this.lx + (x - this.lx) * t, this.ly + (y - this.ly) * t, dt / n, dist / n);
     }
   }
 
-  private pourAt(cx: number, cy: number, dt: number): void {
-    if (dt <= 0) return;
-    const sig = Math.max(1, this.size * 0.32);
+  /** 모래 줄기 폭 — 2판은 더 가늘게(손에서 흘러내린 줄기는 또렷하다. 1판 0.32 = 굵기 79 에서 뿌옇게 번졌다) */
+  private pourSig(): number {
+    return Math.max(1, this.size * (this.pv >= 2 ? 0.22 : 0.32));
+  }
+
+  private pourAt(cx: number, cy: number, dt: number, dist = 0): void {
+    const sig = this.pourSig();
+    // 1초 누르면 가운데가 약 2.4 두께(빛이 거의 막힘) — 더미.
+    // 2판: + 움직인 거리 몫 — 한 번 지나간 줄 가운데가 약 1.3 두께(빛이 거의 안 샘)가 되게 a_d·√(2π)σ ≈ 1.3.
+    //   (1판은 시간만 셌다 → 아이 손 빠르기(1칸/ms)·굵기 79 에서 줄 가운데 0.15 = 연한 안개)
+    const amp = dt * 0.0024 + (this.pv >= 2 ? dist * (0.52 / sig) : 0);
+    if (amp <= 0) return;
     const R = Math.ceil(sig * 2.4);
-    // 1초 누르면 가운데가 약 2.4 두께(빛이 거의 막힘). 굵은 손일수록 넓게 퍼지되 가운데 높이는 같다
-    const amp = dt * 0.0024;
     const inv = 1 / (2 * sig * sig);
     const H = this.H;
     const w = this.w;

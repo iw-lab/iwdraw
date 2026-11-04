@@ -23,6 +23,19 @@ describe("모래판", () => {
     expect(at(b, 100, 70)).toBeGreaterThan(1.2); // 1.4초면 빛이 거의 막힐 만큼
   });
 
+  /* 2026-11-04 사용자 폰 «모래 뿌리기인데 이렇게 연하게 나오나?» — 1판은 시간만 세서 아이 손 빠르기(≈1칸/ms)에 줄 가운데 0.15(안개) */
+  it("붓기 2판: 보통 빠르기로 한 번 그어도 진한 줄(빛이 거의 막힘) · 옛 기록(pv 없음)은 옛 공식 그대로", () => {
+    const pts = line(30, 70, 170, 70, 140, 1); // 140칸을 140ms 에 = 1칸/ms
+    const v2 = new SandSim(W, H);
+    v2.apply({ ...(stroke("pour", 79, pts) as Extract<SandOp, { k: "stroke" }>), pv: 2 });
+    const v1 = new SandSim(W, H);
+    v1.apply(stroke("pour", 79, pts)); // pv 없음 = 오늘 앞서 그린 그림
+    expect(at(v2, 100, 70), "2판 줄 가운데").toBeGreaterThan(1.0);
+    expect(at(v1, 100, 70), "1판(옛 기록) 줄 가운데 — 옛 그대로라 무비가 안 바뀐다").toBeLessThan(0.4);
+    // 줄 폭: 가운데에서 굵기 0.5배 떨어지면 확 옅다(뿌옇게 번지지 않는다)
+    expect(at(v2, 100, 70 + 40)).toBeLessThan(at(v2, 100, 70) * 0.2);
+  });
+
   it("손가락: 모래를 없애지 않고 옆으로 민다 — 가운데는 빛이 나고 양옆에 둑이 생긴다", () => {
     const s = new SandSim(W, H);
     s.fill(3);
@@ -89,6 +102,21 @@ describe("화면", () => {
     expect(empty).toBeGreaterThan(200);
     expect(full).toBeLessThan(60);
     expect(carved).toBeGreaterThan(full + 100);
+  });
+});
+
+describe("위아래 빛", () => {
+  it("노을 하늘: 빈 판 위쪽과 아래쪽 색이 다르다 · 한 색 빛은 위아래가 같다", async () => {
+    const { lookOf } = await import("@/sand/SandRender");
+    const s = new SandSim(W, H);
+    const g = new Uint8Array(W * H).fill(128);
+    const px = (r: SandRender, y: number) => { r.paintAll(); const j = (y * W + W / 2) * 4; return [r.img.data[j], r.img.data[j + 1], r.img.data[j + 2]]; };
+    const sun = new SandRender(s, g, lookOf("sunset", "dark"));
+    const top = px(sun, 2), bot = px(sun, H - 3);
+    expect(Math.abs(top[1] - bot[1]), "초록 채널 차").toBeGreaterThan(40);
+    const flat = new SandRender(s, g, lookOf("white", "dark"));
+    const t2 = px(flat, 2), b2 = px(flat, H - 3);
+    expect(Math.abs(t2[1] - b2[1])).toBeLessThan(3);
   });
 });
 

@@ -6,7 +6,7 @@
  *   되돌리기 칸 하나 = ops 끝의 연산 하나(undo 는 ops 를 하나 빼고 그 직전 판으로).
  *   ops 가 너무 길어지면 오래된 것을 base 로 접는다 — 단 되돌리기 칸(UNDO_MAX) 안의 것은 접지 않는다.
  */
-import { SandSim, makeGrain, type SandOp, type SandTool } from "./SandSim";
+import { SandSim, makeGrain, POUR_V, type SandOp, type SandTool } from "./SandSim";
 import { SandRender, type SandLook } from "./SandRender";
 
 export const UNDO_MAX = 20;
@@ -245,7 +245,7 @@ export class SandEngine {
     this.onActivity?.(null, 0);
     this.undoSnaps.push(c.pre);
     if (this.undoSnaps.length > UNDO_MAX) this.undoSnaps.shift();
-    this.commit({ k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d });
+    this.commit({ k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d, pv: POUR_V });
   };
 
   /** 취소(제스처 가로채임) — 붓질 전 판으로 되돌리고 기록하지 않는다 */
@@ -363,7 +363,7 @@ export class SandEngine {
   snapshot(draftId: string): SandSaved {
     const c = this.cur;
     // 늘 새 배열 — 저장(IndexedDB 열기)을 기다리는 사이 다음 획·되돌리기가 this.ops 를 바꾸면 판과 기록이 어긋난다(8way gptweb)
-    const ops: SandOp[] = c ? [...this.ops, { k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d.slice() }] : this.ops.slice();
+    const ops: SandOp[] = c ? [...this.ops, { k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d.slice(), pv: POUR_V }] : this.ops.slice();
     return {
       v: 1,
       w: this.w,
