@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteLink } from "@/components/site-link";
 import { Chip } from "@/components/ui";
 import { JoinCodeForm } from "@/components/join-code-form";
 import { ArtonLogo } from "@/components/arton-logo";
@@ -80,6 +81,8 @@ export default function LandingPage() {
             <br />
             <span className="text-coral">디지털 미술 놀이터</span>
           </h1>
+          {/* 선행쌤 링크 — 모든 앱의 첫 화면에, 스크롤 없이 보이는 자리(제목 바로 밑 · 2026-10-22 사용자 지시) */}
+          <SiteLink className="mt-5 max-w-md" />
           <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-soft">
             설치도 로그인도 필요 없어요. 지금 바로 그리거나 색칠하고, 내 사진을 도안으로
             바꿔서 색칠할 수도 있어요. 우리 반은 학급 코드로 함께 모여요.
