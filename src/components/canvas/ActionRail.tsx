@@ -118,7 +118,9 @@ export function ActionRail() {
 
       {/* 도형 그리기 — 고르고 캔버스를 드래그하면 그 크기로 그려져요 */}
       <CollapsibleSection title="도형 그리기">
-        <div className="mt-1 grid grid-cols-3 gap-1">
+        {/* 칸 수를 못 박지 않는다 — 단추는 최소 44px(touch-target)인데 세로 태블릿의 좁은 칸에 4칸·3칸을 박으면
+            단추가 서로 겹쳐 «좌우»를 누르면 «상하»가 눌렸다(2026-11-04 갤럭시탭 S4 실측). 들어가는 만큼만 한 줄에 */}
+        <div className="mt-1 grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1">
           {SHAPES.map((sh) => {
             const active = shapeInsert === sh.id;
             return (
@@ -157,7 +159,7 @@ export function ActionRail() {
 
       {/* 대칭 */}
       <CollapsibleSection title="데칼코마니(대칭)">
-        <div className="mt-1 grid grid-cols-4 gap-1">
+        <div className="mt-1 grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1">
           {SYMS.map((s) => {
             const active = symmetry === s.id;
             return (
