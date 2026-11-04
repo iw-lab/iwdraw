@@ -1,6 +1,6 @@
 # 샌드아트 배포본 실측 (2026-11-04)
 
-배포본: https://arton.simssijjang.workers.dev/sand (Worker 버전 b815dcdf · version.json 1793784311 = 로컬)
+배포본: https://arton.simssijjang.workers.dev/ → 샌드아트 https://arton.simssijjang.workers.dev/sand (최종 Worker 41887cfe · version.json 1793786638 = 로컬)
 
 ## 전체 회귀(배포본 · 데스크톱+갤럭시탭 S4)
 - 1회차(부하 65): 333 통과 · 7 실패 — 전부 시간 초과(붓 시험). 부하 21 에서 다시: 붓 시험 통과, 태블릿 대칭 2개만 계속 빨강
@@ -15,4 +15,6 @@
 - 폰 세로 390: 넘침 0 · 단추 전부 화면 안 ≥44px · 터치 획 · 세로 판
 - 학급 학생 전시(로컬 워커·빈 D1): 제출 200 · 서버 mode=sand · 선생님 목록에 보임 · 화면 오류 0(하이드레이션 #418 고침)
 
-LIVE-E2E PASS https://arton.simssijjang.workers.dev/sand console_errors=0
+- 첫 화면 선행쌤 링크(완성 관문이 찾아냄 — 첫 화면에 없었다): 제목 바로 밑 · 폰·PC 스크롤 없이 보임 PASS · 재배포 뒤 첫 화면·샌드아트·콘솔·헤더 80/80
+
+LIVE-E2E PASS https://arton.simssijjang.workers.dev/ console_errors=0
