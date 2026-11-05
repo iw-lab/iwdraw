@@ -15,6 +15,37 @@ export const PEN_PALM_MS = 1500;
 export const LOG_MAX_NUMS = 600_000;
 const Q = 65535 / 8; // 두께 0~8 → Uint16
 
+/**
+ * 손끝 떨림 거르개(one-euro 방식) — 천천히 그을수록 많이 거르고, 빠르면 거의 안 거른다(늦게 따라오지 않게).
+ * 폰에서는 화면 1칸이 모래판 2칸 남짓이라 손가락 좌표가 계단으로 온다 → 얇은 손가락 선이 떨렸다(2026-11-05 사용자).
+ * 거른 점을 기록하므로 무비도 같은 선을 그린다.
+ */
+export class PointSmoother {
+  private x = 0;
+  private y = 0;
+  private spd = 0;
+  private has = false;
+  push(x: number, y: number, dtMs: number): [number, number] {
+    if (!this.has) {
+      this.has = true;
+      this.x = x;
+      this.y = y;
+      return [x, y];
+    }
+    const dt = Math.max(1, dtMs);
+    const rawSpd = Math.hypot(x - this.x, y - this.y) / dt;
+    this.spd += (rawSpd - this.spd) * alphaOf(0.006, dt);
+    const a = alphaOf(0.002 + 0.02 * this.spd, dt);
+    this.x += (x - this.x) * a;
+    this.y += (y - this.y) * a;
+    return [this.x, this.y];
+  }
+}
+function alphaOf(cutoffPerMs: number, dt: number): number {
+  const tau = 1 / (2 * Math.PI * cutoffPerMs);
+  return 1 / (1 + tau / dt);
+}
+
 export function quantize(H: Float32Array): Uint16Array {
   const out = new Uint16Array(H.length);
   for (let i = 0; i < H.length; i++) {
@@ -69,6 +100,7 @@ export class SandEngine {
   // 진행 중 붓질
   /** pre = 붓질 전 판(되돌리기 칸). 획이 끝나야 되돌리기 줄에 넣는다 — 시작 때 넣으면 줄이 꽉 찼을 때
    * 가장 오래된 칸을 먼저 버리고, 취소된 획이 칸 하나를 먹는다(8way gptweb) */
+  private smoother = new PointSmoother();
   private cur: { id: number; tool: SandTool; size: number; seed: number; d: number[]; t: number; x: number; y: number; moved: number; pre: Uint16Array } | null = null;
   /** 마지막 펜 신호 시각 — 펜을 쓰는 동안(그리고 막 뗀 1.5초)만 손바닥 터치를 무시한다.
    * 한 번 펜을 쓰면 영영 터치를 막던 것 = 샌드아트는 손가락 놀이인데 손가락이 안 먹었다(8way meta) */
@@ -196,6 +228,8 @@ export class SandEngine {
     // 붓질 전 판 — 획이 끝날 때 되돌리기 칸이 된다
     const pre = quantize(this.sim.H);
     this.cur = { id: e.pointerId, tool: this.tool, size, seed, d: [], t: performance.now(), x, y, moved: 0, pre };
+    this.smoother = new PointSmoother();
+    this.smoother.push(x, y, 0);
     this.sim.begin(this.tool, size, seed);
     this.addDab(x, y, this.cur.t, 0);
     this.onActivity?.(this.tool, 0);
@@ -212,7 +246,10 @@ export class SandEngine {
     for (const ev of list) {
       const [x, y] = this.toGrid(ev);
       const ts = Number.isFinite(ev.timeStamp) ? Math.min(now, Math.max(c.t, ev.timeStamp)) : now;
-      this.addDab(x, y, ts);
+      const dtRaw = Math.max(0, ts - c.t);
+      // 손바닥은 넓어서 떨림이 안 보이고, 쓴 방향이 바로 따라와야 한다
+      const [sx, sy] = c.tool === "palm" ? [x, y] : this.smoother.push(x, y, dtRaw);
+      this.addDab(sx, sy, ts);
     }
   };
 
@@ -239,6 +276,11 @@ export class SandEngine {
     if (e.pointerType === "pen") this.lastPen = performance.now();
     const c = this.cur;
     if (!c || e.pointerId !== c.id) return;
+    // 뗀 자리까지 마저 잇는다(거르느라 뒤처진 만큼)
+    if (c.tool !== "palm" && c.d.length) {
+      const [x, y] = this.toGrid(e);
+      if (Number.isFinite(x) && Number.isFinite(y) && Math.hypot(x - c.x, y - c.y) > 0.05) this.addDab(x, y, c.t, 0);
+    }
     this.cur = null;
     this.sim.end();
     this.speed = 0;

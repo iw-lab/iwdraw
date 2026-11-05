@@ -1,7 +1,7 @@
 // 샌드아트 모래판 — 붓기·손가락·손바닥의 물리 약속 + 무비·되돌리기의 결정성
 import { describe, expect, it } from "vitest";
 import { SandSim, FILL_LEVEL, makeGrain, type SandOp } from "@/sand/SandSim";
-import { SandEngine, LOG_MAX_NUMS, UNDO_MAX, quantize, dequantize, isSandSaved } from "@/sand/SandEngine";
+import { PointSmoother, SandEngine, LOG_MAX_NUMS, UNDO_MAX, quantize, dequantize, isSandSaved } from "@/sand/SandEngine";
 import { SandRender, LIGHTS, SANDS } from "@/sand/SandRender";
 
 const W = 200, H = 140;
@@ -259,5 +259,33 @@ describe("붓기 4판 — 스프레이처럼 보이지 않게(2026-11-05 사용�
     expect(lum(W >> 1, H >> 1)).toBeGreaterThan(238);   // 가운데는 거의 흰빛
     expect(lum(0, 0)).toBeGreaterThan(165);             // 가장자리도 어둑하지 않게
     expect(lum(W >> 1, H >> 1) - lum(0, 0)).toBeGreaterThan(30); // 고른 한 색이면 «색 도화지»로 보인다
+  });
+});
+
+describe("얇은 손가락 떨림(2026-11-05 사용자)", () => {
+  // 폰: 화면 1칸 ≈ 판 2.2칸 — 손가락 좌표가 계단으로 오고 손도 떨린다
+  const W3 = 400, H3 = 160, Y = 80, N = 240;
+  const rnd = (() => { let s = 12345; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32); })();
+  const noisy: [number, number, number][] = Array.from({ length: N }, (_, i) => {
+    const q = 2.2;
+    return [Math.round((30 + (i * 340) / N + (rnd() - 0.5) * 1.5) / q) * q, Math.round((Y + (rnd() - 0.5) * 2.5) / q) * q, 16];
+  });
+  const smoothed = (pts: [number, number, number][]) => { const f = new PointSmoother(); return pts.map(([x, y, dt], i) => { const [a, b] = f.push(x, y, i ? dt : 0); return [a, b, dt] as [number, number, number]; }); };
+  const carve = (pts: [number, number, number][]) => { const s = new SandSim(W3, H3); s.H.fill(1.5); s.apply({ k: "stroke", tool: "finger", size: 6, seed: 3, d: pts.flat(), pv: 4 }); return s; };
+  /** 세로줄마다 가장 파인 곳의 위치 → 선의 들쭉날쭉함 */
+  const jitter = (s: SandSim) => { const c: number[] = []; for (let x = 60; x < 340; x++) { let a = 0, m = 0; for (let y = 50; y < 110; y++) { const v = Math.max(0, 0.6 - s.H[y * W3 + x]); a += v * y; m += v; } if (m > 0) c.push(a / m); } let d = 0; for (let i = 1; i < c.length; i++) d += Math.abs(c[i] - c[i - 1]); return d / c.length; };
+
+  it("계단으로 오는 좌표로 그어도 선이 곧다 — 곧은 선보다 더 떨리는 몫이 절반 아래", () => {
+    const straight = jitter(carve(Array.from({ length: N }, (_, i) => [30 + (i * 340) / N, Y + 0.37, 16] as [number, number, number])));
+    expect(jitter(carve(smoothed(noisy))) - straight).toBeLessThan((jitter(carve(noisy)) - straight) * 0.5);
+  });
+
+  it("빠르게 그으면 거의 안 늦는다 · 멈추면 따라잡는다", () => {
+    const f = new PointSmoother();
+    let last: [number, number] = [0, 0];
+    for (let i = 0; i <= 60; i++) last = f.push(i * 16, 0, i ? 8 : 0); // 2칸/ms
+    expect(60 * 16 - last[0]).toBeLessThan(10);
+    for (let i = 0; i < 60; i++) last = f.push(60 * 16, 0, 16);
+    expect(60 * 16 - last[0]).toBeLessThan(1);
   });
 });
