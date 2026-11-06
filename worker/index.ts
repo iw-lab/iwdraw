@@ -606,7 +606,7 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
     c.env.DB.prepare("DELETE FROM artwork_likes WHERE artwork_id = ?").bind(id),
     c.env.DB.prepare("DELETE FROM artworks WHERE id = ?").bind(id),
   ]);
-  await dropShowcaseCache(c.req.url, id); // 전시 중이던 작품이면 전시관에서도 바로 빠지게
+  await dropShowcaseCache(c, c.req.url, id); // 전시 중이던 작품이면 전시관에서도 바로 빠지게
   return c.json({ ok: true });
 });
 
@@ -617,8 +617,19 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
 const SHOWCASE_MAX = 50; // 하트 순 50위까지(2026-11-03 «너무 많아지면 50위까지만»)
 const SHOWCASE_TTL = 60;
 const SHOWCASE_DAYS = 60; // 두 달 지난 작품은 목록에서 빠진다
+// 마지막 정상 전시(R2 · 공개 경로 없음) — DB 가 막혀도(2026-11-06 계정 D1 한도 초과로 그림 전부 500) 걸려 있던 그림은 보인다. DB 를 못 읽을 때만 쓴다.
+// 내리기·신고·삭제는 이 파일부터 지운다 — 내린 그림이 비상 경로로 되살아나지 않게(다음 정상 목록이 새로 적는다)
+const LAST_GOOD = "_showcase/last-good.json";
+type LastGood = { works: unknown[]; paths: Record<string, string> };
+let lastGoodSig = "";
+async function readLastGood(c: AppContext): Promise<LastGood | null> {
+  const o = await c.env.BUCKET.get(LAST_GOOD);
+  return o ? ((await o.json()) as LastGood) : null;
+}
 /** 전시관 캐시 비우기(이 지역) — 걸기는 목록만, 내리기·삭제는 그림까지 */
-async function dropShowcaseCache(reqUrl: string, id?: string | null) {
+async function dropShowcaseCache(c: AppContext, reqUrl: string, id?: string | null) {
+  lastGoodSig = "";
+  await c.env.BUCKET.delete(LAST_GOOD).catch(() => {});
   const base = new URL(reqUrl);
   const keys = id ? ["/api/showcase", `/api/showcase/${id}`] : ["/api/showcase"];
   await Promise.all(keys.map((p) => caches.default.delete(new Request(new URL(p, base).toString())))).catch(() => {});
@@ -657,7 +668,7 @@ app.patch("/api/artworks/:id/showcase", requireTeacher, async (c) => {
     .run();
   if (!res.meta.changes) return c.json({ error: "not_found" }, 404);
   // 걸거나 내리면 이 지역 캐시를 바로 비운다 — 다른 지역은 SHOWCASE_TTL 안에 저절로
-  await dropShowcaseCache(c.req.url, body.on ? null : id);
+  await dropShowcaseCache(c, c.req.url, body.on ? null : id);
   return c.json({ ok: true, showcase: body.on });
 });
 
@@ -670,13 +681,20 @@ app.get("/api/showcase", async (c) => {
   // 순위 = 이번 주(7일) 하트 순 · 걸린 지 3일 안 된 작품은 3칸마다 자리를 보장(첫 하트가 없어 영원히 뒤로 밀리지 않게)
   //   · 두 달 지난 작품은 목록에서 빠진다(표가 커져도 읽는 행 = 최근 두 달 건 것만 · 부분 색인 artworks_showcase_idx)
   const now = Date.now();
-  const { results } = await d1Retry(() => c.env.DB.prepare(
-    `SELECT a.id, a.showcase_at, a.like_count, a.showcase_sido,
+  let results: { id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null; p: string }[] | undefined;
+  try {
+    ({ results } = await d1Retry(() => c.env.DB.prepare(
+    `SELECT a.id, a.showcase_at, a.like_count, a.showcase_sido, COALESCE(a.showcase_path, a.thumb_path) AS p,
             (SELECT COUNT(*) FROM artwork_likes l WHERE l.artwork_id = a.id AND l.created_at > ?) AS wk
      FROM artworks a WHERE a.showcase_at > ? ORDER BY a.showcase_at DESC LIMIT 400`,
   )
     .bind(now - 7 * 86400e3, now - SHOWCASE_DAYS * 86400e3)
-    .all<{ id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null }>());
+    .all<{ id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null; p: string }>()));
+  } catch (e) {
+    const lg = await readLastGood(c);
+    if (!lg) throw e;
+    return new Response(JSON.stringify({ works: lg.works }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=30", ...SHOWCASE_CORS } });
+  }
   const sidoOf = new Map((results ?? []).map((r) => [r.id, r.showcase_sido && SIDO.includes(r.showcase_sido) ? r.showcase_sido : ""]));
   const works = rankShowcase((results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count, wk: r.wk })), now, SHOWCASE_MAX).map((w) => ({ ...w, r: sidoOf.get(w.id) ?? "" }));
   // 1분 묶음 — 캐시는 지역(colo)마다 따로라 내린 작품이 다른 지역에선 최대 1분 남는다(목록·그림 같은 길이)
@@ -684,6 +702,13 @@ app.get("/api/showcase", async (c) => {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${SHOWCASE_TTL}`, ...SHOWCASE_CORS },
   });
   c.executionCtx.waitUntil(cache.put(key, res.clone()));
+  const pathOf = new Map((results ?? []).map((r) => [r.id, r.p]));
+  const paths = Object.fromEntries(works.filter((w) => pathOf.get(w.id)).map((w) => [w.id, pathOf.get(w.id) as string]));
+  const sig = JSON.stringify(paths);
+  if (sig !== lastGoodSig) {
+    lastGoodSig = sig;
+    c.executionCtx.waitUntil(c.env.BUCKET.put(LAST_GOOD, JSON.stringify({ works, paths })).then(() => undefined));
+  }
   return res;
 });
 
@@ -699,13 +724,15 @@ app.post("/api/showcase/:id/report", async (c) => {
   const H = likeCors(o);
   const id = c.req.param("id");
   if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return c.json({ error: "bad_id" }, 400, H);
+  lastGoodSig = "";
+  await c.env.BUCKET.delete(LAST_GOOD).catch(() => {});   // DB 가 막혀 내리기가 실패해도 비상 경로로는 안 나가게 — 아이 안전이 먼저
   const day = Math.floor((Date.now() + 9 * 3600e3) / 86400000);
   const iph = `r:${await hex16(`${day}|${c.env.SESSION_SECRET}|${c.req.header("cf-connecting-ip") || "0"}`)}`;
   const cap = await c.env.DB.prepare("SELECT n FROM showcase_like_caps WHERE day = ? AND iph = ?").bind(day, iph).first<{ n: number }>();
   if ((cap?.n ?? 0) >= 10) return c.json({ error: "cap" }, 429, H);
   const res = await c.env.DB.prepare("UPDATE artworks SET showcase_at = NULL, showcase_report = ? WHERE id = ? AND showcase_at IS NOT NULL").bind(Date.now(), id).run();
   await c.env.DB.prepare("INSERT INTO showcase_like_caps (day, iph, n) VALUES (?, ?, 1) ON CONFLICT(day, iph) DO UPDATE SET n = n + 1").bind(day, iph).run();
-  await dropShowcaseCache(c.req.url, id);
+  await dropShowcaseCache(c, c.req.url, id);
   return c.json({ ok: true, hidden: !!res.meta.changes }, 200, H);
 });
 
@@ -724,7 +751,7 @@ app.put("/api/artworks/:id/showcase-image", requireTeacher, async (c) => {
   const key = `showcase/${id}.${webp ? "webp" : "png"}`;
   await c.env.BUCKET.put(key, buf, { httpMetadata: { contentType: webp ? "image/webp" : "image/png" } });
   await c.env.DB.prepare("UPDATE artworks SET showcase_path = ? WHERE id = ?").bind(key, id).run();
-  await dropShowcaseCache(c.req.url, id);
+  await dropShowcaseCache(c, c.req.url, id);
   return c.json({ ok: true });
 });
 
@@ -778,9 +805,16 @@ app.get("/api/showcase/:id", async (c) => {
   const key = new Request(new URL(`/api/showcase/${id}`, c.req.url).toString());
   const hit = await cache.match(key);
   if (hit) return hit;
-  const row = await d1Retry(() => c.env.DB.prepare("SELECT COALESCE(showcase_path, thumb_path) AS p FROM artworks WHERE id = ? AND showcase_at IS NOT NULL")   /* 이름 지운 사본이 있으면 그것만 */
-    .bind(id)
-    .first<{ p: string }>());
+  let row: { p: string } | null;
+  try {
+    row = await d1Retry(() => c.env.DB.prepare("SELECT COALESCE(showcase_path, thumb_path) AS p FROM artworks WHERE id = ? AND showcase_at IS NOT NULL")   /* 이름 지운 사본이 있으면 그것만 */
+      .bind(id)
+      .first<{ p: string }>());
+  } catch (e) {
+    const p = (await readLastGood(c))?.paths?.[id];   // DB 가 막혔을 때만 — 마지막 정상 전시에 있던 그림
+    if (!p) throw e;
+    row = { p };
+  }
   if (!row) return c.json({ error: "not_found" }, 404);
   const obj = await c.env.BUCKET.get(row.p);
   if (!obj) return c.json({ error: "not_found" }, 404);
