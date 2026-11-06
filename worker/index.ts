@@ -87,15 +87,50 @@ function clientIp(c: AppContext): string {
   );
 }
 
-// join_attempts 재사용 IP rate limit(교사 인증·학생 join 공용). marker로 카운트 분리.
+// 막힌 요청은 DB 를 건드리지 않는다(2026-11-06: 한 IP 가 20분 동안 입장을 4,222번 눌렀다 — 막힌 시도까지 줄을 쌓고 그 줄을 다시 세어,
+// 19분에 D1 800만 행을 읽어 계정 하루 한도 500만을 넘겼다. 같은 계정의 아트온·학습만화 이미지가 전부 500).
+// 막혔다고 답한 IP 는 이 실행기에서 10초 동안 DB 없이 바로 돌려보낸다 · 시도 기록은 막히기 전까지만 남아 창이 늘어나지 않는다.
+const BLOCK_MEMO_MS = 10_000;   // 짧게 — 창이 끝난 뒤에도 교실 전체(NAT)를 오래 막지 않게
+const blockedIps = new Map<string, number>();
+function memoBlocked(key: string): boolean {
+  const until = blockedIps.get(key);
+  if (!until) return false;
+  if (until > Date.now()) return true;
+  blockedIps.delete(key);
+  return false;
+}
+function memoBlock(key: string): void {
+  if (blockedIps.size > 5000) {
+    const now = Date.now();
+    for (const [k, until] of blockedIps) if (until <= now) blockedIps.delete(k);
+    if (blockedIps.size > 5000) { const oldest = blockedIps.keys().next().value; if (oldest) blockedIps.delete(oldest); }
+  }
+  blockedIps.set(key, Date.now() + BLOCK_MEMO_MS);
+}
+
+// join_attempts 재사용 IP rate limit(교사 인증·학생 join 공용). marker로 카운트 분리. 상한까지만 센다(읽는 행 ≤ 상한)
 async function ipAttemptCount(c: AppContext, ipHash: string, marker: string): Promise<number> {
   const since = Date.now() - RATE_WINDOW_MS;
   const r = await c.env.DB.prepare(
-    "SELECT COUNT(*) AS n FROM join_attempts WHERE ip_hash = ? AND code_tried = ? AND created_at >= ?",
+    "SELECT COUNT(*) AS n FROM (SELECT 1 FROM join_attempts WHERE ip_hash = ? AND code_tried = ? AND created_at >= ? LIMIT ?)",
   )
-    .bind(ipHash, marker, since)
+    .bind(ipHash, marker, since, AUTH_RATE_MAX)
     .first<{ n: number }>();
   return r?.n ?? 0;
+}
+/** 교사 인증 문 — 막혔으면 true. 막힌 시도는 줄을 쌓지 않는다 */
+async function authBlocked(c: AppContext, ipHash: string): Promise<boolean> {
+  const memo = `a:${ipHash}`;
+  if (memoBlocked(memo)) return true;
+  if ((await ipAttemptCount(c, ipHash, AUTH_MARKER)) < AUTH_RATE_MAX) return false;
+  memoBlock(memo);
+  return true;
+}
+/** D1 일시 실패·한도 초과는 들쭉날쭉하다 — 공개 전시만 두 번 더 해 본다(값을 지어내지 않는다 · 끝내 실패면 그대로 오류) */
+async function d1Retry<T>(run: () => Promise<T>): Promise<T> {
+  for (let k = 0; ; k++) {
+    try { return await run(); } catch (e) { if (k >= 2) throw e; await new Promise((r) => setTimeout(r, 100 * (k + 1))); }
+  }
 }
 async function recordAttempt(c: AppContext, ipHash: string, marker: string, success: boolean): Promise<void> {
   await c.env.DB.prepare("INSERT INTO join_attempts (ip_hash, code_tried, success) VALUES (?, ?, ?)")
@@ -187,10 +222,7 @@ app.post("/api/teacher/signup", async (c) => {
 
   // 크리덴셜 스터핑/무차별 대입 방어(IP rate limit) — login과 예산 공유
   const ipHash = await hashIp(clientIp(c));
-  if ((await ipAttemptCount(c, ipHash, AUTH_MARKER)) >= AUTH_RATE_MAX) {
-    await recordAttempt(c, ipHash, AUTH_MARKER, false);
-    return c.json({ error: "rate_limited" }, 429);
-  }
+  if (await authBlocked(c, ipHash)) return c.json({ error: "rate_limited" }, 429);
 
   const existing = await c.env.DB.prepare("SELECT id FROM teachers WHERE email = ?").bind(email).first();
   if (existing) {
@@ -237,10 +269,7 @@ app.post("/api/teacher/login", async (c) => {
 
   // 크리덴셜 스터핑/무차별 대입 방어(IP rate limit)
   const ipHash = await hashIp(clientIp(c));
-  if ((await ipAttemptCount(c, ipHash, AUTH_MARKER)) >= AUTH_RATE_MAX) {
-    await recordAttempt(c, ipHash, AUTH_MARKER, false);
-    return c.json({ error: "rate_limited" }, 429);
-  }
+  if (await authBlocked(c, ipHash)) return c.json({ error: "rate_limited" }, 429);
 
   const t = await c.env.DB.prepare(
     "SELECT id, email, name, plan, password_hash, password_salt FROM teachers WHERE email = ?",
@@ -297,10 +326,7 @@ app.post("/api/teacher/delete-account", requireTeacher, async (c) => {
 
   // 비밀번호 재확인 — 세션 탈취/CSRF로 남의 계정을 삭제하는 것 방지. 브루트포스 방어(rate limit).
   const ipHash = await hashIp(clientIp(c));
-  if ((await ipAttemptCount(c, ipHash, AUTH_MARKER)) >= AUTH_RATE_MAX) {
-    await recordAttempt(c, ipHash, AUTH_MARKER, false);
-    return c.json({ error: "rate_limited" }, 429);
-  }
+  if (await authBlocked(c, ipHash)) return c.json({ error: "rate_limited" }, 429);
   const t = await c.env.DB.prepare("SELECT password_hash, password_salt FROM teachers WHERE id = ?")
     .bind(teacherId)
     .first<{ password_hash: string; password_salt: string }>();
@@ -644,13 +670,13 @@ app.get("/api/showcase", async (c) => {
   // 순위 = 이번 주(7일) 하트 순 · 걸린 지 3일 안 된 작품은 3칸마다 자리를 보장(첫 하트가 없어 영원히 뒤로 밀리지 않게)
   //   · 두 달 지난 작품은 목록에서 빠진다(표가 커져도 읽는 행 = 최근 두 달 건 것만 · 부분 색인 artworks_showcase_idx)
   const now = Date.now();
-  const { results } = await c.env.DB.prepare(
+  const { results } = await d1Retry(() => c.env.DB.prepare(
     `SELECT a.id, a.showcase_at, a.like_count, a.showcase_sido,
             (SELECT COUNT(*) FROM artwork_likes l WHERE l.artwork_id = a.id AND l.created_at > ?) AS wk
      FROM artworks a WHERE a.showcase_at > ? ORDER BY a.showcase_at DESC LIMIT 400`,
   )
     .bind(now - 7 * 86400e3, now - SHOWCASE_DAYS * 86400e3)
-    .all<{ id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null }>();
+    .all<{ id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null }>());
   const sidoOf = new Map((results ?? []).map((r) => [r.id, r.showcase_sido && SIDO.includes(r.showcase_sido) ? r.showcase_sido : ""]));
   const works = rankShowcase((results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count, wk: r.wk })), now, SHOWCASE_MAX).map((w) => ({ ...w, r: sidoOf.get(w.id) ?? "" }));
   // 1분 묶음 — 캐시는 지역(colo)마다 따로라 내린 작품이 다른 지역에선 최대 1분 남는다(목록·그림 같은 길이)
@@ -752,9 +778,9 @@ app.get("/api/showcase/:id", async (c) => {
   const key = new Request(new URL(`/api/showcase/${id}`, c.req.url).toString());
   const hit = await cache.match(key);
   if (hit) return hit;
-  const row = await c.env.DB.prepare("SELECT COALESCE(showcase_path, thumb_path) AS p FROM artworks WHERE id = ? AND showcase_at IS NOT NULL")   /* 이름 지운 사본이 있으면 그것만 */
+  const row = await d1Retry(() => c.env.DB.prepare("SELECT COALESCE(showcase_path, thumb_path) AS p FROM artworks WHERE id = ? AND showcase_at IS NOT NULL")   /* 이름 지운 사본이 있으면 그것만 */
     .bind(id)
-    .first<{ p: string }>();
+    .first<{ p: string }>());
   if (!row) return c.json({ error: "not_found" }, 404);
   const obj = await c.env.BUCKET.get(row.p);
   if (!obj) return c.json({ error: "not_found" }, 404);
@@ -980,16 +1006,16 @@ app.post("/api/join", async (c) => {
   // 교실은 한 공용 IP(NAT) 뒤에서 다수 학생이 정상 입장하므로 성공 join은 제외해야
   // 30명 학급의 9번째부터 차단되는 오작동을 막는다. 브루트포스=코드 오답(success=0)만 제한.
   // 교사 인증 표식(__AUTH__)도 제외해 카운트 분리.
+  const memo = `j:${ipHash}`;
+  if (memoBlocked(memo)) return c.json({ error: "rate_limited" }, 429);
   const since = Date.now() - RATE_WINDOW_MS;
   const rl = await c.env.DB.prepare(
-    "SELECT COUNT(*) AS n FROM join_attempts WHERE ip_hash = ? AND code_tried != ? AND success = 0 AND created_at >= ?",
+    "SELECT COUNT(*) AS n FROM (SELECT 1 FROM join_attempts WHERE ip_hash = ? AND code_tried != ? AND success = 0 AND created_at >= ? LIMIT ?)",
   )
-    .bind(ipHash, AUTH_MARKER, since)
+    .bind(ipHash, AUTH_MARKER, since, RATE_MAX)
     .first<{ n: number }>();
   if ((rl?.n ?? 0) >= RATE_MAX) {
-    await c.env.DB.prepare("INSERT INTO join_attempts (ip_hash, code_tried, success) VALUES (?, ?, 0)")
-      .bind(ipHash, code)
-      .run();
+    memoBlock(memo);   // 막힌 시도는 줄을 쌓지 않는다 — 쌓으면 막힘이 끝나지 않고 세는 비용만 는다
     return c.json({ error: "rate_limited" }, 429);
   }
 
