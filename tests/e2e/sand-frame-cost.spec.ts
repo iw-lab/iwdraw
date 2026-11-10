@@ -11,7 +11,9 @@ const RATE = Number(process.env.SAND_RATE ?? 6);
 const P75_MAX = Number(process.env.SAND_P75_MAX ?? 50);
 
 for (const tool of ["pour", "finger", "palm"] as const) {
-  test(`샌드 프레임 간격 — ${tool} · CPU ${RATE}배`, async ({ page }) => {
+  test(`샌드 프레임 간격 — ${tool} · CPU ${RATE}배`, async ({ page }, info) => {
+    // tablet 프로파일(DPR 2.25·소프트웨어 GL)은 같은 코드로도 느려 계측 기준이 못 된다(long-session-perf 와 같은 이유)
+    test.skip(info.project.name === "tablet", "tablet 프로파일은 성능 계측 기준이 아니다");
     const cdp = await page.context().newCDPSession(page);
     await page.goto("/sand");
     await page.getByTestId("sand-canvas").waitFor();

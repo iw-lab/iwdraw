@@ -18,15 +18,28 @@ const dir = path.join(process.cwd(), "worker", "migrations");
 const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
 const ALREADY = /duplicate column name|already exists/i;
 
-for (const f of files) {
-  const rel = path.join("worker", "migrations", f);
+// OAuth 토큰이 만료되면 import API 가 «Authentication error [code: 10000]»로 실패한다(2026-11-10 하루 두 번 배포 중단).
+// whoami 가 토큰을 새로 받아 오므로, 그 오류면 한 번 새로 받고 다시 시도한다.
+const AUTH_EXPIRED = /Authentication error \[code: 10000\]/;
+const exec = (rel) => {
   const r = spawnSync(
     "bash",
     // 격리 로그인 래퍼(전역 wrangler 로그인은 다른 계정일 수 있다 — tools/cf.sh 주석)
     ["tools/cf.sh", "d1", "execute", "arton", "--remote", "--yes", "--file", rel],
     { encoding: "utf8" },
   );
-  const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+  return { status: r.status, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+};
+
+for (const f of files) {
+  const rel = path.join("worker", "migrations", f);
+  let r = exec(rel);
+  if (r.status !== 0 && AUTH_EXPIRED.test(r.out)) {
+    console.log(`↻ ${f} — 로그인 토큰 만료, 새로 받아 다시 시도`);
+    spawnSync("bash", ["tools/cf.sh", "whoami"], { encoding: "utf8" });
+    r = exec(rel);
+  }
+  const out = r.out;
   if (r.status === 0) {
     console.log(`✓ ${f} 적용`);
   } else if (ALREADY.test(out)) {
