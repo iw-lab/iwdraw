@@ -6,7 +6,7 @@
  *   되돌리기 칸 하나 = ops 끝의 연산 하나(undo 는 ops 를 하나 빼고 그 직전 판으로).
  *   ops 가 너무 길어지면 오래된 것을 base 로 접는다 — 단 되돌리기 칸(UNDO_MAX) 안의 것은 접지 않는다.
  */
-import { SandSim, makeGrain, POUR_V, type SandOp, type SandTool } from "./SandSim";
+import { SandSim, makeGrain, POUR_V, quantizeColor, dequantizeColor, validRGB, type RGB, type SandOp, type SandTool } from "./SandSim";
 import { SandRender, type SandLook } from "./SandRender";
 
 export const UNDO_MAX = 20;
@@ -58,12 +58,23 @@ export function dequantize(q: Uint16Array, into: Float32Array): void {
   for (let i = 0; i < q.length; i++) into[i] = q[i] / Q;
 }
 
+/** 되돌리기 한 칸 = 두께 + 겉 색 */
+interface Snap {
+  H: Uint16Array;
+  C: Uint16Array;
+}
+
 export interface SandSaved {
   v: 1;
   w: number;
   h: number;
   cur: Uint16Array;
   base: Uint16Array | null;
+  /** 칸 색(RGB565) — 없으면 옛 저장본(한 색 판) = defColor 로 칠한다 */
+  curC?: Uint16Array;
+  baseC?: Uint16Array | null;
+  /** 옛 저장본의 판 색 */
+  defColor?: RGB;
   ops: SandOp[];
   draftId: string;
   savedAt: number;
@@ -84,10 +95,13 @@ export class SandEngine {
   sizes: Record<SandTool, number> = { pour: 22, finger: 12, palm: 34 };
 
   base: Uint16Array | null = null;
+  baseC: Uint16Array | null = null;
   ops: SandOp[] = [];
+  /** 다음에 부을 모래 색 */
+  color: RGB;
   private logNums = 0;
-  private undoSnaps: Uint16Array[] = [];
-  private redoSnaps: Uint16Array[] = [];
+  private undoSnaps: Snap[] = [];
+  private redoSnaps: Snap[] = [];
   private redoOps: SandOp[] = [];
   /** 기록이 바뀔 때마다 오른다 — 자동저장이 «바뀐 게 있나»를 본다 */
   version = 0;
@@ -101,7 +115,7 @@ export class SandEngine {
   /** pre = 붓질 전 판(되돌리기 칸). 획이 끝나야 되돌리기 줄에 넣는다 — 시작 때 넣으면 줄이 꽉 찼을 때
    * 가장 오래된 칸을 먼저 버리고, 취소된 획이 칸 하나를 먹는다(8way gptweb) */
   private smoother = new PointSmoother();
-  private cur: { id: number; tool: SandTool; size: number; seed: number; d: number[]; t: number; x: number; y: number; moved: number; pre: Uint16Array } | null = null;
+  private cur: { id: number; tool: SandTool; size: number; seed: number; c: RGB; d: number[]; t: number; x: number; y: number; moved: number; pre: Snap } | null = null;
   /** 마지막 펜 신호 시각 — 펜을 쓰는 동안(그리고 막 뗀 1.5초)만 손바닥 터치를 무시한다.
    * 한 번 펜을 쓰면 영영 터치를 막던 것 = 샌드아트는 손가락 놀이인데 손가락이 안 먹었다(8way meta) */
   private lastPen = -1e9;
@@ -112,6 +126,9 @@ export class SandEngine {
 
   constructor(w: number, h: number, look: SandLook) {
     this.sim = new SandSim(w, h);
+    this.color = [...look.sand] as RGB;
+    this.sim.defColor = this.color;
+    this.sim.paintColor(this.color);
     this.grain = makeGrain(w, h);
     this.render = new SandRender(this.sim, this.grain, look);
   }
@@ -178,6 +195,21 @@ export class SandEngine {
     this.sim.markAll();
   }
 
+  /** 다음 붓기·쏟기 색 — 판 위 모래 색은 안 바뀐다(2026-11-10 사용자 «지금은 모래 색깔이 전체가 변하는데») */
+  setColor(c: RGB): void {
+    if (validRGB(c)) this.color = [c[0], c[1], c[2]];
+  }
+
+  /** 지금 판 → 되돌리기 칸 */
+  private snap(): Snap {
+    return { H: quantize(this.sim.H), C: quantizeColor(this.sim.C) };
+  }
+  private load(s: Snap): void {
+    dequantize(s.H, this.sim.H);
+    dequantizeColor(s.C, this.sim.C);
+    this.sim.markAll();
+  }
+
   setTool(t: SandTool): void {
     this.tool = t;
   }
@@ -226,11 +258,12 @@ export class SandEngine {
     const seed = (Date.now() ^ Math.imul(this.seedCounter++, 2654435761)) >>> 0;
     const size = this.size;
     // 붓질 전 판 — 획이 끝날 때 되돌리기 칸이 된다
-    const pre = quantize(this.sim.H);
-    this.cur = { id: e.pointerId, tool: this.tool, size, seed, d: [], t: performance.now(), x, y, moved: 0, pre };
+    const pre = this.snap();
+    const c: RGB = [...this.color] as RGB;
+    this.cur = { id: e.pointerId, tool: this.tool, size, seed, c, d: [], t: performance.now(), x, y, moved: 0, pre };
     this.smoother = new PointSmoother();
     this.smoother.push(x, y, 0);
-    this.sim.begin(this.tool, size, seed);
+    this.sim.begin(this.tool, size, seed, POUR_V, c);
     this.addDab(x, y, this.cur.t, 0);
     this.onActivity?.(this.tool, 0);
   };
@@ -287,7 +320,7 @@ export class SandEngine {
     this.onActivity?.(null, 0);
     this.undoSnaps.push(c.pre);
     if (this.undoSnaps.length > UNDO_MAX) this.undoSnaps.shift();
-    this.commit({ k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d, pv: POUR_V });
+    this.commit({ k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d, pv: POUR_V, ...(c.tool === "pour" ? { c: c.c } : {}) });
   };
 
   /** 취소(제스처 가로채임) — 붓질 전 판으로 되돌리고 기록하지 않는다 */
@@ -297,13 +330,12 @@ export class SandEngine {
     this.cur = null;
     this.sim.end();
     this.onActivity?.(null, 0);
-    dequantize(c.pre, this.sim.H);
-    this.sim.markAll();
+    this.load(c.pre);
   };
 
   /* ── 기록·되돌리기 ── */
   private pushUndo(): void {
-    this.undoSnaps.push(quantize(this.sim.H));
+    this.undoSnaps.push(this.snap());
     if (this.undoSnaps.length > UNDO_MAX) this.undoSnaps.shift();
   }
 
@@ -321,7 +353,7 @@ export class SandEngine {
     if (this.cur) return;
     this.pushUndo();
     const seed = (Date.now() ^ Math.imul(this.seedCounter++, 2246822519)) >>> 0;
-    const op: SandOp = { k: "fill", seed };
+    const op: SandOp = { k: "fill", seed, c: [...this.color] as RGB };
     this.sim.apply(op);
     this.commit(op);
   }
@@ -343,10 +375,9 @@ export class SandEngine {
       return false;
     }
     this.logNums -= op.k === "stroke" ? op.d.length : 1;
-    this.redoSnaps.push(quantize(this.sim.H));
+    this.redoSnaps.push(this.snap());
     this.redoOps.push(op);
-    dequantize(snap, this.sim.H);
-    this.sim.markAll();
+    this.load(snap);
     this.emit();
     return true;
   }
@@ -356,12 +387,11 @@ export class SandEngine {
     const op = this.redoOps.pop();
     const snap = this.redoSnaps.pop();
     if (!op || !snap) return false;
-    this.undoSnaps.push(quantize(this.sim.H));
+    this.undoSnaps.push(this.snap());
     if (this.undoSnaps.length > UNDO_MAX) this.undoSnaps.shift();
-    dequantize(snap, this.sim.H);
+    this.load(snap);
     this.ops.push(op);
     this.logNums += op.k === "stroke" ? op.d.length : 1;
-    this.sim.markAll();
     this.emit();
     return true;
   }
@@ -378,12 +408,22 @@ export class SandEngine {
       n++;
     }
     if (n === 0) return;
-    const tmp = new SandSim(this.w, this.h);
-    if (this.base) dequantize(this.base, tmp.H);
+    const tmp = this.replaySim();
     for (let i = 0; i < n; i++) tmp.apply(this.ops[i]);
     this.base = quantize(tmp.H);
+    this.baseC = quantizeColor(tmp.C);
     this.ops = this.ops.slice(n);
     this.logNums = nums;
+  }
+
+  /** 시작 판(base)을 깐 새 모래판 — 무비·접기가 ops 를 이 위에 다시 넣는다 */
+  replaySim(): SandSim {
+    const s = new SandSim(this.w, this.h);
+    s.defColor = this.sim.defColor;
+    s.paintColor(s.defColor);
+    if (this.base) dequantize(this.base, s.H);
+    if (this.baseC) dequantizeColor(this.baseC, s.C);
+    return s;
   }
 
   /** 새 그림 — 판·기록·되돌리기 전부 비운다 */
@@ -391,6 +431,7 @@ export class SandEngine {
     this.cur = null;
     this.sim.clear();
     this.base = null;
+    this.baseC = null;
     this.ops = [];
     this.logNums = 0;
     this.undoSnaps = [];
@@ -405,13 +446,16 @@ export class SandEngine {
   snapshot(draftId: string): SandSaved {
     const c = this.cur;
     // 늘 새 배열 — 저장(IndexedDB 열기)을 기다리는 사이 다음 획·되돌리기가 this.ops 를 바꾸면 판과 기록이 어긋난다(8way gptweb)
-    const ops: SandOp[] = c ? [...this.ops, { k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d.slice(), pv: POUR_V }] : this.ops.slice();
+    const ops: SandOp[] = c ? [...this.ops, { k: "stroke", tool: c.tool, size: c.size, seed: c.seed, d: c.d.slice(), pv: POUR_V, ...(c.tool === "pour" ? { c: c.c } : {}) }] : this.ops.slice();
     return {
       v: 1,
       w: this.w,
       h: this.h,
       cur: quantize(this.sim.H),
       base: this.base,
+      curC: quantizeColor(this.sim.C),
+      baseC: this.baseC,
+      defColor: this.sim.defColor,
       ops,
       draftId,
       savedAt: Date.now(),
@@ -421,9 +465,19 @@ export class SandEngine {
   /** 손상된 저장본(필드 없음·타입 다름·크기 다름)은 false — 화면은 빈 판으로 뜬다 */
   restore(s: SandSaved): boolean {
     if (!isSandSaved(s) || s.w !== this.w || s.h !== this.h) return false;
+    const n = this.w * this.h;
+    const okC = (q: unknown): q is Uint16Array => q instanceof Uint16Array && q.length === n;
+    // 옛 저장본(색 칸 없음) = 그때 고른 한 색 판. 색 없는 옛 연산에 그 색을 박아 둔다 — 나중에 고른 색이 바뀌어도 무비가 같은 판을 그린다
+    const def: RGB = validRGB(s.defColor) ? s.defColor : this.sim.defColor;
+    this.sim.defColor = def;
     dequantize(s.cur, this.sim.H);
-    this.base = s.base && s.base.length === this.w * this.h ? s.base : null;
-    this.ops = Array.isArray(s.ops) ? s.ops.filter(validOp) : [];
+    if (okC(s.curC)) dequantizeColor(s.curC, this.sim.C);
+    else this.sim.paintColor(def);
+    this.base = s.base && s.base.length === n ? s.base : null;
+    this.baseC = this.base && okC(s.baseC) ? s.baseC : null;
+    this.ops = (Array.isArray(s.ops) ? s.ops.filter(validOp) : []).map((o) =>
+      o.k === "fill" && !o.c ? { ...o, c: def } : o.k === "stroke" && o.tool === "pour" && !o.c ? { ...o, c: def } : o,
+    );
     this.logNums = this.ops.reduce((a, o) => a + (o.k === "stroke" ? o.d.length : 1), 0);
     this.undoSnaps = [];
     this.redoSnaps = [];
@@ -474,14 +528,15 @@ export function validOp(o: unknown): o is SandOp {
   if (!o || typeof o !== "object") return false;
   const op = o as SandOp;
   if (op.k === "clear") return true;
-  if (op.k === "fill") return Number.isFinite(op.seed);
+  if (op.k === "fill") return Number.isFinite(op.seed) && (op.c === undefined || validRGB(op.c));
   if (op.k === "stroke")
     return (
       (op.tool === "pour" || op.tool === "finger" || op.tool === "palm") &&
       Number.isFinite(op.size) &&
       Number.isFinite(op.seed) &&
       Array.isArray(op.d) &&
-      op.d.length % 3 === 0
+      op.d.length % 3 === 0 &&
+      (op.c === undefined || validRGB(op.c))
     );
   return false;
 }

@@ -6,9 +6,8 @@
  * 영상 저장 = 같은 재생을 canvas.captureStream 으로 webm 에 담는다.
  */
 import { useEffect, useRef, useState } from "react";
-import { SandSim } from "@/sand/SandSim";
 import { SandRender } from "@/sand/SandRender";
-import { dequantize, type SandEngine } from "@/sand/SandEngine";
+import type { SandEngine } from "@/sand/SandEngine";
 
 /** 재생 길이 목표(초) — 점 수가 많아도 이 안에 끝난다(빠르게 = 절반) */
 const TARGET_SEC = 24;
@@ -28,8 +27,7 @@ export function SandMovie({ engine, onClose }: { engine: SandEngine; onClose: ()
       const canvas = canvasRef.current;
       if (!canvas) return resolve();
       const ctx = canvas.getContext("2d", { alpha: false })!;
-      const sim = new SandSim(engine.w, engine.h);
-      if (engine.base) dequantize(engine.base, sim.H);
+      const sim = engine.replaySim();
       const r = new SandRender(sim, engine.grain, engine.render.look);
       const ops = engine.ops.slice();
       const total = ops.reduce((a, o) => a + (o.k === "stroke" ? Math.max(1, o.d.length / 3) : 30), 0);
@@ -59,7 +57,7 @@ export function SandMovie({ engine, onClose }: { engine: SandEngine; onClose: ()
             oi++;
             continue;
           }
-          if (di === 0) sim.begin(op.tool, op.size, op.seed, op.pv ?? 1);
+          if (di === 0) sim.beginOp(op);
           const n = op.d.length;
           while (budget > 0 && di < n) {
             sim.dab(op.d[di], op.d[di + 1], op.d[di + 2]);

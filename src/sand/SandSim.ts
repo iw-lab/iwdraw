@@ -10,12 +10,37 @@
  */
 
 export type SandTool = "pour" | "finger" | "palm";
+export type RGB = [number, number, number];
 
-/** 기록 단위. d = 평평한 [x, y, dtMs, x, y, dtMs, …](격자 좌표) */
+/** 기록 단위. d = 평평한 [x, y, dtMs, x, y, dtMs, …](격자 좌표)
+ * c = 붓는 모래 색(2026-11-10 사용자 «모래 쏟기 하고 다른 색으로 뿌리기») — 없으면 옛 기록 = 판 기본 색(defColor) */
 export type SandOp =
-  | { k: "stroke"; tool: SandTool; size: number; seed: number; d: number[]; pv?: number }
-  | { k: "fill"; seed: number }
+  | { k: "stroke"; tool: SandTool; size: number; seed: number; d: number[]; pv?: number; c?: RGB }
+  | { k: "fill"; seed: number; c?: RGB }
   | { k: "clear" };
+
+/** 겉 색이 바뀌는 깊이 — 이만큼 새 모래가 얹히면 겉이 거의 새 색이 된다(모래알은 불투명 · 덮인 칸 문턱 0.6 의 절반) */
+export const SKIN = 0.3;
+
+/** RGB565 한 칸(저장·되돌리기 — 색 칸이 두께 칸과 같은 2바이트) */
+export const pack565 = (r: number, g: number, b: number): number =>
+  ((Math.max(0, Math.min(255, r)) >> 3) << 11) | ((Math.max(0, Math.min(255, g)) >> 2) << 5) | (Math.max(0, Math.min(255, b)) >> 3);
+export function quantizeColor(C: Float32Array): Uint16Array {
+  const n = C.length / 3;
+  const out = new Uint16Array(n);
+  for (let i = 0; i < n; i++) out[i] = pack565(C[i * 3] + 4, C[i * 3 + 1] + 2, C[i * 3 + 2] + 4);
+  return out;
+}
+export function dequantizeColor(q: Uint16Array, into: Float32Array): void {
+  for (let i = 0; i < q.length; i++) {
+    const v = q[i];
+    into[i * 3] = ((v >> 11) & 31) * (255 / 31);
+    into[i * 3 + 1] = ((v >> 5) & 63) * (255 / 63);
+    into[i * 3 + 2] = (v & 31) * (255 / 31);
+  }
+}
+export const validRGB = (c: unknown): c is RGB =>
+  Array.isArray(c) && c.length === 3 && c.every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 255);
 
 /** 두께 상한 — 붓기를 오래 눌러도 칸 하나가 끝없이 쌓이지 않게 */
 export const SAND_MAX = 6;
@@ -68,12 +93,19 @@ export class SandSim {
   readonly w: number;
   readonly h: number;
   H: Float32Array;
+  /** 칸마다 «겉에 보이는» 모래 색(r,g,b 0~255) — 두께(H)와 따로. 새로 얹힌 모래가 위에 보인다 */
+  C: Float32Array;
+  /** 색 없는 옛 기록·빈 판의 색 */
+  defColor: RGB = [34, 26, 20];
   /** 마지막 flush 이후 바뀐 칸의 사각형(렌더가 이만큼만 다시 그린다). x1·y1 은 포함 안 함 */
   dx0 = 0;
   dy0 = 0;
   dx1 = 0;
   dy1 = 0;
   private tmp: Float32Array;
+  private tmpC: Float32Array | null = null;
+  /** 진행 중 붓질의 모래 색 */
+  private col: RGB = [34, 26, 20];
 
   // 진행 중 붓질 상태
   private tool: SandTool = "pour";
@@ -90,6 +122,8 @@ export class SandSim {
     this.h = h;
     this.H = new Float32Array(w * h);
     this.tmp = new Float32Array(w * h);
+    this.C = new Float32Array(w * h * 3);
+    this.paintColor(this.defColor);
     this.markAll();
   }
 
@@ -125,11 +159,40 @@ export class SandSim {
     return r;
   }
 
+  /** 판 전체 색 칠하기(빈 판·옛 저장본) */
+  paintColor(c: RGB): void {
+    const C = this.C;
+    for (let i = 0; i < C.length; i += 3) {
+      C[i] = c[0];
+      C[i + 1] = c[1];
+      C[i + 2] = c[2];
+    }
+  }
+  /** 칸 i 에 색 (r,g,b) 모래 a 가 «위에» 얹혔다 — 아래가 얇으면(옛 두께 hb) 거의 새 색 */
+  private tint(i: number, a: number, hb: number, r: number, g: number, b: number): void {
+    if (a <= 0) return;
+    const t = a / (a + (hb < SKIN ? (hb > 0 ? hb : 0) : SKIN));
+    const C = this.C;
+    const k = i * 3;
+    C[k] += (r - C[k]) * t;
+    C[k + 1] += (g - C[k + 1]) * t;
+    C[k + 2] += (b - C[k + 2]) * t;
+  }
+  /** 붓기 한 칸: 두께 계산은 옛 식 그대로(무비 결정성) + 늘어난 만큼 색 */
+  private addAt(i: number, v: number): void {
+    const H = this.H;
+    const h0 = H[i];
+    const nv = v > SAND_MAX ? SAND_MAX : v;
+    H[i] = nv;
+    if (nv > h0) this.tint(i, nv - h0, h0, this.col[0], this.col[1], this.col[2]);
+  }
+
   /* ── 판 전체 연산 ── */
-  fill(seed: number): void {
+  fill(seed: number, c: RGB = this.defColor): void {
     const rnd = mulberry32(seed);
     const H = this.H;
     for (let i = 0; i < H.length; i++) H[i] = FILL_LEVEL + (rnd() - 0.5) * 0.35;
+    this.paintColor(c);
     this.markAll();
   }
   clear(): void {
@@ -144,8 +207,9 @@ export class SandSim {
   private wy = 0;
   private wWidth = 0;
   private wFlow = 0;
-  begin(tool: SandTool, size: number, seed: number, pv: number = POUR_V): void {
+  begin(tool: SandTool, size: number, seed: number, pv: number = POUR_V, c: RGB = this.defColor): void {
     this.pv = pv;
+    this.col = c;
     this.wx = this.wy = this.wWidth = this.wFlow = 0;
     this.tool = tool;
     this.size = Math.max(2, Math.min(120, size));
@@ -179,11 +243,16 @@ export class SandSim {
   /** 기록된 연산 하나를 통째로 적용(무비·복원·되돌리기 재생) */
   apply(op: SandOp): void {
     if (op.k === "clear") return this.clear();
-    if (op.k === "fill") return this.fill(op.seed);
-    this.begin(op.tool, op.size, op.seed, op.pv ?? 1);
+    if (op.k === "fill") return this.fill(op.seed, op.c ?? this.defColor);
+    this.beginOp(op);
     const d = op.d;
     for (let i = 0; i + 2 < d.length; i += 3) this.dab(d[i], d[i + 1], d[i + 2]);
     this.end();
+  }
+
+  /** 기록된 붓질 시작(무비가 점을 나눠 넣을 때도 같은 길) */
+  beginOp(op: Extract<SandOp, { k: "stroke" }>): void {
+    this.begin(op.tool, op.size, op.seed, op.pv ?? 1, op.c ?? this.defColor);
   }
 
   /* ── 붓기: 손끝에서 모래가 흘러내려 쌓인다. 양은 «누르고 있는 시간»에 비례 ── */
@@ -231,8 +300,7 @@ export class SandSim {
         // 가장자리(g 작음)로 갈수록 0.2~1.8배로 흩어져 «모래알 가장자리 + 꽉 찬 줄기»(가운데까지 흩뿌리면 에어브러시 스프레이)
         const i = yy * w + xx;
         const spread = v3 ? 1.6 - 1.1 * g : 1.6;
-        const v = H[i] + amp * g * (1 - spread / 2 + spread * rnd());
-        H[i] = v > SAND_MAX ? SAND_MAX : v;
+        this.addAt(i, H[i] + amp * g * (1 - spread / 2 + spread * rnd()));
       }
     }
     this.relax(x0 - 1, y0 - 1, x1 + 2, y1 + 2, 0.45);
@@ -276,8 +344,7 @@ export class SandSim {
         if (g < 0.01) continue;
         const i = yy * w + xx;
         const spread = 1.5 - 1.05 * g;
-        const v = H[i] + amp * g * (1 - spread / 2 + spread * rnd());
-        H[i] = v > SAND_MAX ? SAND_MAX : v;
+        this.addAt(i, H[i] + amp * g * (1 - spread / 2 + spread * rnd()));
       }
     }
     this.relax(x0 - 1, y0 - 1, x1 + 2, y1 + 2, 0.45);
@@ -297,7 +364,9 @@ export class SandSim {
       const put = (xx: number, yy: number, v: number) => {
         if (xx < 0 || yy < 0 || xx >= this.w || yy >= this.h) return;
         const i = yy * w + xx;
-        H[i] = Math.min(SAND_MAX, H[i] + v);
+        const h0 = H[i];
+        H[i] = Math.min(SAND_MAX, h0 + v);
+        if (H[i] > h0) this.tint(i, H[i] - h0, h0, this.col[0], this.col[1], this.col[2]);
       };
       put(gx, gy, amt);
       if (rnd() < 0.25) {
@@ -336,6 +405,7 @@ export class SandSim {
     const y0 = Math.max(0, Math.floor(cy - Rc));
     const y1 = Math.min(this.h - 1, Math.ceil(cy + Rc));
     const side = rnd() < 0.5 ? 1 : -1;
+    const C = this.C;
     for (let yy = y0; yy <= y1; yy++) {
       for (let xx = x0; xx <= x1; xx++) {
         const ddx = xx - cx;
@@ -349,6 +419,7 @@ export class SandSim {
         const take = h0 * Math.min(1, 0.94 * wgt);
         if (take <= 0) continue;
         H[i] = h0 - take;
+        const cr = C[i * 3], cg = C[i * 3 + 1], cb = C[i * 3 + 2];
         // 가운데에서 바깥으로 — 바로 가운데 칸은 진행 방향의 옆으로 민다
         let nx: number, ny: number;
         if (d < 0.5) {
@@ -359,7 +430,7 @@ export class SandSim {
           ny = ddy / d;
         }
         const t = R + 0.6 + rnd() * R * 0.35;
-        this.splat(cx + nx * t, cy + ny * t, take);
+        this.splat(cx + nx * t, cy + ny * t, take, cr, cg, cb);
       }
     }
     // 둑은 가운데에서 최대 R×1.35+0.6(+네 칸 나눔 1) 떨어진 곳에 쌓인다 — 안식각·칠하기 범위가 그 둑까지 덮어야 한다
@@ -388,6 +459,8 @@ export class SandSim {
   private palmStamp(cx: number, cy: number, sx: number, sy: number, R: number): void {
     const H = this.H;
     const T = this.tmp;
+    const C = this.C;
+    const TC = (this.tmpC ??= new Float32Array(this.w * this.h * 3));
     const w = this.w;
     const rnd = this.rnd;
     const x0 = Math.max(0, Math.floor(cx - R));
@@ -407,6 +480,9 @@ export class SandSim {
         const mv = H[i] * f;
         H[i] -= mv;
         T[i] = mv;
+        TC[i * 3] = C[i * 3];
+        TC[i * 3 + 1] = C[i * 3 + 1];
+        TC[i * 3 + 2] = C[i * 3 + 2];
       }
     }
     // 2) 손이 간 만큼 옮겨 놓기 + 옆으로 살짝 흩기(손바닥 결)
@@ -420,7 +496,7 @@ export class SandSim {
         if (mv <= 0) continue;
         T[i] = 0;
         const j = (rnd() - 0.5) * 1.2;
-        this.splat(xx + sx * 1.05 + px * j, yy + sy * 1.05 + py * j, mv);
+        this.splat(xx + sx * 1.05 + px * j, yy + sy * 1.05 + py * j, mv, TC[i * 3], TC[i * 3 + 1], TC[i * 3 + 2]);
       }
     }
     const Rc = Math.ceil(R + len + 2);
@@ -429,7 +505,7 @@ export class SandSim {
   }
 
   /** 양 v 를 실수 좌표 둘레 네 칸에 나눠 놓는다(판 밖으로 나간 모래는 판 끝에 쌓인다) */
-  private splat(fx: number, fy: number, v: number): void {
+  private splat(fx: number, fy: number, v: number, r: number, g: number, b: number): void {
     const w = this.w;
     const h = this.h;
     fx = Math.min(w - 1.001, Math.max(0, fx));
@@ -440,10 +516,15 @@ export class SandSim {
     const ay = fy - iy;
     const H = this.H;
     const i = iy * w + ix;
-    H[i] += v * (1 - ax) * (1 - ay);
-    H[i + 1] += v * ax * (1 - ay);
-    H[i + w] += v * (1 - ax) * ay;
-    H[i + w + 1] += v * ax * ay;
+    const a0 = v * (1 - ax) * (1 - ay), a1 = v * ax * (1 - ay), a2 = v * (1 - ax) * ay, a3 = v * ax * ay;
+    this.tint(i, a0, H[i], r, g, b);
+    this.tint(i + 1, a1, H[i + 1], r, g, b);
+    this.tint(i + w, a2, H[i + w], r, g, b);
+    this.tint(i + w + 1, a3, H[i + w + 1], r, g, b);
+    H[i] += a0;
+    H[i + 1] += a1;
+    H[i + w] += a2;
+    H[i + w + 1] += a3;
   }
 
   /** 안식각 — 이웃보다 thr 넘게 높은 칸은 넘친 만큼을 나눠 흘려보낸다(뾰족한 탑·한 칸 가시를 없앤다) */
@@ -460,15 +541,17 @@ export class SandSim {
         let hc = H[i];
         if (hc <= thr) continue;
         // 네 이웃 각각에 넘친 양의 1/5 (전부 보내면 진동한다)
+        // 흘러내린 모래는 제 색을 이웃 위에 얹는다
         const n0 = i - 1, n1 = i + 1, n2 = i - w, n3 = i + w;
+        const C = this.C, cr = C[i * 3], cg = C[i * 3 + 1], cb = C[i * 3 + 2];
         let d = hc - H[n0] - thr;
-        if (d > 0) { d *= 0.2; H[n0] += d; hc -= d; }
+        if (d > 0) { d *= 0.2; this.tint(n0, d, H[n0], cr, cg, cb); H[n0] += d; hc -= d; }
         d = hc - H[n1] - thr;
-        if (d > 0) { d *= 0.2; H[n1] += d; hc -= d; }
+        if (d > 0) { d *= 0.2; this.tint(n1, d, H[n1], cr, cg, cb); H[n1] += d; hc -= d; }
         d = hc - H[n2] - thr;
-        if (d > 0) { d *= 0.2; H[n2] += d; hc -= d; }
+        if (d > 0) { d *= 0.2; this.tint(n2, d, H[n2], cr, cg, cb); H[n2] += d; hc -= d; }
         d = hc - H[n3] - thr;
-        if (d > 0) { d *= 0.2; H[n3] += d; hc -= d; }
+        if (d > 0) { d *= 0.2; this.tint(n3, d, H[n3], cr, cg, cb); H[n3] += d; hc -= d; }
         H[i] = hc;
       }
     }

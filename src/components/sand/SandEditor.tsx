@@ -235,7 +235,8 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
     const eng = engineRef.current;
     const s = SANDS.find((x) => x.id === id);
     if (!eng || !s) return;
-    eng.setLook({ ...eng.render.look, sand: s.rgb });
+    // 판 위 모래는 그대로 — 다음에 붓는(쏟는) 모래만 이 색(2026-11-10 사용자 «여러 색으로»)
+    eng.setColor(s.rgb);
     updatePref({ sand: id });
   };
   const toggleSound = () => {
@@ -526,7 +527,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
             />
           </label>
           <fieldset className="flex w-full min-w-0 flex-col gap-1">
-            <legend className="mb-1 text-xs font-semibold text-ink-soft">모래 색</legend>
+            <legend className="mb-1 text-xs font-semibold text-ink-soft">모래 색 <span className="font-normal">· 다음에 붓는 모래</span></legend>
             {/* 폰: 한 줄 옆 넘기기(빛 11·모래 8을 접어 쌓으면 판이 작아져 세로 판을 못 깐다) · md 이상: 접어 쌓기 */}
             <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
               {SANDS.map((s) => (

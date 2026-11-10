@@ -319,3 +319,76 @@ describe("빛 밝기(2026-11-10 사용자 «빛의 색뿐만 아니라 밝기도
     expect(src).toMatch(/lookOf\(p\.light, p\.sand, p\.bright\)/);
   });
 });
+
+/* 2026-11-10 사용자 «지금은 모래 색깔이 전체가 변하는데.. 모래 쏟기 하고 다른 색으로 모래 뿌리기 하고 여러 색으로» */
+describe("여러 색 모래", () => {
+  const RED = SANDS.find((s) => s.id === "red")!.rgb;
+  const DARK = SANDS[0].rgb;
+  const pix = (r: SandRender, x: number, y: number) => {
+    const j = (y * r.img.width + x) * 4;
+    return [r.img.data[j], r.img.data[j + 1], r.img.data[j + 2]];
+  };
+  const far = (a: number[], b: number[]) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+  const pourLine = (e: SandEngine, y: number) =>
+    e.sim.apply({ k: "stroke", tool: "pour", size: 16, seed: 3, d: line(30, y, 170, y, 140, 4).flat(), pv: 4, c: [...e.color] as [number, number, number] });
+
+  it("검은 모래를 쏟고 붉은 모래를 부으면 그 줄만 붉고 나머지는 검다", () => {
+    const e = new SandEngine(W, H, look);
+    e.fill();
+    e.setColor(RED);
+    pourLine(e, 70);
+    e.render.paintAll();
+    const onLine = pix(e.render, 100, 70), off = pix(e.render, 100, 20);
+    expect(onLine[0] - onLine[2], "줄 위 = 붉다").toBeGreaterThan(40);
+    expect(off[0] - off[2], "줄 밖 = 검은 모래 그대로").toBeLessThan(25);
+  });
+
+  it("색을 바꿔도 판 위 모래 색은 안 바뀐다(다음에 붓는 모래만)", () => {
+    const e = new SandEngine(W, H, look);
+    e.fill();
+    e.render.paintAll();
+    const before = pix(e.render, 50, 50);
+    e.setColor(RED);
+    e.render.paintAll();
+    expect(far(pix(e.render, 50, 50), before)).toBe(0);
+  });
+
+  it("손가락으로 밀면 색도 같이 간다 — 붉은 줄의 둑은 붉다", () => {
+    const s = new SandSim(W, H);
+    s.begin("pour", 16, 1, 4, RED as [number, number, number]);
+    for (let i = 0; i < 60; i++) s.dab(100, 70, 16);
+    s.end();
+    s.apply({ k: "stroke", tool: "finger", size: 10, seed: 2, d: line(100, 50, 100, 90, 40).flat() });
+    // 밀려난 둑(가운데에서 옆으로 6~9칸)
+    let red = 0;
+    for (let x = 105; x <= 110; x++) if (s.H[70 * W + x] > 0.3 && s.C[(70 * W + x) * 3] - s.C[(70 * W + x) * 3 + 2] > 40) red++;
+    expect(red).toBeGreaterThan(0);
+  });
+
+  it("무비(base+ops 다시 넣기) = 지금 판 색 · 되돌리기도 색까지 되돌린다", () => {
+    const e = new SandEngine(W, H, look);
+    e.fill();
+    e.setColor(RED);
+    const pts = line(30, 70, 170, 70, 140, 4).flat();
+    e.sim.begin("pour", 16, 3, 4, e.color);
+    for (let i = 0; i < pts.length; i += 3) e.sim.dab(pts[i], pts[i + 1], pts[i + 2]);
+    e.sim.end();
+    (e as unknown as { commit(o: SandOp): void }).commit({ k: "stroke", tool: "pour", size: 16, seed: 3, d: pts, pv: 4, c: e.color });
+    const re = e.replaySim();
+    for (const o of e.ops) re.apply(o);
+    let dmax = 0;
+    for (let i = 0; i < re.C.length; i++) dmax = Math.max(dmax, Math.abs(re.C[i] - e.sim.C[i]));
+    expect(dmax).toBeLessThan(1e-3);
+  });
+
+  it("옛 저장본(색 칸 없음)은 그때 고른 한 색 판으로 뜨고, 옛 연산에 그 색이 박힌다", () => {
+    const e = new SandEngine(800, 533, look);
+    e.fill();
+    const s = e.snapshot("d");
+    const old = { ...s, curC: undefined, baseC: undefined, defColor: undefined, ops: s.ops.map((o) => (o.k === "fill" ? { k: "fill" as const, seed: o.seed } : o)) };
+    const e2 = new SandEngine(800, 533, { ...look, sand: DARK });
+    expect(e2.restore(old)).toBe(true);
+    expect(e2.ops[0].k === "fill" && e2.ops[0].c).toEqual(DARK);
+    expect(Math.round(e2.sim.C[0])).toBe(DARK[0]);
+  });
+});

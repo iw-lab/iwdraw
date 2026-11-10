@@ -3,15 +3,15 @@
  *   두꺼운 모래 = 모래색(위에서 비친 은은한 볼록함) · 얇으면 빛이 새어 노을빛 · 없으면 환한 빛
  * 바뀐 사각형만 다시 칠한다(손가락 한 번 = 손 둘레 몇천 칸).
  */
-import { SandSim } from "./SandSim";
+import { SandSim, type RGB } from "./SandSim";
 
-export type RGB = [number, number, number];
+export type { RGB };
 
 export interface SandLook {
   /** 빛 색(유리판) — light2 가 있으면 위(light) → 아래(light2)로 바뀌는 빛(노을 하늘처럼) */
   light: RGB;
   light2?: RGB;
-  /** 모래 색 */
+  /** 고른 모래 색 — 판 위 모래는 칸마다 제 색(sim.C)이고, 이건 다음에 부을 색(단추 표시)·옛 판 기본색 */
   sand: RGB;
   /** 빛 밝기(2026-11-10 사용자 «빛의 색뿐만 아니라 밝기도») — 1 = 기본 · 작으면 어둑한 방 · 크면 더 환하게 */
   bright?: number;
@@ -138,7 +138,7 @@ export class SandRender {
     const g = this.grain;
     const px = this.img.data;
     const lm = this.lmap;
-    const [sr, sg, sb] = this._look.sand;
+    const C = this.sim.C;
     for (let y = y0; y < y1; y++) {
       const up = y > 0 ? -w : 0;
       const dn = y < h - 1 ? w : 0;
@@ -164,9 +164,10 @@ export class SandRender {
         const o = 1 - T;
         const j = i * 4;
         const k = i * 3;
-        px[j] = sr * sk * o + lm[k] * T;
-        px[j + 1] = sg * sk * o + lm[k + 1] * T;
-        px[j + 2] = sb * sk * o + lm[k + 2] * T;
+        const c = i * 3;
+        px[j] = C[c] * sk * o + lm[k] * T;
+        px[j + 1] = C[c + 1] * sk * o + lm[k + 1] * T;
+        px[j + 2] = C[c + 2] * sk * o + lm[k + 2] * T;
         px[j + 3] = 255;
       }
     }
