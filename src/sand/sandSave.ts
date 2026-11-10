@@ -59,6 +59,8 @@ export interface SandPref {
   light: string;
   sand: string;
   sound: boolean;
+  /** 빛 밝기(0.3~1.4 · 기본 1) */
+  bright?: number;
   sizes?: { pour: number; finger: number; palm: number };
 }
 export function loadPref(): SandPref {

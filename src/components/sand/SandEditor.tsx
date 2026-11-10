@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { SandEngine, isSandSaved } from "@/sand/SandEngine";
-import { LIGHTS, SANDS, lookOf } from "@/sand/SandRender";
+import { BRIGHT_MAX, BRIGHT_MIN, LIGHTS, SANDS, clampBright, lookOf } from "@/sand/SandRender";
 import type { SandTool } from "@/sand/SandSim";
 import { SandAudio } from "@/sand/sandAudio";
 import { loadPref, loadSand, savePref, saveSand, type SandPref } from "@/sand/sandSave";
@@ -44,12 +44,12 @@ function toBlob(c: HTMLCanvasElement, type: string, q?: number): Promise<Blob> {
 }
 
 /** 판 둘레로 새어 나오는 빛 — 판이 종이가 아니라 켜진 유리판으로 보이게(화면에만 · 저장 그림에는 안 들어간다) */
-function lightGlow(id: string) {
+function lightGlow(id: string, bright = 1) {
   const l = LIGHTS.find((x) => x.id === id) ?? LIGHTS[0];
   const [r, g, b] = l.rgb;
   const [r2, g2, b2] = l.rgb2 ?? l.rgb;
   return {
-    boxShadow: `0 -6px 28px rgba(${r},${g},${b},.55), 0 6px 28px rgba(${r2},${g2},${b2},.55), 0 0 70px rgba(${(r + r2) >> 1},${(g + g2) >> 1},${(b + b2) >> 1},.35)`,
+    boxShadow: `0 -6px 28px rgba(${r},${g},${b},${(0.55 * bright).toFixed(2)}), 0 6px 28px rgba(${r2},${g2},${b2},${(0.55 * bright).toFixed(2)}), 0 0 70px rgba(${(r + r2) >> 1},${(g + g2) >> 1},${(b + b2) >> 1},${(0.35 * bright).toFixed(2)})`,
   };
 }
 
@@ -107,7 +107,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
   useEffect(() => {
     if (!dims || !canvasRef.current) return;
     const p = loadPref();
-    const look = lookOf(p.light, p.sand);
+    const look = lookOf(p.light, p.sand, p.bright);
     const eng = new SandEngine(dims.w, dims.h, look);
     if (p.sizes) eng.sizes = { ...eng.sizes, ...p.sizes };
     const audio = new SandAudio();
@@ -224,6 +224,12 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
     if (!eng || !l) return;
     eng.setLook({ ...eng.render.look, light: l.rgb, light2: l.rgb2 });
     updatePref({ light: id });
+  };
+  const setBright = (v: number) => {
+    const eng = engineRef.current;
+    const b = clampBright(v);
+    if (eng) eng.setLook({ ...eng.render.look, bright: b });
+    updatePref({ bright: b });
   };
   const setSand = (id: string) => {
     const eng = engineRef.current;
@@ -462,7 +468,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
             data-testid="sand-canvas"
             aria-label="모래판"
             className="canvas-surface touch-none select-none rounded-[10px]"
-            style={{ width: fit ? fit.w : 0, height: fit ? fit.h : 0, cursor: "crosshair", ...lightGlow(pref.light) }}
+            style={{ width: fit ? fit.w : 0, height: fit ? fit.h : 0, cursor: "crosshair", ...lightGlow(pref.light, clampBright(pref.bright)) }}
           />
           {!ready && <p className="absolute font-display text-cream">모래판을 깔고 있어요…</p>}
           <div className="absolute bottom-3 left-3 flex gap-2">
@@ -502,6 +508,23 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
               ))}
             </div>
           </fieldset>
+          <label className="flex w-full min-w-0 flex-col gap-1">
+            <span className="flex items-center justify-between text-xs font-semibold text-ink-soft">
+              빛 밝기
+              <span className="tabular-nums" data-testid="sand-bright-value">{Math.round(clampBright(pref.bright) * 100)}%</span>
+            </span>
+            <input
+              type="range"
+              min={Math.round(BRIGHT_MIN * 100)}
+              max={Math.round(BRIGHT_MAX * 100)}
+              step={5}
+              value={Math.round(clampBright(pref.bright) * 100)}
+              onChange={(e) => setBright(Number(e.target.value) / 100)}
+              aria-label="빛 밝기"
+              data-testid="sand-bright"
+              className="h-11 w-full min-w-40 cursor-pointer accent-sun"
+            />
+          </label>
           <fieldset className="flex w-full min-w-0 flex-col gap-1">
             <legend className="mb-1 text-xs font-semibold text-ink-soft">모래 색</legend>
             {/* 폰: 한 줄 옆 넘기기(빛 11·모래 8을 접어 쌓으면 판이 작아져 세로 판을 못 깐다) · md 이상: 접어 쌓기 */}

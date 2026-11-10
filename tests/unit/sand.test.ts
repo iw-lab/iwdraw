@@ -1,5 +1,6 @@
 // 샌드아트 모래판 — 붓기·손가락·손바닥의 물리 약속 + 무비·되돌리기의 결정성
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { SandSim, FILL_LEVEL, makeGrain, type SandOp } from "@/sand/SandSim";
 import { PointSmoother, SandEngine, LOG_MAX_NUMS, UNDO_MAX, quantize, dequantize, isSandSaved } from "@/sand/SandEngine";
 import { SandRender, LIGHTS, SANDS } from "@/sand/SandRender";
@@ -287,5 +288,34 @@ describe("얇은 손가락 떨림(2026-11-05 사용자)", () => {
     expect(60 * 16 - last[0]).toBeLessThan(10);
     for (let i = 0; i < 60; i++) last = f.push(60 * 16, 0, 16);
     expect(60 * 16 - last[0]).toBeLessThan(1);
+  });
+});
+
+describe("빛 밝기(2026-11-10 사용자 «빛의 색뿐만 아니라 밝기도»)", () => {
+  it("밝기를 낮추면 빈 판이 어두워지고, 올리면 환해진다 · 기본(1)은 그대로 · 범위 밖은 잘린다", async () => {
+    const { lookOf, clampBright, BRIGHT_MIN, BRIGHT_MAX } = await import("@/sand/SandRender");
+    const s = new SandSim(W, H);
+    const g = new Uint8Array(W * H).fill(128);
+    const lum = (b?: number) => { const r = new SandRender(s, g, lookOf("violet", "dark", b)); r.paintAll(); const j = (10 * W + 10) * 4; return 0.3 * r.img.data[j] + 0.59 * r.img.data[j + 1] + 0.11 * r.img.data[j + 2]; };
+    const base = lum(), dim = lum(0.4), hot = lum(1.3);
+    expect(lum(1)).toBe(base);
+    expect(dim).toBeLessThan(base * 0.5);
+    expect(hot).toBeGreaterThan(base + 15);
+    expect(clampBright(9)).toBe(BRIGHT_MAX);
+    expect(clampBright(-1)).toBe(BRIGHT_MIN);
+    expect(clampBright("x")).toBe(1);
+  });
+  it("모래 덮인 곳은 밝기와 상관없이 모래색(빛만 바뀐다)", async () => {
+    const { lookOf } = await import("@/sand/SandRender");
+    const s = new SandSim(W, H); s.fill(1);
+    const g = new Uint8Array(W * H).fill(128);
+    const px = (b: number) => { const r = new SandRender(s, g, lookOf("warm", "dark", b)); r.paintAll(); const j = (70 * W + 100) * 4; return r.img.data[j]; };
+    expect(Math.abs(px(0.4) - px(1.3))).toBeLessThan(12);
+  });
+  it("화면에 «빛 밝기» 막대가 있고 설정에 저장된다", () => {
+    const src = readFileSync("src/components/sand/SandEditor.tsx", "utf8");
+    expect(src).toMatch(/data-testid="sand-bright"/);
+    expect(src).toMatch(/updatePref\(\{ bright: b \}\)/);
+    expect(src).toMatch(/lookOf\(p\.light, p\.sand, p\.bright\)/);
   });
 });

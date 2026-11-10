@@ -13,7 +13,17 @@ export interface SandLook {
   light2?: RGB;
   /** 모래 색 */
   sand: RGB;
+  /** 빛 밝기(2026-11-10 사용자 «빛의 색뿐만 아니라 밝기도») — 1 = 기본 · 작으면 어둑한 방 · 크면 더 환하게 */
+  bright?: number;
 }
+
+/** 빛 밝기 막대 범위 */
+export const BRIGHT_MIN = 0.3;
+export const BRIGHT_MAX = 1.4;
+export const clampBright = (b: unknown): number => {
+  const n = typeof b === "number" && Number.isFinite(b) ? b : 1;
+  return n < BRIGHT_MIN ? BRIGHT_MIN : n > BRIGHT_MAX ? BRIGHT_MAX : n;
+};
 
 export interface LightDef {
   id: string;
@@ -51,10 +61,10 @@ export const SANDS: { id: string; label: string; rgb: RGB }[] = [
 ];
 
 /** 고른 빛·모래 id → 화면 색(없는 id 면 첫째) */
-export function lookOf(lightId: string, sandId: string): SandLook {
+export function lookOf(lightId: string, sandId: string, bright = 1): SandLook {
   const l = LIGHTS.find((x) => x.id === lightId) ?? LIGHTS[0];
   const s = SANDS.find((x) => x.id === sandId) ?? SANDS[0];
-  return { light: l.rgb, light2: l.rgb2, sand: s.rgb };
+  return { light: l.rgb, light2: l.rgb2, sand: s.rgb, bright: clampBright(bright) };
 }
 
 /** 두께 → 빛이 새는 비율. exp 를 칸마다 부르지 않게 표로 */
@@ -103,6 +113,9 @@ export class SandRender {
     const [r1, g1, b1] = l.light;
     const [r2, g2, b2] = l.light2 ?? l.light;
     const m = this.lmap;
+    // 밝기: 1 아래는 그대로 어둡게(꺼져 가는 전구) · 1 위는 흰빛 쪽으로(더 센 전구)
+    const B = clampBright(l.bright);
+    const lit = (c: number) => (B <= 1 ? c * B : c + (255 - c) * (B - 1) * 1.6);
     for (let y = 0; y < h; y++) {
       const t = h > 1 ? y / (h - 1) : 0;
       const r = r1 + (r2 - r1) * t, g = g1 + (g2 - g1) * t, b = b1 + (b2 - b1) * t;
@@ -112,9 +125,9 @@ export class SandRender {
         // 전구 바로 위 = 가운데는 흰빛에 가깝고 둘레로 갈수록 빛 색이 짙어진다.
         // 고른 색 한 장이면 «그런 색 도화지»로 보인다(2026-11-05 사용자) — 밝기 차이가 있어야 빛으로 읽힌다
         const glow = 0.62 * Math.max(0, (v - 0.86) / 0.14) ** 1.6;
-        m[i * 3] = (r + (255 - r) * glow) * v;
-        m[i * 3 + 1] = (g + (255 - g) * glow) * v;
-        m[i * 3 + 2] = (b + (255 - b) * glow) * v;
+        m[i * 3] = lit((r + (255 - r) * glow) * v);
+        m[i * 3 + 1] = lit((g + (255 - g) * glow) * v);
+        m[i * 3 + 2] = lit((b + (255 - b) * glow) * v);
       }
     }
   }
