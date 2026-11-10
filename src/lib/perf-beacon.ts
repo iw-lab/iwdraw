@@ -13,6 +13,8 @@ export const BASE_RATE = 0.1;
 /** 이만큼 «그리는 프레임»이 모이면 판정한다(획 몇 개 분량) */
 export const MIN_FRAMES = 150;
 const SENT_KEY = "arton.perf.sent";
+/** 계측 시험(tests/e2e/perf-beacon.spec.ts)만 켜는 표식 */
+export const TEST_KEY = "arton.perf.test";
 
 export interface PerfInfo {
   backend?: string;
@@ -44,6 +46,8 @@ export function startPerfBeacon(canvas: HTMLCanvasElement, page: "draw" | "sand"
   if (typeof window === "undefined" || typeof navigator === "undefined") return () => {};
   try {
     if (sessionStorage.getItem(SENT_KEY)) return () => {};
+    // 자동 시험 브라우저는 보내지 않는다 — 배포본 회귀 시험이 운영 표를 시험 수치로 채운다(계측 시험만 표식으로 켠다)
+    if (navigator.webdriver && !localStorage.getItem(TEST_KEY)) return () => {};
   } catch {
     return () => {};
   }
