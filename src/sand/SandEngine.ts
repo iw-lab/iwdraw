@@ -13,6 +13,8 @@ export const UNDO_MAX = 20;
 export const PEN_PALM_MS = 1500;
 /** 기록 상한(점 수 ×3 숫자) — 넘으면 오래된 연산을 base 로 접는다(숫자 60만 개 ≈ 메모리 4.8MB · 저장 구조복제도 그만큼) */
 export const LOG_MAX_NUMS = 600_000;
+/** 상한의 이만큼에서 미리 접기를 시작한다(쉬는 짬에 나눠서) */
+export const FOLD_EARLY = 0.8;
 const Q = 65535 / 8; // 두께 0~8 → Uint16
 
 /**
@@ -186,6 +188,12 @@ export class SandEngine {
       c.removeEventListener("lostpointercapture", this.onUp);
     }
     cancelAnimationFrame(this.raf);
+    if (this.foldTimer) {
+      const w = window as Window & { cancelIdleCallback?: (h: number) => void };
+      if (w.cancelIdleCallback) w.cancelIdleCallback(this.foldTimer);
+      else clearTimeout(this.foldTimer);
+      this.foldTimer = 0;
+    }
     this.canvas = null;
     this.ctx = null;
   }
@@ -396,24 +404,79 @@ export class SandEngine {
     return true;
   }
 
-  /** 오래된 연산을 base 로 접는다 — 되돌리기 칸 안(끝 UNDO_MAX 개)은 남긴다 */
+  /*
+   * 접기 = 오래된 연산을 base 로. 한 번에 몰아 하면 옛 붓질 수백 개를 다시 그려 화면이 멈춘다
+   * (2026-11-10 실측: 맥에서도 5.5초 · 웨일북 수십 초 — 사용자 «오래 사용할수록 렉»).
+   * → 상한의 80% 에서 미리 시작해 쉬는 짬(requestIdleCallback)마다 몇 ms 씩 다시 그린다.
+   *   끝나면 접힌 앞부분이 그대로인지(같은 객체) 보고 갈아 끼운다. 상한 1.5배까지 못 끝내면 그때만 한 번에.
+   */
+  private fold: { refs: SandOp[]; nums: number; i: number; di: number; sim: SandSim } | null = null;
+  private foldTimer = 0;
+  get foldPending() {
+    return !!this.fold;
+  }
   private foldIfLong(): void {
-    if (this.logNums <= LOG_MAX_NUMS) return;
+    if (!this.fold && this.logNums > LOG_MAX_NUMS * FOLD_EARLY) this.startFold();
+    if (this.fold && this.logNums > LOG_MAX_NUMS * 1.5) this.foldStep(Infinity);
+    else if (this.fold) this.scheduleFold();
+  }
+  private startFold(): void {
     const keep = Math.max(UNDO_MAX, 1);
     let n = 0;
     let nums = this.logNums;
-    while (n < this.ops.length - keep && nums > LOG_MAX_NUMS * 0.7) {
+    while (n < this.ops.length - keep && nums > LOG_MAX_NUMS * 0.6) {
       const op = this.ops[n];
       nums -= op.k === "stroke" ? op.d.length : 1;
       n++;
     }
     if (n === 0) return;
-    const tmp = this.replaySim();
-    for (let i = 0; i < n; i++) tmp.apply(this.ops[i]);
-    this.base = quantize(tmp.H);
-    this.baseC = quantizeColor(tmp.C);
+    this.fold = { refs: this.ops.slice(0, n), nums: this.logNums - nums, i: 0, di: 0, sim: this.replaySim() };
+  }
+  private scheduleFold(): void {
+    if (this.foldTimer || typeof window === "undefined") return;
+    const w = window as Window & { requestIdleCallback?: (cb: (d: { timeRemaining(): number }) => void, o?: { timeout: number }) => number };
+    const run = (budget: number) => {
+      this.foldTimer = 0;
+      if (this.cur) return this.scheduleFold(); // 그리는 중엔 손을 뗄 때까지 미룬다
+      this.foldStep(budget);
+      if (this.fold) this.scheduleFold();
+    };
+    this.foldTimer = w.requestIdleCallback
+      ? w.requestIdleCallback((d) => run(Math.max(2, Math.min(8, d.timeRemaining()))), { timeout: 1500 })
+      : (setTimeout(() => run(6), 60) as unknown as number);
+  }
+  /** 접기 한 조각 — budgetMs 만큼만 다시 그린다(시험은 Infinity 로 끝까지) */
+  foldStep(budgetMs: number): void {
+    const f = this.fold;
+    if (!f) return;
+    const t0 = performance.now();
+    while (f.i < f.refs.length) {
+      const op = f.refs[f.i];
+      if (op.k !== "stroke") {
+        f.sim.apply(op);
+        f.i++;
+      } else {
+        if (f.di === 0) f.sim.beginOp(op);
+        const d = op.d;
+        while (f.di + 2 < d.length) {
+          f.sim.dab(d[f.di], d[f.di + 1], d[f.di + 2]);
+          f.di += 3;
+          if ((f.di % 48) === 0 && performance.now() - t0 > budgetMs) return;
+        }
+        f.sim.end();
+        f.di = 0;
+        f.i++;
+      }
+      if (performance.now() - t0 > budgetMs) return;
+    }
+    // 다 그렸다 — 그 사이 되돌리기·새 그림·복원으로 앞부분이 바뀌었으면 버린다
+    this.fold = null;
+    const n = f.refs.length;
+    for (let k = 0; k < n; k++) if (this.ops[k] !== f.refs[k]) return;
+    this.base = quantize(f.sim.H);
+    this.baseC = quantizeColor(f.sim.C);
     this.ops = this.ops.slice(n);
-    this.logNums = nums;
+    this.logNums -= f.nums;
   }
 
   /** 시작 판(base)을 깐 새 모래판 — 무비·접기가 ops 를 이 위에 다시 넣는다 */
@@ -429,6 +492,7 @@ export class SandEngine {
   /** 새 그림 — 판·기록·되돌리기 전부 비운다 */
   reset(): void {
     this.cur = null;
+    this.fold = null;
     this.sim.clear();
     this.base = null;
     this.baseC = null;
@@ -465,6 +529,7 @@ export class SandEngine {
   /** 손상된 저장본(필드 없음·타입 다름·크기 다름)은 false — 화면은 빈 판으로 뜬다 */
   restore(s: SandSaved): boolean {
     if (!isSandSaved(s) || s.w !== this.w || s.h !== this.h) return false;
+    this.fold = null;
     const n = this.w * this.h;
     const okC = (q: unknown): q is Uint16Array => q instanceof Uint16Array && q.length === n;
     // 옛 저장본(색 칸 없음) = 그때 고른 한 색 판. 색 없는 옛 연산에 그 색을 박아 둔다 — 나중에 고른 색이 바뀌어도 무비가 같은 판을 그린다

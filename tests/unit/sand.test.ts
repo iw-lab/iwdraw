@@ -174,6 +174,8 @@ describe("되돌리기·기록", () => {
       e.sim.apply(op);
       (e as unknown as { commit(o: SandOp): void }).commit(op);
     }
+    // 접기는 쉬는 짬에 나눠서 한다(2026-11-10) — 시험은 끝까지 돌린다
+    while (e.foldPending) e.foldStep(Infinity);
     expect(e.base).not.toBeNull();
     expect(e.ops.length).toBeGreaterThanOrEqual(UNDO_MAX); // 되돌리기 칸은 접지 않는다
     const re = new SandSim(W, H);
@@ -406,5 +408,57 @@ describe("높은 더미 위 색(2026-11-10 사용자 «높게 쌓인 모래 위�
     s.end();
     const k = (70 * W + 100) * 3;
     expect(s.C[k] - s.C[k + 2], "더미 꼭대기 = 붉다").toBeGreaterThan(40);
+  });
+});
+
+/* 2026-11-10 사용자 «오래 사용할수록 렉» — 기록 접기를 한 번에 몰아 해 맥에서도 5.5초 멈췄다(웨일북 수십 초) */
+describe("오래 그려도 멈추지 않는다", () => {
+  it("접기는 붓질(commit) 안에서 하지 않고 쉬는 짬에 조각으로 — 조각 하나는 예산 근처에서 끝나고, 다 접으면 base+ops = 지금 판", () => {
+    const e = new SandEngine(W, H, look);
+    const real = line(20, 120, 180, 20, 40);
+    const long = line(10, 10, 190, 130, Math.ceil(LOG_MAX_NUMS / 3 / 18)).map((p, j) => [p[0], p[1], j < 60 ? 16 : 0] as [number, number, number]);
+    let worst = 0;
+    for (let i = 0; i < UNDO_MAX + 12; i++) {
+      const op = i % 3 === 2 ? stroke("finger", 10, real, 100 + i) : stroke("pour", 10, long, 100 + i);
+      e.sim.apply(op);
+      const t0 = performance.now();
+      (e as unknown as { commit(o: SandOp): void }).commit(op);
+      worst = Math.max(worst, performance.now() - t0);
+    }
+    expect(e.foldPending, "접기가 시작됐다").toBe(true);
+    expect(e.base, "commit 안에서 접지 않는다").toBeNull();
+    // 조각 예산을 작게(0.5ms) — 여러 조각으로 나뉘고 한 조각이 예산을 크게 넘지 않는다
+    let slices = 0, sliceWorst = 0;
+    while (e.foldPending) {
+      const t0 = performance.now();
+      e.foldStep(0.5);
+      sliceWorst = Math.max(sliceWorst, performance.now() - t0);
+      slices++;
+    }
+    expect(slices).toBeGreaterThan(1);
+    expect(sliceWorst).toBeLessThan(40);
+    expect(e.base).not.toBeNull();
+    const re = e.replaySim();
+    for (const o of e.ops) re.apply(o);
+    let maxd = 0;
+    for (let i = 0; i < re.H.length; i++) maxd = Math.max(maxd, Math.abs(re.H[i] - e.sim.H[i]));
+    expect(maxd).toBeLessThan(0.05);
+    void worst;
+  });
+
+  it("접는 사이 되돌리기·새 그림이 오면 접은 것을 버린다(엉뚱한 base 금지)", () => {
+    const e = new SandEngine(W, H, look);
+    const long = line(10, 10, 190, 130, Math.ceil(LOG_MAX_NUMS / 3 / 18)).map((p, j) => [p[0], p[1], j < 60 ? 16 : 0] as [number, number, number]);
+    for (let i = 0; i < UNDO_MAX + 12; i++) {
+      const op = stroke("pour", 10, long, 100 + i);
+      e.sim.apply(op);
+      (e as unknown as { commit(o: SandOp): void }).commit(op);
+    }
+    expect(e.foldPending).toBe(true);
+    e.reset();
+    expect(e.foldPending).toBe(false);
+    e.foldStep(Infinity);
+    expect(e.base).toBeNull();
+    expect(e.ops.length).toBe(0);
   });
 });
