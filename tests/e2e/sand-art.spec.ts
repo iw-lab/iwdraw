@@ -127,12 +127,6 @@ test("폰 세로: 넘치지 않고 손가락(터치)으로 그려진다", async 
     return [c.width, c.height];
   });
   expect(grid[1], "세로 폰 = 세로 판").toBeGreaterThan(grid[0]);
-  // 폰은 밝기 막대 대신 빛 색 줄 맨 앞의 숫자 칸(2026-11-10 «숫자도 쓸 수 있게»)
-  const bm = page.getByTestId("sand-bright-num-m");
-  await expect(bm).toBeVisible();
-  await bm.fill("60");
-  await bm.press("Enter");
-  await expect(bm).toHaveValue("60");
   await page.getByTestId("sand-fill").click();
   await page.getByTestId("sand-tool-finger").click();
   const box = (await page.getByTestId("sand-canvas").boundingBox())!;
@@ -145,6 +139,12 @@ test("폰 세로: 넘치지 않고 손가락(터치)으로 그려진다", async 
   }
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await expect.poll(() => lum(page, 0.5, 0.5), { message: "터치로 판 자국(브라우저가 스크롤로 가로채면 실패)" }).toBeGreaterThan(150);
+  // 폰은 밝기 막대 대신 빛 색 줄 맨 앞의 숫자 칸(2026-11-10 «숫자도 쓸 수 있게») — 판 자국을 잰 뒤에(어두우면 자국 밝기가 낮다)
+  const bm = page.getByTestId("sand-bright-num-m");
+  await expect(bm).toBeVisible();
+  await bm.fill("60");
+  await bm.press("Enter");
+  await expect(bm).toHaveValue("60");
   await ctx.close();
 });
 
@@ -290,10 +290,12 @@ test("굵기·빛 밝기를 숫자로 쓴다 — 막대가 따라가고 범위 �
   await sz.fill("500");
   await sz.press("Enter");
   await expect(page.getByTestId("sand-size")).toHaveValue("80");
-  const br = page.getByTestId("sand-bright-num");
+  // 넓은 화면 = 막대 옆 숫자 · 좁은 화면(세로 태블릿·폰) = 빛 색 줄 맨 앞 숫자
+  const wide = await page.getByTestId("sand-bright").isVisible();
+  const br = page.getByTestId(wide ? "sand-bright-num" : "sand-bright-num-m");
   await br.fill("73");
   await br.press("Enter");
-  await expect(page.getByTestId("sand-bright")).toHaveValue("75"); // 막대는 5 칸 단위 — 숫자는 73 그대로
+  if (wide) await expect(page.getByTestId("sand-bright")).toHaveValue("75"); // 막대는 5 칸 단위 — 숫자는 73 그대로
   await expect(br).toHaveValue("73");
   await br.fill("5");
   await br.press("Enter");
