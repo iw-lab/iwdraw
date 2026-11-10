@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ArtonLogo } from "@/components/arton-logo";
 import { getStudentSession } from "@/lib/student-session";
 import { groupByDay } from "@/lib/day-group";
@@ -12,6 +13,8 @@ import {
   toggleLike,
   type GalleryItem,
 } from "@/lib/student-api";
+
+const SandReplay = dynamic(() => import("@/components/sand/SandReplay").then((m) => m.SandReplay), { ssr: false });
 
 /*
  * 학생용 학급 갤러리 — 저장(제출)하면 바로 전시되고, 날짜별로 모아 보여주며 좋아요를
@@ -240,6 +243,15 @@ export function StudentGallery() {
                   big.nickname
                 )}
               </span>
+              {big.mode === "sand" && big.timelapse_path?.endsWith(".sand") && (
+                <SandReplay
+                  key={big.id}
+                  load={async () => {
+                    const u = await fetchStudentImage(big.timelapse_path!, big.created_at);
+                    return u ? await (await fetch(u)).blob() : null;
+                  }}
+                />
+              )}
               <button
                 onClick={() => setBig(null)}
                 className="pressable shrink-0 rounded-card bg-ink px-5 py-2 font-display text-white"

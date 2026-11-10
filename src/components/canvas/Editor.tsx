@@ -23,6 +23,7 @@ import { hasBackend } from "@/lib/backend";
 import { takeEntryHint, takeSaveHint } from "@/lib/class-hint";
 import { TitleAsk, Toast } from "./SaveUi";
 import { genDraftId } from "@/lib/draft-id";
+import { startPerfBeacon } from "@/lib/perf-beacon";
 import {
   SOFT_REFRESH_KEY,
   shouldSoftRefresh,
@@ -300,6 +301,23 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
   const [perfHud, setPerfHud] = useState(false);
   useEffect(() => {
     setPerfHud(new URLSearchParams(window.location.search).get("perf") === "1");
+  }, []);
+  /* 저사양 렉 자동 계측(2026-11-10) — 그리는 동안 프레임 간격을 세션당 한 번(lib/perf-beacon) */
+  useEffect(() => {
+    let stop = () => {};
+    const t = setInterval(() => {
+      const el = document.querySelector('canvas[aria-label="그림 캔버스"]') as HTMLCanvasElement | null;
+      if (!el) return;
+      clearInterval(t);
+      stop = startPerfBeacon(el, "draw", () => {
+        const st = useEditor.getState();
+        return { backend: st.usingWebGL2 ? "gl" : "2d", brush: st.brush, layers: st.layers.length };
+      });
+    }, 500);
+    return () => {
+      clearInterval(t);
+      stop();
+    };
   }, []);
   const templateDropped = blankKey > 0;
   const lineart = templateDropped ? undefined : lineartSrc;

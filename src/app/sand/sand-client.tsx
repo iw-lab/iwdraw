@@ -15,8 +15,8 @@ export function SandClient() {
   const [session, setSession] = useState<StudentSession | null>(null);
   useEffect(() => setSession(getStudentSession()), []);
   const handleSave = useCallback(
-    async (image: Blob, thumb: Blob, draftId?: string, title?: string) =>
-      await submitArtwork({ image, thumb, mode: "sand", draftId, title }),
+    async (image: Blob, thumb: Blob, draftId?: string, title?: string, record?: Blob) =>
+      await submitArtwork({ image, thumb, mode: "sand", draftId, title, timelapse: record }),
     [],
   );
   return (

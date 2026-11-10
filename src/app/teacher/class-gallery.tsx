@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui";
 import { renderPrintSheet, type PrintItem } from "@/engine/export/PrintSheet";
 import { printImageA4, downloadImage } from "@/lib/print";
@@ -18,6 +19,8 @@ import {
   type StudentRow,
 } from "@/lib/teacher-api";
 import { ShowcaseDialog } from "./showcase-dialog";
+
+const SandReplay = dynamic(() => import("@/components/sand/SandReplay").then((m) => m.SandReplay), { ssr: false });
 import { ShowcaseGuide } from "./showcase-guide";
 
 /* 학급 갤러리: 날짜별 작품 목록 + 필요 없는 작품 삭제(큐레이션) + 작품집 A4 인쇄.
@@ -403,6 +406,17 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
                   (big.nickname ?? "학생")
                 )}
               </span>
+              {big.mode === "sand" && big.timelapse_path?.endsWith(".sand") && (
+                <SandReplay
+                  key={big.id}
+                  load={async () => {
+                    const u = await signedUrl(big.timelapse_path!);
+                    if (!u) return null;
+                    const r = await fetch(u, { credentials: "include" });
+                    return r.ok ? await r.blob() : null;
+                  }}
+                />
+              )}
               <button
                 onClick={() => setBig(null)}
                 className="pressable shrink-0 rounded-card bg-ink px-5 py-2 font-display text-white"

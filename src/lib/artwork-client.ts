@@ -34,7 +34,7 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ id: st
   const imageExt = input.image.type === "image/webp" ? "webp" : "png";
   form.append("image", input.image, `artwork.${imageExt}`);
   form.append("thumb", input.thumb, "thumb.webp");
-  if (input.timelapse) form.append("timelapse", input.timelapse, "timelapse.webm");
+  if (input.timelapse) form.append("timelapse", input.timelapse, input.mode === "sand" ? "record.sand" : "timelapse.webm");
   if (input.draftId) form.append("draft_id", input.draftId);
   // 빈 제목은 아예 보내지 않는다 — 서버가 COALESCE로 기존 제목을 지키므로,
   // "제목 없이 재저장"이 이미 붙여 둔 제목을 지우지 않는다.

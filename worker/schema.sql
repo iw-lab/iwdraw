@@ -170,3 +170,10 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at      INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
 CREATE INDEX IF NOT EXISTS payments_teacher_idx ON payments(teacher_id);
+CREATE TABLE IF NOT EXISTS perf_reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at INTEGER NOT NULL,
+  page TEXT NOT NULL,
+  data TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS perf_reports_at_idx ON perf_reports (at);

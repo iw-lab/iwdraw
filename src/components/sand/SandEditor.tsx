@@ -13,6 +13,8 @@ import { SandEngine, isSandSaved } from "@/sand/SandEngine";
 import { BRIGHT_MAX, BRIGHT_MIN, LIGHTS, SANDS, clampBright, lookOf } from "@/sand/SandRender";
 import type { SandTool } from "@/sand/SandSim";
 import { SandAudio } from "@/sand/sandAudio";
+import { encodeRecord } from "@/sand/sandRecord";
+import { startPerfBeacon } from "@/lib/perf-beacon";
 import { loadPref, loadSand, savePref, saveSand, type SandPref } from "@/sand/sandSave";
 import { ModeTabs } from "@/components/canvas/ModeTabs";
 import { Icon, type IconName } from "@/components/canvas/icons";
@@ -33,7 +35,8 @@ const TOOLS: { id: SandTool; label: string; hint: string; icon: IconName }[] = [
 ];
 
 export interface SandEditorProps {
-  onSave?: (image: Blob, thumb: Blob, draftId?: string, title?: string) => Promise<unknown>;
+  /** record = «그린 과정 기록»(갤러리에서 무비로 다시 그린다 · 너무 크거나 못 만들면 없음) */
+  onSave?: (image: Blob, thumb: Blob, draftId?: string, title?: string, record?: Blob) => Promise<unknown>;
   who?: string;
   backHref?: string;
   galleryHref?: string;
@@ -117,6 +120,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
     engineRef.current = eng;
     eng.attach(canvasRef.current);
     const canvas = canvasRef.current;
+    const stopBeacon = startPerfBeacon(canvas, "sand", () => ({ backend: "2d", brush: eng.tool }));
     const unlock = () => audio.unlock();
     canvas.addEventListener("pointerdown", unlock);
     setToolState(eng.tool);
@@ -190,6 +194,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", flushSave);
       canvas.removeEventListener("pointerdown", unlock);
+      stopBeacon();
       eng.detach();
       audio.dispose();
       engineRef.current = null;
@@ -335,7 +340,9 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
         tctx.imageSmoothingQuality = "high";
         tctx.drawImage(big, 0, 0, th.width, th.height);
         const thumb = await toBlob(th, "image/webp", 0.85);
-        await onSave(image, thumb, draftId, t);
+        // 그린 과정 기록 — 못 만들어도 그림은 낸다
+        const record = await encodeRecord(eng, eng.render.look).catch(() => null);
+        await onSave(image, thumb, draftId, t, record ?? undefined);
         flash("우리 반 갤러리에 전시했어요! 갤러리에서 확인해 보세요", "leaf", 3500);
       } else {
         const png = await toBlob(big, "image/png");

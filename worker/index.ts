@@ -15,6 +15,8 @@ import {
   serializeCookie,
   SESSION_COOKIE,
 } from "./lib/util";
+import { PERF_DAY_MAX, PERF_KEEP_MS, sanitizePerf } from "./lib/perf";
+import { SAND_RECORD_MAX, isSandRecord } from "./lib/sand-record";
 import { sanitizeTitle } from "./lib/title";
 import { rankShowcase } from "./lib/showcase-rank";
 
@@ -520,7 +522,7 @@ app.get("/api/classes/:id/artworks", requireTeacher, async (c) => {
   /* title 컬럼이 없는(마이그레이션 미적용) DB에서도 교사 갤러리는 열려야 한다 — 제목만 빠진다 */
   const listArtworks = (withTitle: boolean) =>
     c.env.DB.prepare(
-      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.is_approved, a.like_count, a.created_at, a.showcase_at, a.showcase_report,
+      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.timelapse_path, a.is_approved, a.like_count, a.created_at, a.showcase_at, a.showcase_report,
               ${withTitle ? "a.title," : "NULL AS title,"} s.nickname
      FROM artworks a JOIN students s ON s.id = a.student_id
      WHERE a.class_id = ? ORDER BY a.created_at DESC`,
@@ -933,7 +935,7 @@ app.get("/api/student/gallery", requireStudent, async (c) => {
   /* title 컬럼이 없는(마이그레이션 미적용) DB에서도 갤러리는 열려야 한다 — 제목만 빠진다 */
   const listGallery = (withTitle: boolean) =>
     c.env.DB.prepare(
-    `SELECT a.id, a.mode, a.thumb_path, a.image_path, a.like_count, a.created_at, a.is_approved, ${withTitle ? "a.title," : "NULL AS title,"} s.nickname,
+    `SELECT a.id, a.mode, a.thumb_path, a.image_path, a.timelapse_path, a.like_count, a.created_at, a.is_approved, ${withTitle ? "a.title," : "NULL AS title,"} s.nickname,
             EXISTS(SELECT 1 FROM artwork_likes al WHERE al.artwork_id = a.id AND al.voter_key = ?) AS liked,
             (a.student_id = ?) AS mine
      FROM artworks a JOIN students s ON s.id = a.student_id
@@ -1097,6 +1099,27 @@ app.post("/api/join", async (c) => {
   return c.json({ token, studentId, classId: cls.id, className: cls.name, nickname });
 });
 
+// ══════════════════════ 저사양 렉 계측(2026-11-10) ══════════════════════
+// 그리는 동안의 프레임 간격·백엔드·캔버스 크기만(lib/perf.ts 가 깎는다). 늘 204 — 계측은 그리기를 막지 않는다.
+app.post("/api/perf", async (c) => {
+  try {
+    const len = Number(c.req.header("content-length") ?? 0);
+    if (len > 2048) return c.body(null, 204);
+    const row = sanitizePerf(await c.req.json().catch(() => null));
+    if (!row) return c.body(null, 204);
+    const now = Date.now();
+    await c.env.DB.prepare(
+      `INSERT INTO perf_reports (at, page, data)
+       SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM perf_reports WHERE at >= ?) < ?`,
+    )
+      .bind(now, row.page, JSON.stringify(row), now - 24 * 3600 * 1000, PERF_DAY_MAX)
+      .run();
+  } catch {
+    /* 표 없음(마이그레이션 전)·DB 막힘 — 조용히 넘긴다 */
+  }
+  return c.body(null, 204);
+});
+
 // ══════════════════════ 학생: 작품 제출(submit-artwork 포팅) ══════════════════════
 app.post("/api/artwork", async (c) => {
   const auth = c.req.header("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
@@ -1217,8 +1240,34 @@ app.post("/api/artwork", async (c) => {
 
   await c.env.BUCKET.put(imagePath, imageBuf, { httpMetadata: { contentType: imageCt } });
   await c.env.BUCKET.put(thumbPath, thumbBuf, { httpMetadata: { contentType: thumbCt } });
-  if (timelapse && timelapse.size > 0 && timelapse.size <= MAX_BYTES * 4) {
-    timelapsePath = `${base}.webm`;
+  /* 샌드아트 «그린 과정 기록»(2026-11-10) — 영상 대신 gzip JSON(수십 KB). 갤러리가 받아 모래판을 다시 그린다.
+   * 클라 MIME 을 믿지 않고 gzip 머리(1f 8b)·크기(SAND_RECORD_MAX)를 본다. 형식이 틀리면 기록만 버리고 그림은 낸다. */
+  if (mode === "sand") {
+    // 기록은 덤 — 읽기·저장이 실패해도 그림 제출은 계속한다(교차검증 codex). 새 기록이 없으면 옛 기록을 지운다:
+    // 같은 그림을 다시 낼 때 기록을 못 만들면(상한 초과) 옛 과정이 새 그림에 붙어 끝 장면이 어긋난다(교차검증 grok)
+    let stored = false;
+    if (timelapse && timelapse.size > 0 && timelapse.size <= SAND_RECORD_MAX) {
+      try {
+        const buf = await timelapse.arrayBuffer();
+        if (isSandRecord(buf)) {
+          const next = `${base}.sand`;
+          await c.env.BUCKET.put(next, buf, { httpMetadata: { contentType: "application/gzip" } });
+          if (timelapsePath && timelapsePath !== next) await c.env.BUCKET.delete(timelapsePath).catch(() => undefined);
+          timelapsePath = next;
+          stored = true;
+        }
+      } catch {
+        /* 기록만 빠진다 */
+      }
+    }
+    if (!stored && timelapsePath) {
+      await c.env.BUCKET.delete(timelapsePath).catch(() => undefined);
+      timelapsePath = null;
+    }
+  } else if (timelapse && timelapse.size > 0 && timelapse.size <= MAX_BYTES * 4) {
+    const next = `${base}.webm`;
+    if (timelapsePath && timelapsePath !== next) await c.env.BUCKET.delete(timelapsePath).catch(() => undefined);
+    timelapsePath = next;
     await c.env.BUCKET.put(timelapsePath, await timelapse.arrayBuffer(), {
       httpMetadata: { contentType: "video/webm" },
     });
@@ -1417,6 +1466,10 @@ export default {
           (r) => console.log(`[cron] purged ${r.deleted} expired artworks`),
           (e) => console.error("[cron] purge failed", e),
         ),
+        env.DB.prepare("DELETE FROM perf_reports WHERE at < ?")
+          .bind(Date.now() - PERF_KEEP_MS)
+          .run()
+          .catch(() => undefined),
         purgeOldJoinAttempts(env).then(
           (r) => console.log(`[cron] purged ${r.deleted} old join_attempts`),
           (e) => console.error("[cron] join_attempts purge failed", e),

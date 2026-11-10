@@ -15,6 +15,8 @@ export interface GalleryItem {
   mode: string;
   thumb_path: string;
   image_path: string;
+  /** 샌드아트 «그린 과정 기록»(.sand) — 없으면 null */
+  timelapse_path?: string | null;
   like_count: number;
   created_at: number;
   nickname: string;
