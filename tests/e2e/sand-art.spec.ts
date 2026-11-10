@@ -127,6 +127,12 @@ test("폰 세로: 넘치지 않고 손가락(터치)으로 그려진다", async 
     return [c.width, c.height];
   });
   expect(grid[1], "세로 폰 = 세로 판").toBeGreaterThan(grid[0]);
+  // 폰은 밝기 막대 대신 빛 색 줄 맨 앞의 숫자 칸(2026-11-10 «숫자도 쓸 수 있게»)
+  const bm = page.getByTestId("sand-bright-num-m");
+  await expect(bm).toBeVisible();
+  await bm.fill("60");
+  await bm.press("Enter");
+  await expect(bm).toHaveValue("60");
   await page.getByTestId("sand-fill").click();
   await page.getByTestId("sand-tool-finger").click();
   const box = (await page.getByTestId("sand-canvas").boundingBox())!;
@@ -251,3 +257,45 @@ for (const width of [360, 390, 412]) {
     await ctx.close();
   });
 }
+
+/* 2026-11-10 사용자 «모래 쏟기 하고 다른 색으로 모래 뿌리기 · 여러 색» — 옛 판은 색을 바꾸면 판 전체가 바뀌었다 */
+test("여러 색: 검은 모래를 쏟고 붉은 모래로 그으면 그 줄만 붉다 · 색을 바꿔도 깔린 모래는 그대로", async ({ page }) => {
+  const P = await openClean(page);
+  await page.getByTestId("sand-color-dark").click({ force: true });
+  await page.getByTestId("sand-fill").click({ force: true });
+  const rgb = (fx: number, fy: number) =>
+    page.evaluate(([fx, fy]) => {
+      const c = document.querySelector('[data-testid="sand-canvas"]') as HTMLCanvasElement;
+      return Array.from(c.getContext("2d")!.getImageData(Math.floor(c.width * fx), Math.floor(c.height * fy), 1, 1).data.slice(0, 3));
+    }, [fx, fy] as const);
+  await expect.poll(async () => (await rgb(0.5, 0.2))[0]).toBeLessThan(70);
+  const darkBefore = await rgb(0.5, 0.2);
+  await page.getByTestId("sand-color-red").click({ force: true });
+  await page.waitForTimeout(200);
+  expect(await rgb(0.5, 0.2), "색만 바꾸면 깔린 모래는 그대로").toEqual(darkBefore);
+  await page.getByTestId("sand-tool-pour").click({ force: true });
+  for (let k = 0; k < 3; k++) await drag(page, P, Array.from({ length: 21 }, (_, i) => [0.3 + i * 0.02, 0.5] as [number, number]));
+  await expect.poll(async () => { const [r, , b] = await rgb(0.5, 0.5); return r - b; }, { message: "붉은 줄" }).toBeGreaterThan(40);
+  const [r2, , b2] = await rgb(0.5, 0.2);
+  expect(r2 - b2, "줄 밖은 검은 모래").toBeLessThan(25);
+});
+
+/* 2026-11-10 사용자 «빛 밝기랑 굵기도 직접 숫자도 쓸 수 있게» */
+test("굵기·빛 밝기를 숫자로 쓴다 — 막대가 따라가고 범위 밖은 잘린다", async ({ page }) => {
+  await openClean(page);
+  const sz = page.getByTestId("sand-size-num");
+  await sz.fill("57");
+  await sz.press("Enter");
+  await expect(page.getByTestId("sand-size")).toHaveValue("57");
+  await sz.fill("500");
+  await sz.press("Enter");
+  await expect(page.getByTestId("sand-size")).toHaveValue("80");
+  const br = page.getByTestId("sand-bright-num");
+  await br.fill("73");
+  await br.press("Enter");
+  await expect(page.getByTestId("sand-bright")).toHaveValue("75"); // 막대는 5 칸 단위 — 숫자는 73 그대로
+  await expect(br).toHaveValue("73");
+  await br.fill("5");
+  await br.press("Enter");
+  await expect(br).toHaveValue("30");
+});

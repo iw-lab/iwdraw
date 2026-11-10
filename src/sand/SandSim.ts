@@ -178,13 +178,14 @@ export class SandSim {
     C[k + 1] += (g - C[k + 1]) * t;
     C[k + 2] += (b - C[k + 2]) * t;
   }
-  /** 붓기 한 칸: 두께 계산은 옛 식 그대로(무비 결정성) + 늘어난 만큼 색 */
+  /** 붓기 한 칸: 두께 계산은 옛 식 그대로(무비 결정성) + «부은» 만큼 색.
+   * 늘어난 만큼이 아니다 — 상한(SAND_MAX)까지 쌓인 더미 위에 아무리 부어도 색이 안 바뀌었다(2026-11-10 사용자).
+   * 더 못 쌓여도 새 낱알은 겉을 덮고 굴러 내린다 */
   private addAt(i: number, v: number): void {
     const H = this.H;
     const h0 = H[i];
-    const nv = v > SAND_MAX ? SAND_MAX : v;
-    H[i] = nv;
-    if (nv > h0) this.tint(i, nv - h0, h0, this.col[0], this.col[1], this.col[2]);
+    H[i] = v > SAND_MAX ? SAND_MAX : v;
+    if (v > h0) this.tint(i, v - h0, h0, this.col[0], this.col[1], this.col[2]);
   }
 
   /* ── 판 전체 연산 ── */
@@ -366,7 +367,7 @@ export class SandSim {
         const i = yy * w + xx;
         const h0 = H[i];
         H[i] = Math.min(SAND_MAX, h0 + v);
-        if (H[i] > h0) this.tint(i, H[i] - h0, h0, this.col[0], this.col[1], this.col[2]);
+        this.tint(i, v, h0, this.col[0], this.col[1], this.col[2]);
       };
       put(gx, gy, amt);
       if (rnd() < 0.25) {

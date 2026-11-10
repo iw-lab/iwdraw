@@ -448,7 +448,10 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
             ))}
           </div>
           <label className="flex min-w-0 flex-1 items-center gap-2 px-1 text-xs font-semibold text-ink-soft md:flex-none md:flex-col md:items-stretch">
-            <span className="shrink-0">굵기 {size}</span>
+            <span className="flex shrink-0 items-center gap-1">
+              굵기
+              <NumBox value={size} min={3} max={80} onCommit={setSize} label="굵기 숫자" testId="sand-size-num" />
+            </span>
             <input
               type="range"
               min={3}
@@ -491,6 +494,19 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
             <legend className="mb-1 text-xs font-semibold text-ink-soft">빛 색</legend>
             {/* 폰: 한 줄 옆 넘기기(빛 11·모래 8을 접어 쌓으면 판이 작아져 세로 판을 못 깐다) · md 이상: 접어 쌓기 */}
             <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
+              {/* 폰: 밝기 숫자는 빛 색 줄 맨 앞(막대 줄을 따로 두면 판 자리가 줄어 세로 폰에 가로 판이 깔린다 — 판 자리 336 < 세로 판 문턱 383px 실측) */}
+              <span className="flex h-11 shrink-0 items-center gap-1 rounded-control bg-surface-2 px-2 text-xs font-semibold text-ink-soft md:hidden">
+                밝기
+                <NumBox
+                  value={Math.round(clampBright(pref.bright) * 100)}
+                  min={Math.round(BRIGHT_MIN * 100)}
+                  max={Math.round(BRIGHT_MAX * 100)}
+                  onCommit={(n) => setBright(n / 100)}
+                  label="빛 밝기 숫자(%)"
+                  testId="sand-bright-num-m"
+                />
+                %
+              </span>
               {LIGHTS.map((l) => (
                 <button
                   key={l.id}
@@ -509,10 +525,20 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
               ))}
             </div>
           </fieldset>
-          <label className="flex w-full min-w-0 flex-col gap-1">
-            <span className="flex items-center justify-between text-xs font-semibold text-ink-soft">
+          <label className="hidden w-full min-w-0 md:flex md:flex-col md:gap-1">
+            <span className="flex items-center justify-between gap-1 text-xs font-semibold text-ink-soft">
               빛 밝기
-              <span className="tabular-nums" data-testid="sand-bright-value">{Math.round(clampBright(pref.bright) * 100)}%</span>
+              <span className="flex items-center gap-0.5 tabular-nums" data-testid="sand-bright-value">
+                <NumBox
+                  value={Math.round(clampBright(pref.bright) * 100)}
+                  min={Math.round(BRIGHT_MIN * 100)}
+                  max={Math.round(BRIGHT_MAX * 100)}
+                  onCommit={(n) => setBright(n / 100)}
+                  label="빛 밝기 숫자(%)"
+                  testId="sand-bright-num"
+                />
+                %
+              </span>
             </span>
             <input
               type="range"
@@ -527,7 +553,7 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
             />
           </label>
           <fieldset className="flex w-full min-w-0 flex-col gap-1">
-            <legend className="mb-1 text-xs font-semibold text-ink-soft">모래 색 <span className="font-normal">· 다음에 붓는 모래</span></legend>
+            <legend className="mb-1 text-xs font-semibold text-ink-soft">모래 색 <span className="hidden font-normal md:inline">· 다음에 붓는 모래</span></legend>
             {/* 폰: 한 줄 옆 넘기기(빛 11·모래 8을 접어 쌓으면 판이 작아져 세로 판을 못 깐다) · md 이상: 접어 쌓기 */}
             <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
               {SANDS.map((s) => (
@@ -578,5 +604,36 @@ export function SandEditor({ onSave, who, backHref = "/", galleryHref }: SandEdi
       )}
       {showMovie && engineRef.current && <SandMovie engine={engineRef.current} onClose={() => setShowMovie(false)} />}
     </div>
+  );
+}
+
+/** 숫자 직접 쓰기(2026-11-10 사용자 «빛 밝기랑 굵기도 직접 숫자도 쓸 수 있게») — 쓰는 동안은 그대로 두고
+ * Enter·칸 벗어남에 범위 안으로 잘라 넣는다(한 자리씩 칠 때 «1» 이 최솟값으로 튀지 않게) */
+function NumBox({ value, min, max, onCommit, label, testId }: { value: number; min: number; max: number; onCommit: (n: number) => void; label: string; testId: string }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    const n = Math.round(Number(draft));
+    setDraft(null);
+    if (draft.trim() !== "" && Number.isFinite(n)) onCommit(Math.min(max, Math.max(min, n)));
+  };
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={min}
+      max={max}
+      value={draft ?? String(value)}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        if (e.key === "Escape") setDraft(null);
+      }}
+      onFocus={(e) => e.target.select()}
+      aria-label={label}
+      data-testid={testId}
+      className="h-8 w-12 rounded-control border border-ink/20 bg-paper px-1 text-center text-xs font-semibold tabular-nums text-ink"
+    />
   );
 }

@@ -392,3 +392,19 @@ describe("여러 색 모래", () => {
     expect(Math.round(e2.sim.C[0])).toBe(DARK[0]);
   });
 });
+
+describe("높은 더미 위 색(2026-11-10 사용자 «높게 쌓인 모래 위에 아무리 뿌려도 두 번째 색으로 안 바뀐다»)", () => {
+  it("상한까지 쌓인 검은 더미 위에 붉은 모래를 부으면 겉이 붉어진다", () => {
+    const s = new SandSim(W, H);
+    s.begin("pour", 16, 1, 4, SANDS[0].rgb as [number, number, number]);
+    for (let i = 0; i < 400; i++) s.dab(100, 70, 16);
+    s.end();
+    expect(at(s, 100, 70)).toBeGreaterThan(5.9);
+    const red = SANDS.find((x) => x.id === "red")!.rgb as [number, number, number];
+    s.begin("pour", 16, 2, 4, red);
+    for (let i = 0; i < 60; i++) s.dab(100, 70, 16);
+    s.end();
+    const k = (70 * W + 100) * 3;
+    expect(s.C[k] - s.C[k + 2], "더미 꼭대기 = 붉다").toBeGreaterThan(40);
+  });
+});
