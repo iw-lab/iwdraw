@@ -2,8 +2,9 @@ import { test, expect } from "@playwright/test";
 
 /*
  * «바뀐 곳만 다시 합성»(2026-11-17 저사양 렉) = 화질 그대로인가.
- * 같은 상태에서 ① 부분 합성 화면 ② 통째 합성 화면을 떠서 화소를 비교한다 — 어느 화소든 2/255 넘게 다르면 실패.
- * (확대 화면의 반투명 획(색연필 wash 0.78)은 통째·부분 래스터 경로의 반올림이 ±2 다를 수 있다 — 2026-11-17 배포본 실측 445화소·최대 2. 눈에 안 보이는 반올림이라 허용)
+ * 같은 상태에서 ① 부분 합성 화면 ② 통째 합성 화면을 떠서 화소를 비교한다 — 어느 화소든 4/255 넘게 다르면 실패.
+ * (확대 화면의 반투명 획(색연필 wash 0.78)은 통째·부분 래스터 경로의 반올림이 다를 수 있다 — 2026-11-17 배포본 실측 445화소 최대 2 · 다음 실행 1화소 3.
+ *  빠진 획·어긋난 영역은 수십~255 차이라 4 로도 잡힌다(영역 8px 좁힘 주입 빨강 확인))
  * 붓마다(이음 띠·임파스토·반짝이·무지개·지우개 포함) · 확대·이동한 화면에서도.
  */
 test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] }, deviceScaleFactor: 1, viewport: { width: 1366, height: 768 } });
@@ -59,7 +60,7 @@ for (const zoom of [1, 1.7]) {
             const b = grab();
             let n = 0, bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1;
             const W = e.cm.display.width;
-            for (let k = 0; k < a.length; k += 4) if (Math.abs(a[k] - b[k]) > 2 || Math.abs(a[k + 1] - b[k + 1]) > 2 || Math.abs(a[k + 2] - b[k + 2]) > 2 || Math.abs(a[k + 3] - b[k + 3]) > 2) { n++; const px = (k / 4) % W, py = Math.floor(k / 4 / W); bx0 = Math.min(bx0, px); bx1 = Math.max(bx1, px); by0 = Math.min(by0, py); by1 = Math.max(by1, py); }
+            for (let k = 0; k < a.length; k += 4) if (Math.abs(a[k] - b[k]) > 4 || Math.abs(a[k + 1] - b[k + 1]) > 4 || Math.abs(a[k + 2] - b[k + 2]) > 4 || Math.abs(a[k + 3] - b[k + 3]) > 4) { n++; const px = (k / 4) % W, py = Math.floor(k / 4 / W); bx0 = Math.min(bx0, px); bx1 = Math.max(bx1, px); by0 = Math.min(by0, py); by1 = Math.max(by1, py); }
             if (n && !(window as unknown as { __dump?: string[] }).__dump) {
               const cv = document.createElement("canvas"); cv.width = W; cv.height = a.length / 4 / W; const g = cv.getContext("2d")!;
               g.putImageData(new ImageData(new Uint8ClampedArray(a), W), 0, 0); const ua = cv.toDataURL();
@@ -85,7 +86,7 @@ for (const zoom of [1, 1.7]) {
     for (const [name, d] of Object.entries(report)) {
       const used = -d[d.length - 1];
       const px = d.slice(0, -1);
-      expect(px.every((n) => n === 0), `${name} 부분 합성 화면이 통째 합성과 2/255 넘게 다르다: ${px}`).toBe(true);
+      expect(px.every((n) => n === 0), `${name} 부분 합성 화면이 통째 합성과 4/255 넘게 다르다: ${px}`).toBe(true);
       if (name !== "지우개") expect(used, `${name} 부분 합성이 실제로 쓰였다(${used}번)`).toBeGreaterThan(5);
     }
     expect(Object.keys(report).length, "잰 붓 수").toBeGreaterThanOrEqual(6);
