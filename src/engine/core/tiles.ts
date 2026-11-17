@@ -55,21 +55,48 @@ export type TileBlitter = (tiles: TileRect[], snaps: Uint8ClampedArray[]) => voi
  */
 export class TileSnapshotCommand implements Command {
   cost: number;
+  private after: Uint8ClampedArray[] | null;
+  /**
+   * after 는 배열이거나 «지금 레이어에서 읽기» 함수(2026-11-17 저사양 렉 — 획이 끝날 때마다 GPU 레이어를 읽어 오던 멈칫).
+   * 되돌리기는 맨 위부터 한 칸씩이라, 이 칸을 되돌리는 순간의 레이어 = 이 획 바로 뒤 모습이다 → 그때 읽어도 같은 픽셀.
+   * 다시 하기(apply)는 언제나 되돌린 뒤라 그때는 이미 읽혀 있다.
+   */
+  private before: Uint8ClampedArray[] | null;
+  private readBefore: (() => Uint8ClampedArray[]) | null;
   constructor(
     private readonly tiles: TileRect[],
-    private readonly before: Uint8ClampedArray[],
-    private readonly after: Uint8ClampedArray[],
+    before: Uint8ClampedArray[] | (() => Uint8ClampedArray[]),
+    after: Uint8ClampedArray[] | (() => Uint8ClampedArray[]),
     private readonly blit: TileBlitter,
   ) {
-    this.cost =
-      before.reduce((a, b) => a + b.byteLength, 0) + after.reduce((a, b) => a + b.byteLength, 0);
+    // before 도 함수일 수 있다 — 획 끝에 GPU 사본(캔버스)으로 떠 두고 픽셀 배열은 쉬는 틈에(materialize)
+    this.before = typeof before === "function" ? null : before;
+    this.readBefore = typeof before === "function" ? before : null;
+    const b = tiles.reduce((a, t) => a + t.w * t.h * 4, 0);
+    this.after = typeof after === "function" ? null : after;
+    this.readAfter = typeof after === "function" ? after : null;
+    // 아직 안 읽은 after 도 같은 크기로 센다(되돌리기 기록 상한 계산이 달라지지 않게)
+    this.cost = b + (this.after ? this.after.reduce((a, x) => a + x.byteLength, 0) : b);
   }
+  private readAfter: (() => Uint8ClampedArray[]) | null;
 
   apply(): void {
+    if (!this.after) this.after = this.readAfter!();
     this.blit(this.tiles, this.after);
   }
   revert(): void {
-    this.blit(this.tiles, this.before);
+    if (!this.after && this.readAfter) {
+      this.after = this.readAfter();
+      this.readAfter = null;
+    }
+    this.materialize();
+    this.blit(this.tiles, this.before!);
+  }
+  /** GPU 사본으로 떠 둔 before 를 픽셀 배열로(쉬는 틈 · 되돌리기 직전) — 그 뒤 사본은 버린다 */
+  materialize(): void {
+    if (this.before || !this.readBefore) return;
+    this.before = this.readBefore();
+    this.readBefore = null;
   }
 }
 

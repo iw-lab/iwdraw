@@ -95,6 +95,8 @@ export interface RendererBackend {
    * "full" = 이 획은 통째로 다시 그려야 한다(수채 글레이징 등) · null = 바뀐 곳 없음. 없는 백엔드 = 늘 통째.
    */
   takeFrameDirty?(): PxRect | "full" | null;
+  /** 첫 dab 전에 팁·종이 텍스처를 미리 만든다(첫 획 멈칫 — 같은 텍스처를 앞당겨 만들 뿐) */
+  prewarm?(tips: TipKind[], paper: PaperKind): void;
   /** 스트로크 종료 — 임시 버퍼를 (종이 결 침식 후) 레이어에 합성 */
   endStroke(): void;
   /**

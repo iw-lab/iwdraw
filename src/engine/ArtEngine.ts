@@ -330,8 +330,26 @@ export class ArtEngine {
     const wasHanji = this.paperBrushId === "inkbrush";
     if (id !== "eraser") this.paperBrushId = id;
     if (wasHanji !== (this.paperBrushId === "inkbrush")) this.requestComposite();
+    this.schedulePrewarm();
   }
   private paperBrushId: BrushId = "pencil";
+  /** 고른 붓의 팁·종이 텍스처를 쉬는 틈에 미리 만든다(첫 dab 멈칫 제거 · 결과 픽셀은 같다) */
+  private prewarmTimer = 0;
+  private schedulePrewarm(): void {
+    if (typeof window === "undefined" || !this.cm.backend.prewarm) return;
+    window.clearTimeout(this.prewarmTimer);
+    this.prewarmTimer = window.setTimeout(() => {
+      if (this.brush) return; // 획 중엔 하지 않는다
+      try {
+        const b = createBrush(this.brushId);
+        const tips: TipKind[] = [b.cfg.tip];
+        if (b.cfg.tip === "bristle") tips.push("bristle-bold");
+        this.cm.backend.prewarm?.(tips, this.paperKindForMode());
+      } catch {
+        /* 미리 못 만들면 첫 dab 때 만든다(전과 같음) */
+      }
+    }, 120);
+  }
   setColor(rgb: RGB | string): void {
     this.settings.color = typeof rgb === "string" ? hexToRgb(rgb) : rgb;
   }
@@ -804,7 +822,7 @@ export class ArtEngine {
   }
 
   /** 획 시작 전 상태 — 더티 타일만 */
-  private beforeTiles: { tiles: TileRect[]; data: Uint8ClampedArray[] } | null = null;
+  private beforeTiles: { tiles: TileRect[]; data: Uint8ClampedArray[] | (() => Uint8ClampedArray[]) } | null = null;
 
   /*
    * 지우개·번짐은 레이어를 실시간으로 고치므로 "고치기 전" 픽셀을 미리 갖고 있어야 한다.
@@ -850,7 +868,29 @@ export class ArtEngine {
     const w = Math.min(this.width - x, Math.ceil(bb.maxX - x));
     const h = Math.min(this.height - y, Math.ceil(bb.maxY - y));
     const tiles = tilesForRect(x, y, w, h, this.width, this.height);
-    this.beforeTiles = { tiles, data: readTiles(this.layers.active.ctx, tiles) };
+    /* 획 끝 멈칫(2026-11-17): 여기서 레이어를 getImageData 로 읽으면 GPU 를 기다린다(CPU 6배 실측 획마다 ~17ms).
+     * 대신 타일 범위를 GPU 안에서 캔버스로 복사(기다림 없음)하고, 픽셀 배열은 쉬는 틈에 그 사본에서 읽는다 — 같은 바이트. */
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const t of tiles) {
+      x0 = Math.min(x0, t.x); y0 = Math.min(y0, t.y);
+      x1 = Math.max(x1, t.x + t.w); y1 = Math.max(y1, t.y + t.h);
+    }
+    const snap = document.createElement("canvas");
+    snap.width = Math.max(1, x1 - x0);
+    snap.height = Math.max(1, y1 - y0);
+    const sc = snap.getContext("2d");
+    if (!sc) {
+      this.beforeTiles = { tiles, data: readTiles(this.layers.active.ctx, tiles) };
+      return;
+    }
+    sc.globalCompositeOperation = "copy";
+    sc.drawImage(this.layers.active.canvas, x0, y0, snap.width, snap.height, 0, 0, snap.width, snap.height);
+    const read = () => {
+      const out = tiles.map((t) => new Uint8ClampedArray(sc.getImageData(t.x - x0, t.y - y0, t.w, t.h).data));
+      snap.width = snap.height = 0; // GPU 메모리 바로 돌려준다
+      return out;
+    };
+    this.beforeTiles = { tiles, data: read };
   }
 
   private snapshotActiveLayer(): Uint8ClampedArray {
@@ -981,10 +1021,10 @@ export class ArtEngine {
     const snap = cowSnap ?? this.beforeTiles;
     const tiles = snap?.tiles ?? tilesForRect(x, y, w, h, this.width, this.height);
     const before = snap?.data ?? copyTiles(this.beforeFull!, this.width, tiles);
-    const after = readTiles(layer.ctx, tiles);
     this.beforeFull = null;
     this.beforeTiles = null;
-    this.pushTileCommand(layer, tiles, before, after);
+    // «뒤» 픽셀은 되돌릴 때 읽는다(TileSnapshotCommand 주석) — 획 끝마다 레이어를 읽던 멈칫 제거
+    this.pushTileCommand(layer, tiles, before, () => readTiles(layer.ctx, tiles));
 
     if (!alreadyRecorded) {
       this.recorder.record({
@@ -1104,8 +1144,8 @@ export class ArtEngine {
   private pushTileCommand(
     layer: Layer,
     tiles: TileRect[],
-    before: Uint8ClampedArray[],
-    after: Uint8ClampedArray[],
+    before: Uint8ClampedArray[] | (() => Uint8ClampedArray[]),
+    after: Uint8ClampedArray[] | (() => Uint8ClampedArray[]),
   ): void {
     const blit = (ts: TileRect[], snaps: Uint8ClampedArray[]) => {
       ts.forEach((t, i) => {
@@ -1115,8 +1155,20 @@ export class ArtEngine {
       this.requestComposite();
       this.emitHistory();
     };
-    this.history.push(new TileSnapshotCommand(tiles, before, after, blit));
+    const cmd = new TileSnapshotCommand(tiles, before, after, blit);
+    this.history.push(cmd);
     this.emitHistory();
+    if (typeof before === "function") this.materializeSoon(cmd);
+  }
+  /** GPU 사본 before 를 쉬는 틈에 픽셀 배열로(사본을 오래 들고 있지 않게) */
+  private materializeSoon(cmd: TileSnapshotCommand): void {
+    const run = () => {
+      if (this.brush) return void setTimeout(run, 200); // 획 중엔 미룬다
+      cmd.materialize();
+    };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(run, { timeout: 1500 });
+    else setTimeout(run, 300);
   }
 
   /* ── 뚝딱그림(스케치 인식 → 스탬프 제안) ──

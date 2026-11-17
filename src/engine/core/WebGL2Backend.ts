@@ -490,6 +490,15 @@ export class WebGL2Backend implements RendererBackend {
   /* 프레임마다 바뀐 곳(판 좌표) — «바뀐 곳만 다시 합성»(2026-11-17 저사양 렉: 획 중 매 프레임 판 전체를 4~5번 통째로 그렸다).
    * 이음 띠(seg) 사다리꼴은 앞 조각 중심까지 뻗으므로 그 끝도 넣는다(unionDabBounds 는 이 dab 둘레만 본다). */
   private frameDirty: PxRect | null = null;
+  /* 첫 획 멈칫(2026-11-17 실측 CPU 6배: 종이 결 텍스처 45ms + 팁 10~28ms 가 첫 dab 에 몰렸다) — 붓을 고를 때 쉬는 틈에 미리 */
+  prewarm(tips: TipKind[], paper: PaperKind): void {
+    if (this.gl.isContextLost()) return;
+    this.paperTexture(paper);
+    for (const t of tips) {
+      this.tipTexture(t);
+      this.tipHlTexture(t);
+    }
+  }
   takeFrameDirty(): PxRect | "full" | null {
     if (!this.ctx) return "full";
     const r = this.frameDirty;
