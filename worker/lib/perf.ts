@@ -23,6 +23,7 @@ export function sanitizePerf(b: unknown): Record<string, string | number> | null
     backend: word(o.backend, /^[a-z0-9]+$/),
     brush: word(o.brush, /^[a-z0-9_-]+$/),
     layers: num(o.layers, 100),
+    ds: num(o.ds, 1),
     bw: num(o.bw, 20_000),
     bh: num(o.bh, 20_000),
     cw: num(o.cw, 20_000),

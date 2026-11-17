@@ -5,6 +5,7 @@ import { ArtEngine } from "@/engine/ArtEngine";
 import { useEditor } from "@/store/editor";
 import type { Mode } from "@/engine/types";
 import { fitAspectHelper } from "@/lib/aspect";
+import { docScale } from "@/lib/perf-tier";
 import { loadPaperPack } from "@/engine/core/paperPack";
 
 /*
@@ -50,7 +51,7 @@ export function CanvasStage({
   const engineRef = useRef<ArtEngine | null>(null);
   const attach = useEditor((s) => s.attach);
   const detach = useEditor((s) => s.detach);
-  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const [size, setSize] = useState<{ width: number; height: number; scale: number } | null>(null);
 
   // 1단계: 캔버스 크기 결정(도안 비율 또는 방향)
   useEffect(() => {
@@ -63,7 +64,9 @@ export function CanvasStage({
       else if (baseSrc) aspect = await loadImageSize(baseSrc);
       else aspect = orientation === "portrait" ? 1152 / 1536 : 1536 / 1152;
       await pack;
-      if (!cancelled) setSize(fitCanvasSize(aspect));
+      // 판 배율 = 이 기기에서 잰 렉으로 정한 단계(렉 없던 기기는 늘 1) — 그리는 도중엔 안 바뀐다(다음 그림부터)
+      const scale = docScale();
+      if (!cancelled) setSize({ ...fitCanvasSize(aspect, scale), scale });
     })();
     return () => {
       cancelled = true;
@@ -86,6 +89,7 @@ export function CanvasStage({
       // (2026-08-21 실측: 확대 배율 1.00 · 대신 남은 손가락이 획을 그림)
       surface: stageRef.current ?? undefined,
       backendOverride,
+      sizeScale: size.scale,
     });
     engineRef.current = engine;
     // QA/디버그 핸들 — 확대 배율 등 내부 상태를 e2e에서 실측한다

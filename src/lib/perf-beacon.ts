@@ -20,6 +20,8 @@ export interface PerfInfo {
   backend?: string;
   brush?: string;
   layers?: number;
+  /** 그림 판 배율(lib/perf-tier) — 줄인 판이 렉을 정말 줄였는지 표에서 가른다 */
+  ds?: number;
 }
 
 export function summarize(gaps: number[]) {
@@ -42,10 +44,15 @@ function osOf(ua: string): string {
 }
 
 /** 캔버스에 붙인다. 떼는 함수를 돌려준다 */
-export function startPerfBeacon(canvas: HTMLCanvasElement, page: "draw" | "sand", info: () => PerfInfo): () => void {
+/** onMeasured = 잰 결과(보내든 안 보내든 매번) — 그리기 화면은 이걸로 이 기기의 판 단계를 정한다(lib/perf-tier) */
+export function startPerfBeacon(
+  canvas: HTMLCanvasElement,
+  page: "draw" | "sand",
+  info: () => PerfInfo,
+  onMeasured?: (sm: ReturnType<typeof summarize>) => void,
+): () => void {
   if (typeof window === "undefined" || typeof navigator === "undefined") return () => {};
   try {
-    if (sessionStorage.getItem(SENT_KEY)) return () => {};
     // 자동 시험 브라우저는 보내지 않는다 — 배포본 회귀 시험이 운영 표를 시험 수치로 채운다(계측 시험만 표식으로 켠다)
     if (navigator.webdriver && !localStorage.getItem(TEST_KEY)) return () => {};
   } catch {
@@ -78,6 +85,16 @@ export function startPerfBeacon(canvas: HTMLCanvasElement, page: "draw" | "sand"
     done = true;
     stop();
     const sm = summarize(gaps);
+    try {
+      onMeasured?.(sm);
+    } catch {
+      /* 단계 저장 실패는 그리기에 영향 없음 */
+    }
+    try {
+      if (sessionStorage.getItem(SENT_KEY)) return; // 서버로는 세션당 한 번만
+    } catch {
+      return;
+    }
     if (!shouldSend(sm.p75, Math.random())) return;
     const nav = navigator as Navigator & { deviceMemory?: number };
     const i = info();
@@ -87,6 +104,7 @@ export function startPerfBeacon(canvas: HTMLCanvasElement, page: "draw" | "sand"
       backend: i.backend ?? "",
       brush: i.brush ?? "",
       layers: i.layers ?? 0,
+      ds: i.ds ?? 1,
       bw: canvas.width,
       bh: canvas.height,
       cw: Math.round(canvas.clientWidth),

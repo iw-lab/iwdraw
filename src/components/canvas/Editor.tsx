@@ -24,6 +24,7 @@ import { takeEntryHint, takeSaveHint } from "@/lib/class-hint";
 import { TitleAsk, Toast } from "./SaveUi";
 import { genDraftId } from "@/lib/draft-id";
 import { startPerfBeacon } from "@/lib/perf-beacon";
+import { learnTier } from "@/lib/perf-tier";
 import {
   SOFT_REFRESH_KEY,
   shouldSoftRefresh,
@@ -309,10 +310,16 @@ export function Editor({ lineartSrc, baseSrc, navKey, initialMode, onSave, who, 
       const el = document.querySelector('canvas[aria-label="그림 캔버스"]') as HTMLCanvasElement | null;
       if (!el) return;
       clearInterval(t);
-      stop = startPerfBeacon(el, "draw", () => {
-        const st = useEditor.getState();
-        return { backend: st.usingWebGL2 ? "gl" : "2d", brush: st.brush, layers: st.layers.length };
-      });
+      stop = startPerfBeacon(
+        el,
+        "draw",
+        () => {
+          const st = useEditor.getState();
+          return { backend: st.usingWebGL2 ? "gl" : "2d", brush: st.brush, layers: st.layers.length, ds: st.engine?.sizeScale ?? 1 };
+        },
+        // 이 기기에서 잰 렉으로 다음 그림 판 크기를 정한다 — 기종이 아니라 실제 간격(lib/perf-tier)
+        (sm) => learnTier(sm.p75, useEditor.getState().engine?.sizeScale ?? 1),
+      );
     }, 500);
     return () => {
       clearInterval(t);

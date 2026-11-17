@@ -72,6 +72,8 @@ export interface EngineOptions {
   forceCanvas2D?: boolean;
   /** QA용 백엔드 강제(?backend=2d|gl) — gl은 소프트웨어 렌더러도 허용 */
   backendOverride?: "2d" | "gl";
+  /** 판 배율(lib/perf-tier) — 판을 줄인 기기에서 붓 굵기가 화면에서 같게 보이도록 굵기에 곱한다. 기본 1 */
+  sizeScale?: number;
   /** 무비 재현성용 시드 */
   seed?: number;
 }
@@ -160,9 +162,12 @@ export class ArtEngine {
   private lastTick = 0;
   private replaying = false;
 
+  /** 판 배율 — 붓 굵기(화면 체감)를 판 크기에 맞춘다 */
+  readonly sizeScale: number;
   constructor(opts: EngineOptions) {
     this.width = opts.width;
     this.height = opts.height;
+    this.sizeScale = opts.sizeScale && opts.sizeScale > 0 && opts.sizeScale <= 1 ? opts.sizeScale : 1;
     this.dprCap = initialDpr();
     this.cm = new CanvasManager(
       opts.width,
@@ -331,7 +336,8 @@ export class ArtEngine {
     this.settings.color = typeof rgb === "string" ? hexToRgb(rgb) : rgb;
   }
   setSize(size: number): void {
-    this.settings.size = clamp(size, 1, 128);
+    // 굵기 숫자(UI)는 1536 판 기준 — 줄인 판에선 같은 비율로 가늘게 찍어야 화면에서 같은 굵기다
+    this.settings.size = clamp(size * this.sizeScale, 1, 128);
   }
   setOpacity(o: number): void {
     this.settings.opacity = clamp(o, 0, 1);
