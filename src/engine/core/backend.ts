@@ -88,7 +88,13 @@ export interface RendererBackend {
    * Canvas2DBackend는 레이어에 직접 지워 이미 반영되므로 no-op,
    * WebGL2Backend는 스트로크 버퍼를 매 프레임 destination-out으로 합성한다.
    */
-  presentStroke(target: CanvasRenderingContext2D): void;
+  /** region = 이번 프레임에 바뀐 곳(판 좌표) — 주면 그 안만 다시 그린다(밖은 그대로 둬도 되는 자리) */
+  presentStroke(target: CanvasRenderingContext2D, region?: PxRect): void;
+  /**
+   * 지난 호출 이후 획이 바뀐 곳(판 좌표) — «바뀐 곳만 다시 합성»용(2026-11-17 저사양 렉).
+   * "full" = 이 획은 통째로 다시 그려야 한다(수채 글레이징 등) · null = 바뀐 곳 없음. 없는 백엔드 = 늘 통째.
+   */
+  takeFrameDirty?(): PxRect | "full" | null;
   /** 스트로크 종료 — 임시 버퍼를 (종이 결 침식 후) 레이어에 합성 */
   endStroke(): void;
   /**

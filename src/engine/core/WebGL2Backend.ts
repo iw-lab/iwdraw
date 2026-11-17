@@ -484,6 +484,20 @@ export class WebGL2Backend implements RendererBackend {
     this.strokeRev++;
     this.drawDabsInto(this.strokeFbo.fb, dabs);
     this.liveDirty = unionDabBounds(this.liveDirty, dabs);
+    this.frameDirty = frameBounds(this.frameDirty, dabs);
+  }
+
+  /* 프레임마다 바뀐 곳(판 좌표) — «바뀐 곳만 다시 합성»(2026-11-17 저사양 렉: 획 중 매 프레임 판 전체를 4~5번 통째로 그렸다).
+   * 이음 띠(seg) 사다리꼴은 앞 조각 중심까지 뻗으므로 그 끝도 넣는다(unionDabBounds 는 이 dab 둘레만 본다). */
+  private frameDirty: PxRect | null = null;
+  takeFrameDirty(): PxRect | "full" | null {
+    if (!this.ctx) return "full";
+    const r = this.frameDirty;
+    this.frameDirty = null;
+    if (!r) return null;
+    // 임파스토 명암은 획 둘레 IMPASTO_REACH 까지 번진다
+    const pad = this.ctx.impasto > 0 && this.ctx.composite !== "destination-out" ? IMPASTO_REACH + 2 : 2;
+    return growRect(r, pad, this.width, this.height);
   }
 
   /** 라이브 임파스토 부분 갱신 — 지난 계산 이후 바뀐 영역 */
@@ -495,6 +509,7 @@ export class WebGL2Backend implements RendererBackend {
     if (!this.ctx) return;
     // 지난 꼬리 자리도 다시 칠해야 지워진다
     this.liveDirty = unionDabBounds(unionDabBounds(this.liveDirty, this.previewDabs), dabs);
+    this.frameDirty = frameBounds(frameBounds(this.frameDirty, this.previewDabs), dabs);
     this.previewDabs = dabs;
     this.strokeRev++;
   }
@@ -611,10 +626,15 @@ export class WebGL2Backend implements RendererBackend {
   }
 
   /** strokeFbo → glCanvas(기본 프레임버퍼) 복사 — 프리뷰/합성 공용 */
-  private blitStrokeToScreen(): void {
+  private blitStrokeToScreen(region?: PxRect): void {
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.width, this.height);
+    // 부분 합성: 바뀐 곳만 복사(GL 원점은 왼쪽 아래 — y 를 뒤집는다). 밖은 이번 프레임에 안 읽는다
+    if (region) {
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(region.x, this.height - (region.y + region.h), region.w, region.h);
+    }
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this.copyProg);
@@ -625,16 +645,17 @@ export class WebGL2Backend implements RendererBackend {
     gl.uniform1i(gl.getUniformLocation(this.copyProg, "u_tex"), 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindVertexArray(null);
+    if (region) gl.disable(gl.SCISSOR_TEST);
   }
 
-  presentStroke(target: CanvasRenderingContext2D): void {
+  presentStroke(target: CanvasRenderingContext2D, region?: PxRect): void {
     if (!this.ctx) return;
-    this.blitStrokeToScreen();
+    this.blitStrokeToScreen(region);
     if (this.previewDabs.length) this.drawDabsInto(null, this.previewDabs);
     const c = this.ctx.composite;
     if (c === "glaze") {
       // 수채 글레이징(겹침 1단계 진해짐 + 포화) — 프리뷰=최종(endStroke와 같은 함수)
-      compositeGlaze(target, this.glCanvas, this.width, this.height);
+      compositeGlaze(target, this.glCanvas, this.width, this.height, region);
       return;
     }
     // 임파스토 릴리프는 프리뷰=최종(같은 함수) — 손 떼는 순간 명암이 변하는
@@ -682,7 +703,8 @@ export class WebGL2Backend implements RendererBackend {
             : c === "lighter"
               ? "lighter"
               : "source-over";
-    target.drawImage(src, 0, 0);
+    if (region) target.drawImage(src, region.x, region.y, region.w, region.h, region.x, region.y, region.w, region.h);
+    else target.drawImage(src, 0, 0);
     target.restore();
   }
 
@@ -786,4 +808,16 @@ export function tryCreateWebGL2Backend(
   } catch {
     return null;
   }
+}
+
+/** 프레임 dirty 합집합 — dab 둘레(unionDabBounds) + 이음 띠의 앞 조각 중심 둘레 */
+function frameBounds(r: PxRect | null, dabs: Dab[]): PxRect | null {
+  let out = unionDabBounds(r, dabs);
+  for (const d of dabs) {
+    const seg = d.slice?.seg;
+    if (!seg) continue;
+    const rad = Math.max(seg.size, d.size) / 2 + 2;
+    out = unionDabBounds(out, [{ x: seg.x, y: seg.y, size: rad * 2 - 4, alpha: 0, rotation: 0 }]);
+  }
+  return out;
 }

@@ -668,7 +668,12 @@ export function compositeGlaze(
   src: CanvasImageSource,
   width: number,
   height: number,
+  /** 바뀐 곳만(판 좌표) — 모든 단계가 화소마다 따로라 그 밖은 결과가 같다(2026-11-17 저사양 렉: 프레임마다 판 전체 17번) */
+  region?: PxRect,
 ): void {
+  const R = region ?? { x: 0, y: 0, w: width, h: height };
+  const di = (c: CanvasRenderingContext2D, img: CanvasImageSource) => c.drawImage(img, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+  const fr = (c: CanvasRenderingContext2D) => c.fillRect(R.x, R.y, R.w, R.h);
   glzSnap = scratch(glzSnap, width, height); // flatDst: 기존 over 백지
   glzFlat = scratch(glzFlat, width, height); // flatSrc: 획 over 백지(얇은 가장자리 = 옅은 물감)
   glzFloor = scratch(glzFloor, width, height); // 포화 바닥
@@ -677,50 +682,50 @@ export function compositeGlaze(
   // ① 플래튼 — 이후 모든 블렌드가 불투명 대 불투명이 된다
   glzSnap.globalCompositeOperation = "source-over";
   glzSnap.fillStyle = "#fff";
-  glzSnap.fillRect(0, 0, width, height);
-  glzSnap.drawImage(target.canvas, 0, 0);
+  fr(glzSnap);
+  di(glzSnap, target.canvas);
   glzFlat.globalCompositeOperation = "source-over";
   glzFlat.fillStyle = "#fff";
-  glzFlat.fillRect(0, 0, width, height);
-  glzFlat.drawImage(src, 0, 0);
+  fr(glzFlat);
+  di(glzFlat, src);
 
   // ② 바닥 = max(획³, 획×0.6) — 획³: 옅은 워시가 3겹까지 점진 누적 후 포화
   // (획⁴는 p5가 81까지 떨어져 원본(166)보다 훨씬 어두워짐, 실측)
   glzFloor.globalCompositeOperation = "source-over";
-  glzFloor.drawImage(glzFlat.canvas, 0, 0);
+  di(glzFloor, glzFlat.canvas);
   glzFloor.globalCompositeOperation = "multiply";
-  glzFloor.drawImage(glzFlat.canvas, 0, 0); // 획²
-  glzFloor.drawImage(glzFlat.canvas, 0, 0); // 획³
+  di(glzFloor, glzFlat.canvas); // 획²
+  di(glzFloor, glzFlat.canvas); // 획³
   glzWork.globalCompositeOperation = "source-over";
-  glzWork.drawImage(glzFlat.canvas, 0, 0);
+  di(glzWork, glzFlat.canvas);
   glzWork.globalCompositeOperation = "multiply";
   glzWork.fillStyle = "rgb(153,153,153)"; // 획×0.6
-  glzWork.fillRect(0, 0, width, height);
+  fr(glzWork);
   glzFloor.globalCompositeOperation = "lighten";
-  glzFloor.drawImage(glzWork.canvas, 0, 0);
+  di(glzFloor, glzWork.canvas);
 
   // ③ 결과 = min(flatDst, max(flatDst×flatSrc, 바닥)) — 전부 불투명 채널 연산
   glzWork.globalCompositeOperation = "source-over";
-  glzWork.drawImage(glzSnap.canvas, 0, 0);
+  di(glzWork, glzSnap.canvas);
   glzWork.globalCompositeOperation = "multiply";
-  glzWork.drawImage(glzFlat.canvas, 0, 0);
+  di(glzWork, glzFlat.canvas);
   glzWork.globalCompositeOperation = "lighten";
-  glzWork.drawImage(glzFloor.canvas, 0, 0);
+  di(glzWork, glzFloor.canvas);
   glzWork.globalCompositeOperation = "darken";
-  glzWork.drawImage(glzSnap.canvas, 0, 0);
+  di(glzWork, glzSnap.canvas);
 
   // ④ 레이어 반영 — 알파는 src와의 유니언(source-over), 색은 src 알파 가중으로
   // 플래튼 결과 톤으로 치환(마스크 + source-atop). src 알파가 낮은 픽셀(기존 획의
   // 가장자리 스침)은 기존 색이 거의 유지돼 반복 겹침에도 백화·침식이 없다.
   glzWork.globalCompositeOperation = "destination-in";
-  glzWork.drawImage(src, 0, 0);
+  di(glzWork, src);
   glzWork.globalCompositeOperation = "source-over";
 
   target.save();
   target.setTransform(1, 0, 0, 1, 0, 0);
   target.globalCompositeOperation = "source-over";
-  target.drawImage(src, 0, 0);
+  di(target, src);
   target.globalCompositeOperation = "source-atop";
-  target.drawImage(glzWork.canvas, 0, 0);
+  di(target, glzWork.canvas);
   target.restore();
 }

@@ -22,7 +22,7 @@ import { History } from "./core/History";
 import { StrokeRecorder } from "./core/StrokeRecorder";
 import { AutoSave, type SavedState } from "./core/AutoSave";
 import { smearSegment } from "./tools/SmudgeTool";
-import { drawPaperRelief, drawPaperTint, onPaperReliefLoad, type PaperKind } from "./core/paper";
+import { drawPaperRelief, drawPaperTint, onPaperReliefLoad, type PaperKind, type PxRect } from "./core/paper";
 
 /** 캔버스 요철 soft-light 세기(0~1) — 아트봉봉 화면과 나란히 보고 맞춘 값(2026-10-08) */
 const PAPER_RELIEF_STRENGTH = 0.6; // 아트봉봉 화면과 같은 배율로 나란히 맞춘 값(2026-10-08)
@@ -573,7 +573,7 @@ export class ArtEngine {
     const tail = lastSp ? this.brush.preview() : null;
     if (tail && lastSp) this.cm.backend.setPreviewDabs(this.expandDabs(tail, lastSp));
     if (lastSp) this.emit("pointerMoved", { x: lastSp.x, y: lastSp.y });
-    this.requestComposite();
+    this.requestStrokeComposite();
   }
 
   private strokeEnd(p: StrokePoint): void {
@@ -623,6 +623,7 @@ export class ArtEngine {
       this.cm.backend.endStroke();
     }
     this.finalizeStroke(this.quickShapeApplied);
+    this.requestComposite(); // 획이 레이어에 들어간 뒤 한 번 통째로 — 부분 합성은 획 도중에만
   }
 
   /** 진행 중 획 폐기(핀치 진입 등) — 레이어·히스토리·레코더에 아무것도 남기지 않는다.
@@ -948,7 +949,7 @@ export class ArtEngine {
     }
     this.cm.backend.drawDabs(all);
     for (const d of all) this.trackDirty(d.x, d.y, d.size);
-    this.requestComposite();
+    this.requestStrokeComposite();
   }
 
   private trackDirty(x: number, y: number, size: number): void {
@@ -1818,6 +1819,44 @@ export class ArtEngine {
   /* ── 렌더 루프 ── */
   private requestComposite(): void {
     this.needsComposite = true;
+    this.frameFull = true;
+  }
+  /* «바뀐 곳만 다시 합성»(2026-11-17 저사양 렉 — 획 중 매 프레임 판 전체를 지우고·레이어 복사·획 얹기·화면 복사·종이 결까지
+   * 4~5번 통째로 그렸다). 획이 그린 dab 만 이 길로 오고, 그 밖의 모든 변화(줌·레이어·도형·스탬프·대칭 축…)는 requestComposite 로
+   * 통째 합성이다. 바뀐 곳은 백엔드가 센다(takeFrameDirty) — 합성은 화소마다 따로라 그 밖 화소는 지난 프레임과 같다(화질 그대로).
+   * 끄기: ?fullcomp=1 (전·후 화소 비교 시험용) */
+  private frameFull = true;
+  private readonly partialComposite =
+    typeof window === "undefined" || new URLSearchParams(window.location.search).get("fullcomp") !== "1";
+  private requestStrokeComposite(): void {
+    this.needsComposite = true;
+  }
+  /** 이번 프레임에 다시 그릴 화면(기기 픽셀) 사각형 — null = 통째, "skip" = 바뀐 곳 없음 */
+  private frameClip(): { dev: [number, number, number, number]; doc: PxRect } | null | "skip" {
+    const full = this.frameFull;
+    this.frameFull = false;
+    const take = this.cm.backend.takeFrameDirty?.();
+    if (full || !this.partialComposite || !this.brush || take === undefined || take === "full") return null;
+    if (take === null) return "skip";
+    const dpr = this.cm.dpr;
+    const k = this.view.scale * dpr;
+    const ox = this.view.ox * dpr;
+    const oy = this.view.oy * dpr;
+    const W = this.cm.display.width;
+    const H = this.cm.display.height;
+    // 기기 픽셀 경계에 맞춘 사각형(1px 여유) — 가장자리 반픽셀 섞임이 없게
+    const x0 = Math.max(0, Math.floor(take.x * k + ox) - 1);
+    const y0 = Math.max(0, Math.floor(take.y * k + oy) - 1);
+    const x1 = Math.min(W, Math.ceil((take.x + take.w) * k + ox) + 1);
+    const y1 = Math.min(H, Math.ceil((take.y + take.h) * k + oy) + 1);
+    if (x1 <= x0 || y1 <= y0) return "skip";
+    // 그 화면 사각형이 읽는 판 영역 + 확대·축소 보간 이웃(2px) — 미리보기 버퍼는 이 안만 새로 만든다
+    const m = Math.ceil(2 / Math.min(1, k)) + 1;
+    const dx0 = Math.max(0, Math.floor((x0 - ox) / k) - m);
+    const dy0 = Math.max(0, Math.floor((y0 - oy) / k) - m);
+    const dx1 = Math.min(this.width, Math.ceil((x1 - ox) / k) + m);
+    const dy1 = Math.min(this.height, Math.ceil((y1 - oy) / k) + m);
+    return { dev: [x0, y0, x1 - x0, y1 - y0], doc: { x: dx0, y: dy0, w: Math.max(0, dx1 - dx0), h: Math.max(0, dy1 - dy0) } };
   }
   /* 그리기 경로의 예외 방화벽 — 한 번의 실패가 엔진을 영구히 죽이지 않게 한다.
    * 실패하면 진행 중이던 획만 버리고(반쯤 열린 브러시 상태 정리) 계속 살아 있는다. */
@@ -1866,7 +1905,7 @@ export class ArtEngine {
         if (this.brush && dt > 120) this.trackLagGap(dt);
         // 수채/유화 시간 진행 시뮬
         const changed = this.cm.backend.tick(dt);
-        if (changed) this.needsComposite = true;
+        if (changed) this.requestComposite();
         if (this.needsComposite) {
           const t0 = performance.now();
           this.compositeNow();
@@ -1989,10 +2028,29 @@ export class ArtEngine {
   private lagGaps: { t: number; dt: number }[] = [];
 
   private compositeNow(): void {
+    const clip = this.frameClip();
+    if (clip === "skip") return;
     const ctx = this.cm.displayCtx;
     const dpr = this.cm.dpr; // 표시 백킹 배율 — 이후 모든 그리기는 논리 좌표 그대로
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.cm.display.width, this.cm.display.height);
+    if (clip) {
+      // 바뀐 곳만 — 클립은 기기 좌표로 걸어 두고(변환과 무관) 아래 합성은 그대로 둔다
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(...clip.dev);
+      ctx.clip();
+      ctx.clearRect(...clip.dev);
+    } else ctx.clearRect(0, 0, this.cm.display.width, this.cm.display.height);
+    try {
+      this.compositeBody(ctx, dpr, clip ? clip.doc : undefined);
+    } finally {
+      if (clip) ctx.restore();
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.emit("dirty", {});
+  }
+
+  private compositeBody(ctx: CanvasRenderingContext2D, dpr: number, region?: PxRect): void {
     ctx.imageSmoothingQuality = "high"; // 줌 업스케일 보간 품질(계단 완화)
     ctx.setTransform(
       this.view.scale * dpr,
@@ -2010,9 +2068,17 @@ export class ArtEngine {
         return;
       }
       const s = this.previewScratchCtx();
-      s.clearRect(0, 0, this.width, this.height);
-      s.drawImage(layer.canvas, 0, 0);
-      this.cm.backend.presentStroke(s);
+      if (region) {
+        // 바뀐 곳만 새로 — 밖의 미리보기 버퍼는 화면 클립 밖이라 안 쓰인다
+        const { x, y, w, h } = region;
+        s.clearRect(x, y, w, h);
+        s.drawImage(layer.canvas, x, y, w, h, x, y, w, h);
+        this.cm.backend.presentStroke(s, region);
+      } else {
+        s.clearRect(0, 0, this.width, this.height);
+        s.drawImage(layer.canvas, 0, 0);
+        this.cm.backend.presentStroke(s);
+      }
       c.drawImage(s.canvas, 0, 0);
     });
     // 흰 종이는 맨 뒤(destination-over), 종이 결은 맨 위 multiply(표시 전용, 내보내기 미포함).
@@ -2139,8 +2205,6 @@ export class ArtEngine {
         ctx.restore();
       }
     }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.emit("dirty", {});
   }
 
   /* ── AutoSave ── */
