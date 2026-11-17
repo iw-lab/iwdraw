@@ -149,14 +149,16 @@ export async function deleteArtwork(id: string): Promise<boolean> {
 }
 
 /** 선행쌤 작품 전시관에 걸기/내리기 — 성공하면 true */
-export async function setShowcase(id: string, on: boolean, checked = false, sido = ""): Promise<boolean> {
+/** ver = 선생님이 확인 창에서 본 판(작품 created_at) — 그 사이 학생이 다시 내면 서버가 409 */
+export async function setShowcase(id: string, on: boolean, checked = false, sido = "", replay = false, ver?: number): Promise<boolean> {
   if (!hasBackend()) return false;
   try {
     // 걸 때는 «그림 안에 이름·학교·얼굴 사진이 없다(있으면 가렸다)» 확인이 있어야 서버가 받는다
     const res = await apiFetch(`/artworks/${id}/showcase`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ on, checked, sido }),
+      // replay = «그리는 과정»도 — 선생님이 걸기 창에서 과정을 보고 따로 확인한 때만(서버도 replayChecked 없으면 400)
+      body: JSON.stringify({ on, checked, sido, ...(on && typeof ver === "number" ? { ver } : {}), ...(replay ? { replay: true, replayChecked: true } : {}) }),
     });
     return res.ok;
   } catch {

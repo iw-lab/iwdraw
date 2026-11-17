@@ -66,20 +66,23 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
   const [showError, setShowError] = useState(false);
   // 걸 때는 확인 창(이름 가리기 · «이름 없음» 확인) — 2026-11-03 그림 속 실명이 전시관에 나갔다
   const [asking, setAsking] = useState<ArtworkRow | null>(null);
-  const toggleShowcase = async (a: ArtworkRow, cover: Blob | null = null, checked = false, sido = "") => {
+  const toggleShowcase = async (a: ArtworkRow, cover: Blob | null = null, checked = false, sido = "", replay = false) => {
     const on = !a.showcase_at;
     if (on && !checked) { setAsking(a); return; }
     setShowing(a.id);
     let ok = true;
     if (on && cover) ok = await uploadShowcaseImage(a.id, cover);
-    if (ok) ok = await setShowcase(a.id, on, checked, sido);
+    if (ok) ok = await setShowcase(a.id, on, checked, sido, replay, a.created_at);
     setShowing(null);
     if (ok) setItems((prev) => prev.map((x) => (x.id === a.id ? { ...x, showcase_at: on ? Date.now() : null, showcase_report: null } : x)));
     else {
       setShowError(true);
       setTimeout(() => setShowError(false), 3500);
+      // 그 사이 학생이 다시 냈으면(409) 새 그림을 받아 와 선생님이 다시 확인한다
+      if (on) void refreshRef.current();
     }
   };
+  const refreshRef = useRef<() => Promise<void>>(async () => {});
   const [dlError, setDlError] = useState(false);
   // 학생 별명 명단 — 아이가 별명을 까먹으면 여기서 찾아 알려준다(접이식)
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -97,6 +100,7 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
     );
     setUrls(Object.fromEntries(entries));
   }, [klass.id]);
+  refreshRef.current = refresh;
 
   useEffect(() => {
     void refresh();
@@ -179,8 +183,12 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
       {asking && urls[asking.id] && (
         <ShowcaseDialog
           src={urls[asking.id]}
+          replay={asking.mode === "sand" && asking.timelapse_path?.endsWith(".sand") ? async () => {
+            const u = await signedUrl(asking.timelapse_path!);
+            return u ? await fetch(u, { credentials: "include" }).then((r) => (r.ok ? r.blob() : null)) : null;
+          } : null}
           onCancel={() => setAsking(null)}
-          onConfirm={async (cover, sido) => { const a = asking; setAsking(null); await toggleShowcase(a, cover, true, sido); }}
+          onConfirm={async (cover, sido, replay) => { const a = asking; setAsking(null); await toggleShowcase(a, cover, true, sido, replay); }}
         />
       )}
       {showError && (

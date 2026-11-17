@@ -8,6 +8,13 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Strict-Transport-Security: max-age=15552000; includeSubDomains
 
+
+# 선행쌤 전시관 «그리는 과정» 반복 재생(2026-11-17) — 이 경로만 선행쌤 출처가 iframe 으로 띄울 수 있다.
+# 나머지 페이지는 위 SAMEORIGIN 그대로(교사·학생 화면은 남의 프레임에 못 들어간다).
+/showcase/play*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors 'self' https://ssamzip.kr https://www.ssamzip.kr https://ssamzip.com https://www.ssamzip.com https://sunhaengssam.web.app https://madchumbub.web.app http://localhost:* http://127.0.0.1:*
+
 # 해시가 박힌 빌드 산출물만 영구 캐시 — 파일명이 내용의 지문이라 갱신 문제가 없다.
 # ⚠️ 해시 없는 경로(/templates/*, /icons/*, version.json, manifest, sw.js, HTML)는
 #    절대 immutable 로 두지 않는다. 배포 직후 구버전이 박히면 자가치유가 무력해진다.

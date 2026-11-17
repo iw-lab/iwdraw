@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { coverRects, type Rect } from "@/lib/cover-rects";
 import { guessShowcaseSido } from "@/lib/teacher-api";
+import dynamic from "next/dynamic";
+// 모래판 엔진은 «과정 확인» 단추가 보일 때만 내려받는다(학급 갤러리와 같은 방식)
+const SandReplay = dynamic(() => import("@/components/sand/SandReplay").then((m) => m.SandReplay), { ssr: false });
 
 /** 그림 옆에 붙는 시·도(학교·반은 절대 안 나간다) — 한 번 고르면 이 기기에서 기억 */
 export const SIDO = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
@@ -13,12 +16,15 @@ const SIDO_KEY = "arton.showcaseSido";
  * 가린 그림은 전시관 전용 사본으로만 올라간다(학생 원본·학급 썸네일은 그대로). */
 export function ShowcaseDialog({
   src,
+  replay = null,
   onCancel,
   onConfirm,
 }: {
   src: string;
+  /** 샌드아트 «그리는 과정» 기록을 받는 함수 — 기록이 있는 작품만 */
+  replay?: (() => Promise<Blob | null>) | null;
   onCancel: () => void;
-  onConfirm: (cover: Blob | null, sido: string) => Promise<void>;
+  onConfirm: (cover: Blob | null, sido: string, replay: boolean) => Promise<void>;
 }) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -28,6 +34,10 @@ export function ShowcaseDialog({
   const [busy, setBusy] = useState(false);
   const [sido, setSido] = useState(() => { try { const v = localStorage.getItem(SIDO_KEY) || ""; return SIDO.includes(v) ? v : ""; } catch { return ""; } });
   const [guessed, setGuessed] = useState(false);
+  // «그리는 과정»도 걸기(2026-11-17) — 과정을 한 번 열어 본 뒤에만 고를 수 있다. 다 그린 뒤 지운 이름은 완성 그림엔 없어도 과정엔 나온다.
+  const [watched, setWatched] = useState(false);
+  const [withReplay, setWithReplay] = useState(false);
+  const replayBlocked = rects.length > 0; // 가린 곳은 과정 속에선 못 가린다
   const start = useRef<{ x: number; y: number } | null>(null);
 
   // 이 기기에서 고른 적이 없으면 — 전에 다른 기기에서 고른 값, 그것도 없으면 접속 위치로 미리 고른다(선생님이 확인·바꿈)
@@ -71,7 +81,7 @@ export function ShowcaseDialog({
     let blob: Blob | null = null;
     if (rects.length && imgRef.current) blob = await coverRects(imgRef.current, rects);
     try { localStorage.setItem(SIDO_KEY, sido); } catch {}
-    await onConfirm(blob, sido);
+    await onConfirm(blob, sido, !!replay && watched && withReplay && !replayBlocked);
     setBusy(false);
   };
 
@@ -115,6 +125,22 @@ export function ShowcaseDialog({
           {guessed ? <b className="text-ink" data-sido-guessed>접속한 곳으로 미리 골랐어요 — 학교가 있는 시·도가 맞는지 확인해 주세요. </b> : null}
           시·도만 보여요(예: 전북). 학교·반·이름은 나가지 않아요.
         </p>
+        {replay ? (
+          <div className="mt-3 rounded-lg border border-line px-3 py-2 text-sm text-ink" data-showcase-replay-box>
+            <div className="flex items-center gap-2">
+              <span className="flex-1 font-semibold">🎬 그리는 과정도 전시관에서 반복해 보여 주기</span>
+              <SandReplay load={replay} onEnded={() => setWatched(true)} label={watched ? "▶ 다시 보기" : "▶ 과정 확인"} />
+            </div>
+            {replayBlocked ? (
+              <p className="mt-1 text-xs font-semibold text-danger" data-showcase-replay-blocked>가린 곳이 있으면 과정은 걸 수 없어요 — 과정 속에선 가려지지 않아요. 그림만 걸려요.</p>
+            ) : (
+              <label className={`mt-2 flex items-start gap-2 ${watched ? "" : "opacity-50"}`}>
+                <input type="checkbox" checked={withReplay && watched} disabled={!watched} onChange={(e) => setWithReplay(e.target.checked)} className="mt-0.5 h-5 w-5" data-showcase-replay-check />
+                <span>{watched ? <>과정을 끝까지 봤어요 — 그리는 <b>중에도</b> 이름·학교·반이 <b>안 나와요</b>.</> : "먼저 «과정 확인»으로 끝까지 봐 주세요 — 지운 글씨도 과정엔 나와요."}</span>
+              </label>
+            )}
+          </div>
+        ) : null}
         <label className="mt-3 flex items-start gap-2 rounded-lg bg-cream px-3 py-2 text-sm text-ink">
           <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-0.5 h-5 w-5" data-showcase-check />
           <span>그림 안에 이름·학교·반·얼굴 사진이 <b>없어요</b>(있던 곳은 가렸어요).</span>

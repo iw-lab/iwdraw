@@ -55,7 +55,7 @@ const raw = await list.text();
 const body = JSON.parse(raw);
 ok(list.headers.get('access-control-allow-origin') === '*', '공개 목록 CORS *');
 ok(body.works.some((w) => w.id === a1) && !body.works.some((w) => w.id === a2), '건 작품만 나온다');
-ok(body.works.every((w) => Object.keys(w).sort().join() === 'at,fresh,id,likes,r,wk'), `나가는 칸 = id·at·likes·wk·fresh·시도 뿐 (${Object.keys(body.works[0] || {}).join(',')})`);
+ok(body.works.every((w) => Object.keys(w).sort().join() === 'at,fresh,id,likes,r,v,wk' && typeof w.v === 'boolean'), `나가는 칸 = id·at·likes·wk·fresh·시도·과정 여부 뿐 (${Object.keys(body.works[0] || {}).join(',')})`);
 ok(!raw.includes(MARK) && !raw.includes(cls.id) && !raw.includes(join.studentId), '목록에 별명·제목·학급·학생 id 0');
 const img = await fetch(`${BASE}/api/showcase/${a1}`);
 const bytes = new Uint8Array(await img.arrayBuffer());
@@ -111,6 +111,41 @@ ok((await fetch(`${BASE}/api/showcase/${a1}`)).status === 404, '지운 작품 �
   ok((await fetch(`${BASE}/api/showcase/${a3}`)).status === 404, '신고한 작품 그림도 404');
   const tl3 = await (await T2(`/api/classes/${c2.id}/artworks`)).json(); ok(tl3.find((x) => x.id === a3)?.showcase_report > 0, '교사 목록에 «신고로 내려짐»');
   ok((await fetch(`${BASE}/api/showcase/${a3}/report`, { method: 'POST', headers: { origin: 'https://evil.example' } })).status === 403, '남의 출처 신고 거절'); }
+
+// 🔒 2026-11-17 «그리는 과정»도 걸기 — 교사가 과정까지 확인한 샌드아트만 · 가리면·다시 내면 안 나간다
+{ const T4 = await teacher('d'); const c4 = await (await T4('/api/classes', { method: 'POST', headers: json, body: JSON.stringify({ name: '넷째반' }) })).json();
+  const j4 = await (await fetch(BASE + '/api/join', { method: 'POST', headers: { ...json, origin: BASE }, body: JSON.stringify({ code: c4.code, nickname: '모래' }) })).json();
+  const rec = new Uint8Array(await new Response(new Blob([JSON.stringify({ k: 'arton-sand', v: 1, ops: [] })]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  const sand = async (draft, mode = 'sand') => { const f = new FormData(); f.set('mode', mode); f.set('image', png(), 'a.png'); f.set('thumb', png(), 't.png'); f.set('draft_id', draft); f.set('timelapse', new Blob([rec], { type: 'application/gzip' }), 'r.sand');
+    return (await (await fetch(BASE + '/api/artwork', { method: 'POST', headers: { authorization: `Bearer ${j4.token}`, origin: BASE }, body: f })).json()).id; };
+  const s1 = await sand('ds1'), s2 = await sand('ds2', 'sketch');
+  const verOf = async (id) => (await (await T4(`/api/classes/${c4.id}/artworks`)).json()).find((x) => x.id === id)?.created_at;
+  const hang = async (id, b) => T4(`/api/artworks/${id}/showcase`, { method: 'PATCH', headers: json, body: JSON.stringify({ on: true, checked: true, ver: await verOf(id), ...b }) });
+  const L = async () => (await (await fetch(BASE + '/api/showcase')).json()).works;
+  const R = (id) => fetch(`${BASE}/api/showcase/${id}/replay`);
+  ok((await hang(s1, {})).ok && (await L()).find((w) => w.id === s1)?.v === false, '과정 확인 없이 걸면 그림만(v=false)');
+  ok((await R(s1)).status === 404, '과정 안 건 작품의 기록 = 404');
+  ok((await hang(s1, { replay: true })).status === 400, '과정 확인(replayChecked) 없이 과정 걸기 = 거절');
+  ok((await hang(s1, { replay: true, replayChecked: true })).ok && (await L()).find((w) => w.id === s1)?.v === true, '과정까지 확인 = v=true');
+  { const r = await R(s1); const b = new Uint8Array(await r.arrayBuffer());
+    ok(r.ok && b.length === rec.length && b.every((x, i) => x === rec[i]), '전시관 기록 = 학생이 낸 그 기록');
+    ok(!r.headers.get('access-control-allow-origin'), '기록은 아트온 재생 화면(같은 출처)만 — CORS 없음'); }
+  ok((await hang(s2, { replay: true, replayChecked: true })).ok && (await L()).find((w) => w.id === s2)?.v === false && (await R(s2)).status === 404, '샌드아트 아닌 그림은 과정 안 나감');
+  ok(!JSON.stringify(await L()).includes('모래') && !JSON.stringify(await L()).includes('.sand'), '목록에 별명·저장 경로 0');
+  // 가린 사본 = 과정은 못 가리니 내린다
+  { const cover = new Uint8Array(await png().arrayBuffer()); cover[cover.length - 13] ^= 1;
+    ok((await T4(`/api/artworks/${s1}/showcase-image`, { method: 'PUT', body: cover })).ok, '가린 사본 올리기');
+    ok((await L()).find((w) => w.id === s1)?.v === false && (await R(s1)).status === 404, '가린 그림은 과정이 안 나간다'); }
+  // 다시 걸고 → 학생이 같은 그림을 다시 내면 전시관에서 내려간다(선생님이 본 건 옛 그림)
+  const s3 = await sand('ds3');
+  ok((await hang(s3, { replay: true, replayChecked: true })).ok && (await R(s3)).ok, '새 작품 과정까지 걸기');
+  await new Promise((r) => setTimeout(r, 1700));   /* 같은 그림 1.5초 안 덮어쓰기는 서버가 막는다 */
+  ok((await sand('ds3')) === s3, '학생이 같은 그림을 다시 냄');
+  ok(!(await L()).some((w) => w.id === s3) && (await R(s3)).status === 404 && (await fetch(`${BASE}/api/showcase/${s3}`)).status === 404, '다시 낸 그림은 전시관에서 내려간다(확인 없이 새 그림·새 과정이 나가지 않게)');
+  ok((await hang(s3, { replay: true, replayChecked: true, ver: 1 })).status === 409 && !(await L()).some((w) => w.id === s3), '옛 판을 보고 누른 걸기 = 409(창을 연 사이 다시 낸 그림은 안 걸린다)');
+  ok((await hang(s3, { replay: true, replayChecked: true, ver: undefined })).status === 400, '본 판 없이 과정 걸기 = 거절');
+  ok((await hang(s3, { replay: true, replayChecked: true })).ok && (await R(s3)).ok, '선생님이 다시 확인하면 다시 걸린다');
+  ok((await T4(`/api/artworks/${s3}/showcase`, { method: 'PATCH', headers: json, body: '{"on":false}' })).ok && (await R(s3)).status === 404, '내리면 과정도 바로 404'); }
 
 console.log(bad ? `❌ 전시관 시험 ${bad}칸 실패` : '✅ 전시관 시험 전부 통과');
 process.exit(bad ? 1 : 0);

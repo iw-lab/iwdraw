@@ -6,13 +6,14 @@
  * 영상 저장 = 같은 재생을 canvas.captureStream 으로 webm 에 담는다.
  */
 import { useEffect, useRef, useState } from "react";
-import { SandRender } from "@/sand/SandRender";
+import { playOnce } from "@/sand/sandPlay";
 import type { SandEngine } from "@/sand/SandEngine";
 
 /** 재생 길이 목표(초) — 점 수가 많아도 이 안에 끝난다(빠르게 = 절반) */
 const TARGET_SEC = 24;
 
-export function SandMovie({ engine, onClose }: { engine: SandEngine; onClose: () => void }) {
+/** onEnded = 끝 장면까지 다 본 때(걸기 창 «과정 확인»이 이걸로 풀린다) */
+export function SandMovie({ engine, onClose, onEnded }: { engine: SandEngine; onClose: () => void; onEnded?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -22,75 +23,18 @@ export function SandMovie({ engine, onClose }: { engine: SandEngine; onClose: ()
   const canRecord = typeof MediaRecorder !== "undefined" && typeof HTMLCanvasElement !== "undefined" && "captureStream" in HTMLCanvasElement.prototype;
 
   /** 처음부터 끝까지 한 번 재생. 끝나면 resolve */
-  const run = (speedMul: number): Promise<void> =>
-    new Promise((resolve) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return resolve();
-      const ctx = canvas.getContext("2d", { alpha: false })!;
-      const sim = engine.replaySim();
-      const r = new SandRender(sim, engine.grain, engine.render.look);
-      const ops = engine.ops.slice();
-      const total = ops.reduce((a, o) => a + (o.k === "stroke" ? Math.max(1, o.d.length / 3) : 30), 0);
-      const perFrame = Math.max(1, Math.ceil((total / (TARGET_SEC * 60)) * speedMul));
-      let oi = 0;
-      let di = 0;
-      let done = 0;
-      let raf = 0;
-      let stopped = false;
-      const paint = () => {
-        const d = sim.takeDirty();
-        if (!d) return;
-        r.paint(d.x0, d.y0, d.x1, d.y1);
-        ctx.putImageData(r.img, 0, 0, d.x0, d.y0, d.x1 - d.x0, d.y1 - d.y0);
-      };
-      sim.markAll();
-      paint();
-      const step = () => {
-        if (stopped) return;
-        let budget = perFrame;
-        while (budget > 0 && oi < ops.length) {
-          const op = ops[oi];
-          if (op.k !== "stroke") {
-            sim.apply(op);
-            budget -= 30;
-            done += 30;
-            oi++;
-            continue;
-          }
-          if (di === 0) sim.beginOp(op);
-          const n = op.d.length;
-          while (budget > 0 && di < n) {
-            sim.dab(op.d[di], op.d[di + 1], op.d[di + 2]);
-            di += 3;
-            budget--;
-            done++;
-          }
-          if (di >= n) {
-            sim.end();
-            di = 0;
-            oi++;
-          }
-        }
-        paint();
-        setProgress(Math.min(1, done / Math.max(1, total)));
-        if (oi >= ops.length) {
-          stopRef.current = () => {};
-          return resolve();
-        }
-        raf = requestAnimationFrame(step);
-      };
-      stopRef.current = () => {
-        stopped = true;
-        cancelAnimationFrame(raf);
-        resolve();
-      };
-      raf = requestAnimationFrame(step);
-    });
+  const run = (speedMul: number): Promise<boolean> => {
+    const canvas = canvasRef.current;
+    if (!canvas) return Promise.resolve(false);
+    const h = playOnce(canvas, engine, { targetSec: TARGET_SEC, speedMul, onProgress: setProgress });
+    stopRef.current = h.stop;
+    return h.done;
+  };
 
   const play = async () => {
     stopRef.current();
     setPlaying(true);
-    await run(fast ? 2 : 1);
+    if (await run(fast ? 2 : 1)) onEnded?.();
     setPlaying(false);
   };
 

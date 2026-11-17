@@ -619,6 +619,9 @@ app.delete("/api/artworks/:id", requireTeacher, async (c) => {
 const SHOWCASE_MAX = 50; // 하트 순 50위까지(2026-11-03 «너무 많아지면 50위까지만»)
 const SHOWCASE_TTL = 60;
 const SHOWCASE_DAYS = 60; // 두 달 지난 작품은 목록에서 빠진다
+// «그리는 과정»을 밖에 내도 되는 작품(2026-11-17) — 목록 표시(v)와 기록 내주기가 같은 조건을 쓴다.
+// 교사 확인(showcase_replay) · 가린 사본 없음(가린 곳은 과정에서 못 가린다) · 샌드아트 기록 있음
+const REPLAY_OK = "(a.showcase_replay = 1 AND a.showcase_path IS NULL AND a.mode = 'sand' AND a.timelapse_path LIKE '%.sand')";
 // 마지막 정상 전시(R2 · 공개 경로 없음) — DB 가 막혀도(2026-11-06 계정 D1 한도 초과로 그림 전부 500) 걸려 있던 그림은 보인다. DB 를 못 읽을 때만 쓴다.
 // 내리기·신고·삭제는 이 파일부터 지운다 — 내린 그림이 비상 경로로 되살아나지 않게(다음 정상 목록이 새로 적는다)
 const LAST_GOOD = "_showcase/last-good.json";
@@ -662,13 +665,31 @@ app.patch("/api/artworks/:id/showcase", requireTeacher, async (c) => {
   const sidoIn = (body as { sido?: unknown }).sido;
   if (sidoIn != null && sidoIn !== "" && !(typeof sidoIn === "string" && SIDO.includes(sidoIn))) return c.json({ error: "bad_sido" }, 400);
   const sido = typeof sidoIn === "string" && sidoIn ? sidoIn : null;
+  // «그리는 과정»도 걸기(2026-11-17) — 과정을 끝까지 보고 «과정 중에도 이름이 안 나온다»를 따로 확인해야 한다.
+  //   그림을 다 그린 뒤 지운 이름은 완성 그림엔 없어도 과정엔 나온다(네모 가리기로 못 막는다).
+  //   샌드아트 기록(.sand)이 있는 작품만 1 — 내릴 때는 늘 0.
+  const b = body as { replay?: unknown; replayChecked?: unknown };
+  if (body.on && b.replay === true && b.replayChecked !== true) return c.json({ error: "need_replay_check" }, 400);
+  const replay = body.on && b.replay === true ? 1 : 0;
+  // 선생님이 확인 창에서 본 판(created_at) — 창을 연 사이 학생이 다시 내면 본 적 없는 새 그림·새 과정이 걸린다(교차검증 codex CRITICAL).
+  //   과정을 걸 때는 꼭 있어야 하고, 그림만 걸 때도 보내면 맞춰 본다(옛 화면은 안 보낸다).
+  const verIn = (body as { ver?: unknown }).ver;
+  if (verIn != null && !(typeof verIn === "number" && Number.isFinite(verIn))) return c.json({ error: "bad_request" }, 400);
+  if (replay && verIn == null) return c.json({ error: "need_ver" }, 400);
+  const ver = body.on && typeof verIn === "number" ? verIn : null;
   const res = await c.env.DB.prepare(
-    `UPDATE artworks SET showcase_report = NULL, showcase_sido = CASE WHEN ? THEN ? ELSE showcase_sido END, showcase_at = ?
-     WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?)`,
+    `UPDATE artworks SET showcase_report = NULL, showcase_sido = CASE WHEN ? THEN ? ELSE showcase_sido END, showcase_at = ?,
+            showcase_replay = CASE WHEN ? AND mode = 'sand' AND timelapse_path LIKE '%.sand' AND showcase_path IS NULL THEN 1 ELSE 0 END
+     WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?) AND (? IS NULL OR created_at = ?)`,
   )
-    .bind(body.on ? 1 : 0, sido, body.on ? Date.now() : null, id, teacherId)   /* 걸 때만 시·도를 새로 적는다(내릴 땐 그대로) */
+    .bind(body.on ? 1 : 0, sido, body.on ? Date.now() : null, replay, id, teacherId, ver, ver)   /* 걸 때만 시·도를 새로 적는다(내릴 땐 그대로) */
     .run();
-  if (!res.meta.changes) return c.json({ error: "not_found" }, 404);
+  if (!res.meta.changes) {
+    // 본 판이 아니면(그 사이 다시 냄) 409 — 화면이 목록을 새로 받아 선생님이 다시 확인한다
+    if (ver != null && (await c.env.DB.prepare("SELECT 1 FROM artworks WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?)").bind(id, teacherId).first()))
+      return c.json({ error: "changed" }, 409);
+    return c.json({ error: "not_found" }, 404);
+  }
   // 걸거나 내리면 이 지역 캐시를 바로 비운다 — 다른 지역은 SHOWCASE_TTL 안에 저절로
   await dropShowcaseCache(c, c.req.url, body.on ? null : id);
   return c.json({ ok: true, showcase: body.on });
@@ -683,22 +704,23 @@ app.get("/api/showcase", async (c) => {
   // 순위 = 이번 주(7일) 하트 순 · 걸린 지 3일 안 된 작품은 3칸마다 자리를 보장(첫 하트가 없어 영원히 뒤로 밀리지 않게)
   //   · 두 달 지난 작품은 목록에서 빠진다(표가 커져도 읽는 행 = 최근 두 달 건 것만 · 부분 색인 artworks_showcase_idx)
   const now = Date.now();
-  let results: { id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null; p: string }[] | undefined;
+  let results: { id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null; p: string; v: number }[] | undefined;
   try {
     ({ results } = await d1Retry(() => c.env.DB.prepare(
-    `SELECT a.id, a.showcase_at, a.like_count, a.showcase_sido, COALESCE(a.showcase_path, a.thumb_path) AS p,
+    `SELECT a.id, a.showcase_at, a.like_count, a.showcase_sido, COALESCE(a.showcase_path, a.thumb_path) AS p, ${REPLAY_OK} AS v,
             (SELECT COUNT(*) FROM artwork_likes l WHERE l.artwork_id = a.id AND l.created_at > ?) AS wk
      FROM artworks a WHERE a.showcase_at > ? ORDER BY a.showcase_at DESC LIMIT 400`,
   )
     .bind(now - 7 * 86400e3, now - SHOWCASE_DAYS * 86400e3)
-    .all<{ id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null; p: string }>()));
+    .all<{ id: string; showcase_at: number; like_count: number; wk: number; showcase_sido: string | null; p: string; v: number }>()));
   } catch (e) {
     const lg = await readLastGood(c);
     if (!lg) throw e;
     return new Response(JSON.stringify({ works: lg.works }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=30", ...SHOWCASE_CORS } });
   }
   const sidoOf = new Map((results ?? []).map((r) => [r.id, r.showcase_sido && SIDO.includes(r.showcase_sido) ? r.showcase_sido : ""]));
-  const works = rankShowcase((results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count, wk: r.wk })), now, SHOWCASE_MAX).map((w) => ({ ...w, r: sidoOf.get(w.id) ?? "" }));
+  const replayOf = new Set((results ?? []).filter((r) => r.v === 1).map((r) => r.id));
+  const works = rankShowcase((results ?? []).map((r) => ({ id: r.id, at: r.showcase_at, likes: r.like_count, wk: r.wk })), now, SHOWCASE_MAX).map((w) => ({ ...w, r: sidoOf.get(w.id) ?? "", v: replayOf.has(w.id) }));
   // 1분 묶음 — 캐시는 지역(colo)마다 따로라 내린 작품이 다른 지역에선 최대 1분 남는다(목록·그림 같은 길이)
   const res = new Response(JSON.stringify({ works }), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${SHOWCASE_TTL}`, ...SHOWCASE_CORS },
@@ -752,7 +774,7 @@ app.put("/api/artworks/:id/showcase-image", requireTeacher, async (c) => {
   if (!webp && !png) return c.json({ error: "type" }, 415);
   const key = `showcase/${id}.${webp ? "webp" : "png"}`;
   await c.env.BUCKET.put(key, buf, { httpMetadata: { contentType: webp ? "image/webp" : "image/png" } });
-  await c.env.DB.prepare("UPDATE artworks SET showcase_path = ? WHERE id = ?").bind(key, id).run();
+  await c.env.DB.prepare("UPDATE artworks SET showcase_path = ?, showcase_replay = 0 WHERE id = ?").bind(key, id).run();   /* 가린 그림 = 과정은 안 나간다 */
   await dropShowcaseCache(c, c.req.url, id);
   return c.json({ ok: true });
 });
@@ -798,6 +820,22 @@ app.post("/api/showcase/:id/like", async (c) => {
   ]);
   const row = await c.env.DB.prepare("SELECT like_count FROM artworks WHERE id = ?").bind(id).first<{ like_count: number }>();
   return c.json({ ok: true, liked: body.on, likes: row?.like_count ?? 0 }, 200, H);
+});
+
+// «그리는 과정» 기록(2026-11-17) — 아트온 /showcase/play 가 받아 끝없이 다시 그린다(같은 출처라 CORS 없음).
+// 교사가 과정까지 확인한 작품만(REPLAY_OK) · DB 가 막히면 내주지 않는다(비상 목록 경로 없음 — 그림 한 장으로 돌아간다)
+app.get("/api/showcase/:id/replay", async (c) => {
+  const id = c.req.param("id");
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return c.json({ error: "bad_id" }, 400);
+  // 엣지 캐시 없음 — 내리기·가리기·다시 내기와 캐시 넣기가 엇갈리면 내린 기록이 1분 되살아난다(교차검증 codex·grok·meta).
+  //   크게 보기를 열 때만 부르니 볼 때마다 DB 한 행(기본 키)을 읽는다.
+  const row = await d1Retry(() => c.env.DB.prepare(`SELECT a.timelapse_path AS p FROM artworks a WHERE a.id = ? AND a.showcase_at IS NOT NULL AND ${REPLAY_OK}`)
+    .bind(id)
+    .first<{ p: string }>());
+  if (!row) return c.json({ error: "not_found" }, 404);
+  const obj = await c.env.BUCKET.get(row.p);
+  if (!obj) return c.json({ error: "not_found" }, 404);
+  return new Response(obj.body, { headers: { "Content-Type": "application/gzip", "Cache-Control": "no-store" } });
 });
 
 app.get("/api/showcase/:id", async (c) => {
@@ -1163,7 +1201,7 @@ app.post("/api/artwork", async (c) => {
   // 알 수 없어 피해자 행을 타깃할 수 없다(설계상 권한 상승 차단).
   const existing = draftId
     ? await c.env.DB.prepare(
-        `SELECT id, image_path, thumb_path, timelapse_path, created_at
+        `SELECT id, image_path, thumb_path, timelapse_path, created_at, showcase_at, showcase_path
          FROM artworks WHERE student_id = ? AND draft_id = ? LIMIT 1`,
       )
         .bind(claims.student_id, draftId)
@@ -1173,6 +1211,8 @@ app.post("/api/artwork", async (c) => {
           thumb_path: string;
           timelapse_path: string | null;
           created_at: number;
+          showcase_at: number | null;
+          showcase_path: string | null;
         }>()
     : null;
 
@@ -1289,6 +1329,7 @@ app.post("/api/artwork", async (c) => {
        ON CONFLICT(student_id, draft_id) DO UPDATE SET
          mode = excluded.mode, image_path = excluded.image_path, thumb_path = excluded.thumb_path,
          timelapse_path = excluded.timelapse_path, created_at = excluded.created_at,
+         showcase_at = NULL, showcase_path = NULL, showcase_replay = 0,
          -- 제목은 보낸 경우에만 갈아끼운다 — 제목 없이 재저장했다고 붙여 둔 제목이 사라지면 안 된다
          title = COALESCE(excluded.title, artworks.title)
        RETURNING id`
@@ -1296,7 +1337,8 @@ app.post("/api/artwork", async (c) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
        ON CONFLICT(student_id, draft_id) DO UPDATE SET
          mode = excluded.mode, image_path = excluded.image_path, thumb_path = excluded.thumb_path,
-         timelapse_path = excluded.timelapse_path, created_at = excluded.created_at
+         timelapse_path = excluded.timelapse_path, created_at = excluded.created_at,
+         showcase_at = NULL, showcase_path = NULL, showcase_replay = 0
        RETURNING id`,
     )
       .bind(
@@ -1317,9 +1359,11 @@ app.post("/api/artwork", async (c) => {
     c.env.DB.prepare(
       withTitle
         ? `UPDATE artworks SET mode = ?, image_path = ?, thumb_path = ?, timelapse_path = ?, created_at = ?,
+                             showcase_at = NULL, showcase_path = NULL, showcase_replay = 0,
                              title = COALESCE(?, title)
          WHERE id = ? AND student_id = ?`
-        : `UPDATE artworks SET mode = ?, image_path = ?, thumb_path = ?, timelapse_path = ?, created_at = ?
+        : `UPDATE artworks SET mode = ?, image_path = ?, thumb_path = ?, timelapse_path = ?, created_at = ?,
+                             showcase_at = NULL, showcase_path = NULL, showcase_replay = 0
          WHERE id = ? AND student_id = ?`,
     )
       .bind(
@@ -1356,6 +1400,11 @@ app.post("/api/artwork", async (c) => {
     }
     return c.json({ error: "db" }, 500);
   }
+  // 다시 낸 그림은 전시관에서 내려간다(2026-11-17) — 선생님이 확인한 건 옛 그림이다. 새 그림·새 과정이 확인 없이
+  // 밖에 나가면 안 된다. 옛 가린 사본도 새 그림과 안 맞으니 지운다(선생님이 다시 걸면 새로 가린다).
+  // 읽은 뒤 선생님이 걸었을 수도 있어 조건 없이 비운다(교차검증 gemini·codex) — 다시 내기는 드물다
+  if (existing) await dropShowcaseCache(c, c.req.url, existing.id).catch(() => {});
+  if (existing?.showcase_path) await c.env.BUCKET.delete(existing.showcase_path).catch(() => undefined);
 
   // 덮어쓰기에서 포맷이 바뀌면(구 클라 png → 신규 webp, 또는 썸네일 폴백) 옛 키가 참조를 잃는다.
   // D1 갱신이 성공한 뒤에만(=행이 새 경로를 가리킨 뒤) best-effort 정리 — 실패해도 제출은 성공.

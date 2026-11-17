@@ -9,7 +9,7 @@ import { SandMovie } from "./SandMovie";
 import { decodeRecord, engineFromRecord } from "@/sand/sandRecord";
 import type { SandEngine } from "@/sand/SandEngine";
 
-export function SandReplay({ load }: { load: () => Promise<Blob | null> }) {
+export function SandReplay({ load, onEnded, label = "▶ 그리는 과정" }: { load: () => Promise<Blob | null>; onEnded?: () => void; label?: string }) {
   const [eng, setEng] = useState<SandEngine | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "bad">("idle");
   const open = async () => {
@@ -28,14 +28,15 @@ export function SandReplay({ load }: { load: () => Promise<Blob | null> }) {
   return (
     <>
       <button
+        type="button"
         onClick={() => void open()}
         disabled={state === "loading"}
         className="pressable touch-target shrink-0 rounded-card bg-coral px-4 py-2 font-display text-white disabled:opacity-60"
         data-testid="sand-replay"
       >
-        {state === "loading" ? "불러오는 중…" : state === "bad" ? "과정을 못 불러왔어요" : "▶ 그리는 과정"}
+        {state === "loading" ? "불러오는 중…" : state === "bad" ? "과정을 못 불러왔어요" : label}
       </button>
-      {eng && <SandMovie engine={eng} onClose={() => setEng(null)} />}
+      {eng && <SandMovie engine={eng} onClose={() => setEng(null)} onEnded={onEnded} />}
     </>
   );
 }
