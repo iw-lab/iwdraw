@@ -522,7 +522,7 @@ app.get("/api/classes/:id/artworks", requireTeacher, async (c) => {
   /* title 컬럼이 없는(마이그레이션 미적용) DB에서도 교사 갤러리는 열려야 한다 — 제목만 빠진다 */
   const listArtworks = (withTitle: boolean) =>
     c.env.DB.prepare(
-      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.timelapse_path, a.is_approved, a.like_count, a.created_at, a.showcase_at, a.showcase_report,
+      `SELECT a.id, a.student_id, a.mode, a.thumb_path, a.image_path, a.timelapse_path, a.is_approved, a.like_count, a.created_at, a.showcase_at, a.showcase_report, a.showcase_flag, a.showcase_flags,
               ${withTitle ? "a.title," : "NULL AS title,"} s.nickname
      FROM artworks a JOIN students s ON s.id = a.student_id
      WHERE a.class_id = ? ORDER BY a.created_at DESC`,
@@ -678,7 +678,7 @@ app.patch("/api/artworks/:id/showcase", requireTeacher, async (c) => {
   if (replay && verIn == null) return c.json({ error: "need_ver" }, 400);
   const ver = body.on && typeof verIn === "number" ? verIn : null;
   const res = await c.env.DB.prepare(
-    `UPDATE artworks SET showcase_report = NULL, showcase_sido = CASE WHEN ? THEN ? ELSE showcase_sido END, showcase_at = ?,
+    `UPDATE artworks SET showcase_report = NULL, showcase_flag = NULL, showcase_flags = 0, showcase_sido = CASE WHEN ? THEN ? ELSE showcase_sido END, showcase_at = ?,
             showcase_replay = CASE WHEN ? AND mode = 'sand' AND timelapse_path LIKE '%.sand' AND showcase_path IS NULL THEN 1 ELSE 0 END
      WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?) AND (? IS NULL OR created_at = ?)`,
   )
@@ -736,7 +736,10 @@ app.get("/api/showcase", async (c) => {
   return res;
 });
 
-// ── «이름이 보여요 · 숨겨 주세요»(선행쌤 화면) — 누구든 한 번 누르면 바로 내려간다(아이 안전이 먼저) · 교사 화면에 «신고로 내려짐» · IP 해시 하루 10번
+// ── «이름·학교가 보여요» 신고(선행쌤 화면) — 바로 내리지 않고 그림을 건 선생님께 알린다(2026-11-17 사용자
+//    «신고를 하면 바로 내리지 말고 올리신 선생님에게 안내가 가도록»). 전에는 누구든 한 번 누르면 바로 내려가 문제없는
+//    전남 그림이 장난 신고로 내려갔다(11-17 10:51). 선생님 화면에 «신고 N건 · 확인해 주세요» → 괜찮아요(지움)·내리기.
+//    걸기 전 확인 창(이름 가리기·«없어요» 확인)이 공개 전 안전장치 · IP 해시 하루 10번(하트와 같은 칸)
 app.options("/api/showcase/:id/report", (c) => {
   const o = c.req.header("origin") || "";
   if (!SHOWCASE_ORIGINS.test(o)) return c.body(null, 403);
@@ -748,16 +751,30 @@ app.post("/api/showcase/:id/report", async (c) => {
   const H = likeCors(o);
   const id = c.req.param("id");
   if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return c.json({ error: "bad_id" }, 400, H);
-  lastGoodSig = "";
-  await c.env.BUCKET.delete(LAST_GOOD).catch(() => {});   // DB 가 막혀 내리기가 실패해도 비상 경로로는 안 나가게 — 아이 안전이 먼저
   const day = Math.floor((Date.now() + 9 * 3600e3) / 86400000);
   const iph = `r:${await hex16(`${day}|${c.env.SESSION_SECRET}|${c.req.header("cf-connecting-ip") || "0"}`)}`;
   const cap = await c.env.DB.prepare("SELECT n FROM showcase_like_caps WHERE day = ? AND iph = ?").bind(day, iph).first<{ n: number }>();
   if ((cap?.n ?? 0) >= 10) return c.json({ error: "cap" }, 429, H);
-  const res = await c.env.DB.prepare("UPDATE artworks SET showcase_at = NULL, showcase_report = ? WHERE id = ? AND showcase_at IS NOT NULL").bind(Date.now(), id).run();
+  const res = await c.env.DB.prepare("UPDATE artworks SET showcase_flag = ?, showcase_flags = showcase_flags + 1 WHERE id = ? AND showcase_at IS NOT NULL").bind(Date.now(), id).run();
   await c.env.DB.prepare("INSERT INTO showcase_like_caps (day, iph, n) VALUES (?, ?, 1) ON CONFLICT(day, iph) DO UPDATE SET n = n + 1").bind(day, iph).run();
-  await dropShowcaseCache(c, c.req.url, id);
-  return c.json({ ok: true, hidden: !!res.meta.changes }, 200, H);
+  return c.json({ ok: true, hidden: false, told: !!res.meta.changes }, 200, H);
+});
+// 선행쌤 관리자 알림(2026-11-17 사용자 «선행쌤 관리자인 나에게도 알림이 오면 좋겠어») — 신고가 온 전시 작품 목록.
+//   나가는 것 = 작품 id(이미 공개된 그림)·신고 수·마지막 신고 때뿐 · 별명·학급·학교·선생님 0. 선행쌤 출처만 · 캐시 없음
+app.get("/api/showcase/flags", async (c) => {
+  const o = c.req.header("origin") || "";
+  if (o && !SHOWCASE_ORIGINS.test(o)) return c.json({ error: "origin" }, 403);
+  const { results } = await c.env.DB.prepare( // gb-scan-ok: 전시 중 작품만(부분 색인 artworks_showcase_idx) · 50행
+    "SELECT a.id, a.showcase_flags AS n, a.showcase_flag AS at FROM artworks a WHERE a.showcase_at IS NOT NULL AND a.showcase_flags > 0 ORDER BY a.showcase_flag DESC LIMIT 50",
+  ).all<{ id: string; n: number; at: number }>();
+  return c.json({ flags: results ?? [] }, 200, { "Cache-Control": "no-store", ...(o ? likeCors(o) : {}) });
+});
+// 선생님 «괜찮아요» — 신고를 지운다(그림은 그대로 걸려 있다)
+app.delete("/api/artworks/:id/showcase-flag", requireTeacher, async (c) => {
+  const res = await c.env.DB.prepare(
+    "UPDATE artworks SET showcase_flag = NULL, showcase_flags = 0 WHERE id = ? AND class_id IN (SELECT id FROM classes WHERE teacher_id = ?)",
+  ).bind(c.req.param("id"), c.get("teacherId")).run();
+  return res.meta.changes ? c.json({ ok: true }) : c.json({ error: "not_found" }, 404);
 });
 
 // ── 전시용 사본(교사가 이름을 가린 그림) — 학생 원본·학급 썸네일은 그대로 두고 전시관에만 이것을 보인다

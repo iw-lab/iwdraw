@@ -12,6 +12,7 @@ import {
   listArtworks,
   listStudents,
   setShowcase,
+  clearShowcaseFlag,
   uploadShowcaseImage,
   signedUrl,
   type ArtworkRow,
@@ -74,7 +75,7 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
     if (on && cover) ok = await uploadShowcaseImage(a.id, cover);
     if (ok) ok = await setShowcase(a.id, on, checked, sido, replay, a.created_at);
     setShowing(null);
-    if (ok) setItems((prev) => prev.map((x) => (x.id === a.id ? { ...x, showcase_at: on ? Date.now() : null, showcase_report: null } : x)));
+    if (ok) setItems((prev) => prev.map((x) => (x.id === a.id ? { ...x, showcase_at: on ? Date.now() : null, showcase_report: null, showcase_flag: null, showcase_flags: 0 } : x)));
     else {
       setShowError(true);
       setTimeout(() => setShowError(false), 3500);
@@ -191,6 +192,11 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
           onConfirm={async (cover, sido, replay) => { const a = asking; setAsking(null); await toggleShowcase(a, cover, true, sido, replay); }}
         />
       )}
+      {items.some((x) => x.showcase_at && x.showcase_flags) ? (
+        <p className="mb-3 rounded-card bg-danger-soft px-4 py-2 text-sm font-semibold text-danger" role="status" data-showcase-flag-banner>
+          선행쌤 전시관에서 «이름·학교가 보여요» 신고가 온 그림이 {items.filter((x) => x.showcase_at && x.showcase_flags).length}점 있어요 — 아래 빨간 표시를 보고 확인해 주세요. 그림은 아직 걸려 있어요.
+        </p>
+      ) : null}
       {showError && (
         <p className="mb-3 rounded-card bg-danger-soft px-4 py-2 text-sm font-semibold text-danger" role="status">
           전시관에 걸지(내리지) 못했어요. 잠시 후 다시 시도해 주세요.
@@ -352,6 +358,26 @@ export function ClassGallery({ klass, onBack }: { klass: ClassRow; onBack: () =>
                 >
                   {showing === a.id ? "바꾸는 중…" : a.showcase_at ? "🏛️ 전시 중 · 내리기" : "🏛️ 선행쌤 전시관에 걸기"}
                 </button>
+                {a.showcase_at && a.showcase_flags ? (
+                  <div className="mt-1 rounded-md bg-danger-soft px-2 py-1.5 text-xs text-danger" data-showcase-flag={a.id}>
+                    <p className="font-semibold">«이름·학교가 보여요» 신고 {a.showcase_flags}건 — 그림을 크게 보고 확인해 주세요</p>
+                    <div className="mt-1 flex gap-1">
+                      <button
+                        type="button"
+                        className="pressable flex-1 rounded bg-white px-2 py-1 font-semibold text-ink"
+                        data-showcase-flag-ok
+                        onClick={async () => {
+                          if (await clearShowcaseFlag(a.id)) setItems((prev) => prev.map((x) => (x.id === a.id ? { ...x, showcase_flag: null, showcase_flags: 0 } : x)));
+                        }}
+                      >
+                        괜찮아요
+                      </button>
+                      <button type="button" className="pressable flex-1 rounded bg-danger px-2 py-1 font-semibold text-white" data-showcase-flag-down onClick={() => toggleShowcase(a)}>
+                        내리기
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 {!a.showcase_at && a.showcase_report ? (
                   <p className="mt-1 rounded-md bg-danger-soft px-2 py-1 text-xs font-semibold text-danger" data-showcase-report>
                     «이름이 보여요» 신고로 내려졌어요 — 그림을 보고 가린 뒤 다시 걸 수 있어요

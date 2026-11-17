@@ -40,7 +40,7 @@ try {
   const place = await p.evaluate(() => { const g = document.querySelector('[data-showcase-guide]'); const c = [...document.querySelectorAll('h2')].find((h) => h.textContent.includes('시험반')); return { h: Math.round(g.getBoundingClientRect().height), below: !!c && (c.compareDocumentPosition(g) & Node.DOCUMENT_POSITION_FOLLOWING) > 0 }; });
   ok(!guide?.open && place.h <= 60 && place.below, `대시보드 안내문 = 접힌 한 줄(${place.h}px) · 학급 목록 아래(${place.below})`);
   await p.$eval('[data-showcase-guide]', (d) => { d.open = true; }); const guideOpen = await p.$eval('[data-showcase-guide]', (d) => d.textContent);
-  ok(guide && /시·도/.test(guideOpen) && /학교·반은/.test(guideOpen) && /3칸마다/.test(guideOpen) && /숨겨 주세요/.test(guideOpen), '대시보드 안내문(펼치면): 시·도만 · 학교 안 나감 · 새 그림 3칸마다 · 신고');
+  ok(guide && /시·도/.test(guideOpen) && /학교·반은/.test(guideOpen) && /3칸마다/.test(guideOpen) && /선생님께 알리기/.test(guideOpen), '대시보드 안내문(펼치면): 시·도만 · 학교 안 나감 · 새 그림 3칸마다 · 신고');
   await p.goto(`${BASE}/teacher/?gallery=${setup.cls}`, { waitUntil: 'networkidle2' });
   await p.waitForSelector(`[data-showcase-art="${setup.art}"]`, { timeout: 20000 });
   await p.click(`[data-showcase-art="${setup.art}"]`);
@@ -67,6 +67,17 @@ try {
   const g = await p.evaluate(async () => (await fetch('/api/teacher/showcase-sido')).json());
   ok(g.sido === '전북' && g.from === 'last', `미리 고를 시·도 = 전에 고른 값 (${JSON.stringify(g)})`);
   ok(res.pub.st === 200 && res.pub.n === 0, `공개 그림에 글씨 획 0 (어두운 픽셀 ${res.pub.n})`);
+  // 🔒 2026-11-17 신고 = 내리지 않고 건 선생님께 «신고 N건 · 확인» → 괜찮아요(지움)·내리기
+  await fetch(`${BASE}/api/showcase/${setup.art}/report`, { method: 'POST', headers: { origin: 'http://localhost:4177' } });
+  await p.goto(`${BASE}/teacher/?gallery=${setup.cls}`, { waitUntil: 'networkidle2' });
+  ok(!!(await p.waitForSelector(`[data-showcase-flag="${setup.art}"]`, { timeout: 15000 }).catch(() => null)), '신고가 오면 그 그림 아래 «신고 1건 · 확인해 주세요»');
+  ok(/신고가 온 그림이 1점/.test(await p.$eval('[data-showcase-flag-banner]', (e) => e.textContent).catch(() => '')), '갤러리 맨 위 알림 줄');
+  ok((await p.$eval(`[data-showcase-art="${setup.art}"]`, (e) => e.dataset.showcase)) === 'on', '신고가 와도 그림은 계속 전시 중');
+  await p.click(`[data-showcase-flag="${setup.art}"] [data-showcase-flag-ok]`);
+  ok(!!(await p.waitForFunction((id) => !document.querySelector(`[data-showcase-flag="${id}"]`) && !document.querySelector('[data-showcase-flag-banner]'), { timeout: 8000 }, setup.art).catch(() => null)), '«괜찮아요» = 신고 표시가 사라진다');
+  await p.goto(`${BASE}/teacher/?gallery=${setup.cls}`, { waitUntil: 'networkidle2' });
+  await p.waitForSelector(`[data-showcase-art="${setup.art}"]`, { timeout: 20000 });
+  ok(!(await p.$(`[data-showcase-flag="${setup.art}"]`)) && (await p.$eval(`[data-showcase-art="${setup.art}"]`, (e) => e.dataset.showcase)) === 'on', '새로 열어도 신고 표시 없음 · 그림은 그대로 전시');
   // 세로로 긴 그림 · 노트북 높이(700) — 확인 창이 화면 안에 다 들어오고 «걸기» 단추까지 닿는다
   await p.setViewport({ width: 1100, height: 700 });
   await p.goto(`${BASE}/teacher/?gallery=${setup.cls}`, { waitUntil: 'networkidle2' });

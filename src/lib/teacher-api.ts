@@ -34,6 +34,9 @@ export interface ArtworkRow {
   showcase_at?: number | null;
   /** 선행쌤 화면 «숨겨 주세요» 신고로 내려간 때(없으면 null) */
   showcase_report?: number | null;
+  /** 선행쌤 «이름·학교가 보여요» 신고 — 마지막 때·수(그림은 그대로 걸려 있다 · 선생님이 확인) */
+  showcase_flag?: number | null;
+  showcase_flags?: number;
 }
 
 /** 회원 탈퇴 — 비밀번호 재확인 후 계정·개인정보·작품을 영구 파기. 성공 시 세션도 무효화됨. */
@@ -161,6 +164,16 @@ export async function setShowcase(id: string, on: boolean, checked = false, sido
       body: JSON.stringify({ on, checked, sido, ...(on && typeof ver === "number" ? { ver } : {}), ...(replay ? { replay: true, replayChecked: true } : {}) }),
     });
     return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** 신고 확인 «괜찮아요» — 신고 표시만 지운다(그림은 그대로) */
+export async function clearShowcaseFlag(id: string): Promise<boolean> {
+  if (!hasBackend()) return false;
+  try {
+    return (await apiFetch(`/artworks/${id}/showcase-flag`, { method: "DELETE" })).ok;
   } catch {
     return false;
   }

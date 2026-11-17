@@ -44,7 +44,7 @@ export function ShowcaseGuide() {
         <section>
           <h3 className="font-semibold">안전 장치</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-ink-soft">
-            <li>보는 사람이 «이름·학교가 보여요 · 숨겨 주세요»를 누르면 <b className="text-ink">바로 내려가고</b>, 갤러리에 «신고로 내려짐»이 떠요. 가린 뒤 다시 걸 수 있어요.</li>
+            <li>보는 사람이 «이름·학교가 보여요 · 선생님께 알리기»를 누르면 그림은 <b className="text-ink">그대로 걸려 있고</b>, 이 갤러리에 «신고 N건 · 확인해 주세요»가 떠요. 그림을 보고 «괜찮아요» 또는 «내리기»를 골라 주세요.</li>
             <li>언제든 «전시 중 · 내리기»로 내릴 수 있어요.</li>
             <li>학생·보호자에게 «잘 그린 그림은 선생님이 선행쌤 전시관에 걸 수 있어요(이름 없이)»라고 미리 알려 주세요.</li>
           </ul>

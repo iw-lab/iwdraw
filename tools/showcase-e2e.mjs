@@ -105,11 +105,24 @@ ok((await fetch(`${BASE}/api/showcase/${a1}`)).status === 404, '지운 작품 �
   { const L = await (await fetch(BASE + '/api/showcase')).json(); ok(L.works.find((w) => w.id === a3)?.r === '전북', '목록에 시·도 «전북»'); }
   const served = new Uint8Array(await (await fetch(`${BASE}/api/showcase/${a3}`)).arrayBuffer());
   ok(served.length === cover.length && served.every((b, i) => b === cover[i]), '전시관엔 가린 사본이 나간다(원본 아님)');
-  const rep = await (await fetch(`${BASE}/api/showcase/${a3}/report`, { method: 'POST', headers: { origin: 'http://localhost:4177' } })).json();
-  ok(rep.hidden === true, '«숨겨 주세요» 한 번 = 바로 내려감');
-  ok(!(await (await fetch(BASE + '/api/showcase')).json()).works.some((w) => w.id === a3), '신고한 작품은 목록에서 빠진다');
-  ok((await fetch(`${BASE}/api/showcase/${a3}`)).status === 404, '신고한 작품 그림도 404');
-  const tl3 = await (await T2(`/api/classes/${c2.id}/artworks`)).json(); ok(tl3.find((x) => x.id === a3)?.showcase_report > 0, '교사 목록에 «신고로 내려짐»');
+  // 🔒 2026-11-17 신고 = 바로 내리지 않고 건 선생님(+선행쌤 관리자)께 알림 — 전엔 한 번에 내려가 문제없는 전남 그림이 장난 신고로 내려갔다
+  { const rep = async () => fetch(`${BASE}/api/showcase/${a3}/report`, { method: 'POST', headers: { origin: 'http://localhost:4177' } });
+    const r1 = await (await rep()).json(); await rep();
+    ok(r1.hidden === false && r1.told === true, '신고 = 내리지 않고 선생님께 알림');
+    ok((await (await fetch(BASE + '/api/showcase')).json()).works.some((w) => w.id === a3) && (await fetch(`${BASE}/api/showcase/${a3}`)).ok, '신고해도 그림은 전시관에 그대로');
+    const row = (await (await T2(`/api/classes/${c2.id}/artworks`)).json()).find((x) => x.id === a3);
+    ok(row?.showcase_flags === 2 && row?.showcase_flag > 0 && !row?.showcase_report, `건 선생님 목록에 «신고 2건» (${row?.showcase_flags})`);
+    const F = await (await fetch(BASE + '/api/showcase/flags', { headers: { origin: 'http://localhost:4177' } })).json();
+    const f = F.flags.find((x) => x.id === a3);
+    ok(f?.n === 2 && Object.keys(f).sort().join() === 'at,id,n' && !JSON.stringify(F).includes('셋째반') && !JSON.stringify(F).includes('별'), '관리자 신고 목록 = id·수·때 뿐(별명·학급 0)');
+    ok((await fetch(BASE + '/api/showcase/flags', { headers: { origin: 'https://evil.example' } })).status === 403, '관리자 목록은 선행쌤 출처만');
+    ok((await T(`/api/artworks/${a3}/showcase-flag`, { method: 'DELETE' })).status === 404, '남의 선생님은 신고를 못 지운다');
+    ok((await T2(`/api/artworks/${a3}/showcase-flag`, { method: 'DELETE' })).ok, '건 선생님 «괜찮아요»');
+    const row2 = (await (await T2(`/api/classes/${c2.id}/artworks`)).json()).find((x) => x.id === a3);
+    ok(!row2?.showcase_flags && !(await (await fetch(BASE + '/api/showcase/flags')).json()).flags.some((x) => x.id === a3) && !!row2?.showcase_at, '«괜찮아요» = 신고만 지워지고 그림은 계속 전시');
+    await rep();
+    ok((await T2(`/api/artworks/${a3}/showcase`, { method: 'PATCH', headers: json, body: '{"on":false}' })).ok && !(await (await fetch(BASE + '/api/showcase')).json()).works.some((w) => w.id === a3), '건 선생님은 내릴 수 있다');
+    ok(!(await (await fetch(BASE + '/api/showcase/flags')).json()).flags.some((x) => x.id === a3), '내린 그림은 관리자 목록에서도 빠진다'); }
   ok((await fetch(`${BASE}/api/showcase/${a3}/report`, { method: 'POST', headers: { origin: 'https://evil.example' } })).status === 403, '남의 출처 신고 거절'); }
 
 // 🔒 2026-11-17 «그리는 과정»도 걸기 — 교사가 과정까지 확인한 샌드아트만 · 가리면·다시 내면 안 나간다
